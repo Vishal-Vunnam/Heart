@@ -1,129 +1,112 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
-import { NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
-// Import your custom components here (use the correct import paths)
+import React, { useState, useRef } from 'react';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import  SearchScreen  from './search';  // Assuming search.tsx is in the same folder
-import { NativeStackNavigationProp } from '@react-navigation/native-stack'; // Import the navigation types
-
-type RootStackParamList = {
-  Friends: undefined;
-  SearchPage: undefined;
-};
-
-type FriendsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Friends'>;
-
-interface FriendsPageProps {
-  navigation: FriendsScreenNavigationProp;
-}
-
-const Stack = createNativeStackNavigator();
 
 export default function FriendsScreen() {
-  return (
-    <NavigationIndependentTree>
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen
-          name="Friends"
-          component={FriendsPage}
-          options={{ title: 'Friends' }}
-        />
-        <Stack.Screen name="SearchPage" component={SearchScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
-    </NavigationIndependentTree>
-  );
-}
+  const [isTyping, setIsTyping] = useState(false);
+  const textInputRef = useRef<TextInput>(null); 
 
-function FriendsPage({ navigation }: FriendsPageProps) {
+  const handleClearFocus = () => {
+    setIsTyping(false);
+    textInputRef.current?.blur(); 
+  };
+
   return (
-    <ThemedView style={styles.container}>
-      {/* Search Button at the top */}
-      <View style={styles.searchBarContainer}>
-        <TouchableOpacity 
-          style={styles.searchButton} 
-          onPress={() => navigation.navigate('SearchPage')}
-        >
-          <ThemedView style={styles.searchBoxContainer}>
-        <View style={styles.searchBoxWrapper}>
-          <EvilIcons name="search" size={24} color="#888" style={styles.icon} />
-          <ThemedText style={styles.searchBox} >Search Friends</ThemedText>
+    <SafeAreaView style={styles.safeArea}>
+      <ThemedView style={styles.container}>
+        <View style={styles.searchBarContainer}>
+          <View style={styles.searchBoxWrapper}>
+            <EvilIcons name="search" size={24} color="#888" style={styles.icon} />
+            <TextInput
+              ref={textInputRef} // Attach ref to TextInput
+              style={styles.searchBox}
+              placeholder="Search, #tag, location"
+              placeholderTextColor="#888"
+              onFocus={() => setIsTyping(true)}
+            />
+            {isTyping && (
+              <TouchableOpacity onPress={handleClearFocus} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}><Feather name="x-circle" size={24} color="#888" /></Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </ThemedView>
-        </TouchableOpacity>
-      </View>
 
-      {/* Friends list or content */}
-      <View style={styles.content}>
-        <ThemedText>List of Friends will go here</ThemedText>
-      </View>
-    </ThemedView>
+        {/* Function for whether the user is typing or not */}
+
+        {!isTyping ? (
+          <View style={styles.content}>
+            <ThemedText>List of Friends will go here</ThemedText>
+          </View>
+        ) : (
+          <View style={styles.searchContent}>
+            <ThemedText>Search functionality goes here</ThemedText>
+          </View>
+        )}
+      </ThemedView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-    paddingTop: Platform.OS === 'ios' ? 50 : 20, // Status bar space handling
   },
   searchBarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  searchButton: {
-    backgroundColor: '#1D3D47',
-    borderRadius: 8,
-    padding: 10,
-  },
-  searchButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  searchBoxContainer: {
-    position: 'absolute',
-    top: 80,
-    left: '5%',
-    right: '5%',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
   },
   searchBoxWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
-    height: 30,
     borderRadius: 13,
     borderWidth: 1,
     borderColor: '#ccc',
     paddingHorizontal: 12,
     backgroundColor: 'white',
+    height: 40,
   },
   icon: {
     marginRight: 8,
   },
   searchBox: {
-    flex: 1, // Ensures the TextInput takes up the remaining space
+    flex: 1,
     fontSize: 16,
+    color: '#333',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#e0e0e0',
-    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ccc',
-    marginTop: 20,
+    padding: 10,
+  },
+  closeButton: {
+    marginLeft: 10,
+  },
+  closeButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  searchContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#e0e0e0',
+    padding: 10,
   },
 });
