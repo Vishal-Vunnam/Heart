@@ -9,6 +9,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import Entypo from '@expo/vector-icons/Entypo';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -36,10 +37,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="post"
+        options={{
+          title: 'Post',
+          tabBarIcon: ({ color }) => <Entypo name="pin" size={21} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="interact"
         options={{
           title: 'Interact',
-          tabBarIcon: ({ color }) => <AntDesign name="find" size={24} color={color} />,
+          tabBarIcon: ({ color }) => <AntDesign name="find" size={22} color={color} />,
         }}
       />
     </Tabs>
