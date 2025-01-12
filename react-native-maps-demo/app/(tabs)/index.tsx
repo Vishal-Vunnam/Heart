@@ -5,9 +5,22 @@ import EvilIcons from '@expo/vector-icons/EvilIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
 import Entypo from '@expo/vector-icons/Entypo';
+import { initializeApp } from 'firebase/app';
+
 
 
 export default function HomeScreen() {
+  const firebaseConfig = {
+    apiKey: 'api-key',
+    authDomain: 'project-id.firebaseapp.com',
+    databaseURL: 'https://project-id.firebaseio.com',
+    projectId: 'project-id',
+    storageBucket: 'project-id.appspot.com',
+    messagingSenderId: 'sender-id',
+    appId: 'app-id',
+    measurementId: 'G-measurement-id',
+  };
+  
   const [isModalVisible, setIsModalVisible] = useState(false);
   const textInputRef = useRef<TextInput>(null);
 
@@ -16,6 +29,7 @@ export default function HomeScreen() {
     textInputRef.current?.blur(); 
   };
 
+  // Sample Post Data
   const locationTitle = "Pin Title";
   const geographicalLocation = "37°25'19.07\"N, 122°05'06.24\"W";
   const locationLink = "https://www.google.com/maps?q=37.4219999,-122.0840575"; // Example link for Google Maps
@@ -87,10 +101,10 @@ export default function HomeScreen() {
           
           <View >
             <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
-              <Text >Like</Text>
+              <Text style={styles.buttonText}>Like</Text>
             </TouchableOpacity>
             <TouchableOpacity  onPress={handleComment}>
-              <Text >Comment</Text>
+              <Text style={styles.buttonText}>Comment</Text>
             </TouchableOpacity>
             <Text style={styles.picHeader}>Pictures{"\n"}{"\n"}{"\n"}{"\n"}kj{"\n"}{"\n"}kj</Text>
           </View>
