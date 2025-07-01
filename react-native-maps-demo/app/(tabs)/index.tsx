@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SafeAreaView, View, TextInput, StyleSheet, TouchableOpacity, Text, Pressable, Linking } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
@@ -6,6 +6,15 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
 import Entypo from '@expo/vector-icons/Entypo';
 import { initializeApp } from 'firebase/app';
+import MapView, { Marker } from 'react-native-maps';
+import { addPost } from '@/firebase/firestore';
+import { router,  useRouter } from 'expo-router';
+
+
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { app } from '@/firebase/firebaseConfig'; // adjust path as needed
+
+
 
 
 
@@ -20,8 +29,31 @@ export default function HomeScreen() {
     appId: 'app-id',
     measurementId: 'G-measurement-id',
   };
-  
+
+  const [user, setUser] = useState<{
+    displayName: string;
+    email: string;
+    uid: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const auth = getAuth(app);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          displayName: firebaseUser.displayName ?? "",
+          email: firebaseUser.email ?? "",
+          uid: firebaseUser.uid,
+        });
+      } else {
+        setUser(null);
+      }
+    });
+    return unsubscribe; // Clean up the listener on unmount
+  }, []);
+
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<any>(null);
   const textInputRef = useRef<TextInput>(null);
 
   const toggleModal = () => {
@@ -35,10 +67,51 @@ export default function HomeScreen() {
   const locationLink = "https://www.google.com/maps?q=37.4219999,-122.0840575"; // Example link for Google Maps
   const datePosted = "January 9, 2025";
   const author = "John Doe";
-  
+
+  const postLocation = {
+    latitude: 0,
+    latitudeDelta: 0,
+    longitude: 0,
+    longitudeDelta: 0,
+  }
+
+  const postInfo = {
+      title: "Post Title",
+      postId: "Post ID",
+      location: postLocation,
+      authorId: "Post Author ID",
+      images: ["Image 1", "Image 2", "Image 3"],
+      date: "Post Date",
+      description: "Post Description",
+      author: "Post Author",
+      likes: 0,
+      comments: 0,
+      views: 0,
+      tags: ["Tag 1", "Tag 2", "Tag 3"],
+  }
   // Handle the like button action
   const handleLike = () => {
     console.log("Liked!");
+  };
+
+  const getCurrentLocation = () => {
+    console.log("Getting current location!");
+    console.log(currentLocation);
+  };
+
+  // Navigates to the SignInScreen using expo-router
+  const handleSignIn = () => {
+    // If using expo-router, you should push the route as a string path
+    // e.g., '/screens/SignInScreen' or the correct route for your app
+    router.push('/signin');
+  };
+
+  const handlePost = () => {
+    const newPostInfo = postInfo;
+    newPostInfo.location = currentLocation;
+    newPostInfo.postId = "Post ID";
+    addPost(newPostInfo);
+    console.log("Post added!");
   };
 
   // Handle the comment button action
@@ -54,16 +127,37 @@ export default function HomeScreen() {
           <TouchableOpacity style={styles.navButton} onPress={toggleModal}>
             <Text style={styles.navButtonText}>Polis</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navButton}>
-            <Text style={styles.navButtonText}>Vishal Vunnam</Text>
+          {user!=null && <TouchableOpacity style={styles.navButton}>
+            <Text style={styles.navButtonText}>{user.email}</Text>
             <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
           </TouchableOpacity>
+          }
+          {user==null && <TouchableOpacity style={styles.navButton} onPress={handleSignIn}>
+                      <Text style={styles.navButtonText}>Sign In</Text>
+                      <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
+                    </TouchableOpacity>
+          }
         </ThemedView>
 
-        {/* Map Placeholder */}
+        {/* Map Placeholder replaced with MapView */}
         <ThemedView style={styles.mapPlaceholder}>
-          <Text style={styles.mapPlaceholderText}></Text>
-          <TouchableOpacity onPress={toggleModal}>
+          <MapView
+            style={styles.map}
+            initialRegion={{
+              latitude: 37.4219999,
+              longitude: -122.0840575,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }}
+            onRegionChangeComplete={(region) => setCurrentLocation(region)}
+          >
+            {/* You can still have Markers here if you want */}
+          </MapView>
+
+          {/* Center dot overlay */}
+          <View pointerEvents="none" style={styles.centerDot} />
+
+          <TouchableOpacity onPress={toggleModal} style={styles.pinButton}>
             <Entypo name="location-pin" size={24} color="black" />
           </TouchableOpacity>
         </ThemedView>
@@ -83,6 +177,12 @@ export default function HomeScreen() {
           </View>
         </ThemedView>
 
+        <View style={{ position: 'absolute', top: 200, right: 20, zIndex: 100 }}>
+          <TouchableOpacity style={styles.postButton} onPress={handlePost}>
+            <Text style={styles.postButtonText}>Post</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Popup Modal */}
         {isModalVisible && (
       <View style={styles.modalOverlay} pointerEvents="box-none">
@@ -98,7 +198,7 @@ export default function HomeScreen() {
           </Text>
           <Text style={styles.modalMessage}>Date Posted: {datePosted}</Text>
           <Text style={styles.modalMessage}>Author: {author}</Text>
-          
+{/*           
           <View >
             <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
               <Text style={styles.buttonText}>Like</Text>
@@ -107,7 +207,7 @@ export default function HomeScreen() {
               <Text style={styles.buttonText}>Comment</Text>
             </TouchableOpacity>
             <Text style={styles.picHeader}>Pictures{"\n"}{"\n"}{"\n"}{"\n"}kj{"\n"}{"\n"}kj</Text>
-          </View>
+          </View> */}
           
           <TouchableOpacity style={styles.closeButton} onPress={toggleModal}>
             <Feather name="x" size={20} color="white" />
@@ -122,6 +222,24 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  postButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  postButtonText: {
+    color: 'black',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -135,7 +253,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 10,
-    backgroundColor: '#3f68df',
+    backgroundColor: 'black'
   },
   navButton: {
     flexDirection: 'row',
@@ -185,11 +303,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     borderWidth: 1,
     borderColor: '#ccc',
+    overflow: 'hidden',
   },
-  mapPlaceholderText: {
-    color: '#888',
-    fontSize: 18,
-    fontWeight: 'bold',
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  pinButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   modalOverlay: {
     position: 'absolute',
@@ -271,5 +401,19 @@ const styles = StyleSheet.create({
     color: 'black',
     marginTop: 10,
     marginLeft: 10,
-  }
+  },
+  centerDot: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 16,
+    height: 16,
+    marginLeft: -8, // half of width
+    marginTop: -8,  // half of height
+    borderRadius: 8,
+    backgroundColor: 'transparent', // or any color you like
+    borderWidth: 2,
+    borderColor: 'black',
+    zIndex: 10,
+  },
 });
