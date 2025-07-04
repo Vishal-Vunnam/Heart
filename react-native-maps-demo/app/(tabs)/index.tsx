@@ -1,43 +1,112 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { SafeAreaView, View, TextInput, StyleSheet, TouchableOpacity, Text, Pressable, Linking } from 'react-native';
+import { SafeAreaView, View, TextInput, StyleSheet, TouchableOpacity, Text, Pressable, Linking, Modal } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
 import Entypo from '@expo/vector-icons/Entypo';
 import { initializeApp } from 'firebase/app';
-import MapView, { Marker } from 'react-native-maps';
-import { addPost } from '@/firebase/firestore';
-import { router,  useRouter } from 'expo-router';
-
-
+import MapView, { Callout, Marker } from 'react-native-maps';
+import { addPost, getAllPosts } from '@/firebase/firestore';
+import { router, useRouter } from 'expo-router';
+import PostModal from '@/components/PostModal';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { app } from '@/firebase/firebaseConfig'; // adjust path as needed
+import { app } from '@/firebase/firebaseConfig';
 
+// Constants
+const FIREBASE_CONFIG = {
+  apiKey: 'api-key',
+  authDomain: 'project-id.firebaseapp.com',
+  databaseURL: 'https://project-id.firebaseio.com',
+  projectId: 'project-id',
+  storageBucket: 'project-id.appspot.com',
+  messagingSenderId: 'sender-id',
+  appId: 'app-id',
+  measurementId: 'G-measurement-id',
+};
 
+const SAMPLE_POST_DATA = {
+  locationTitle: "Pin Title",
+  geographicalLocation: "37°25'19.07\"N, 122°05'06.24\"W",
+  locationLink: "https://www.google.com/maps?q=37.4219999,-122.0840575",
+  datePosted: "January 9, 2025",
+  author: "John Doe",
+};
 
+const INITIAL_MAP_REGION = {
+  latitude: 37.4219999,
+  longitude: -122.0840575,
+  latitudeDelta: 0.01,
+  longitudeDelta: 0.01,
+};
 
+const POST_LOCATION_TEMPLATE = {
+  latitude: 0,
+  latitudeDelta: 0,
+  longitude: 0,
+  longitudeDelta: 0,
+};
+
+const POST_INFO_TEMPLATE = {
+  title: "Post Title",
+  postId: "Post ID",
+  location: POST_LOCATION_TEMPLATE,
+  authorId: "Post Author ID",
+  images: ["Image 1", "Image 2", "Image 3"],
+  date: "Post Date",
+  description: "Post Description",
+  author: "Post Author",
+  likes: 0,
+  comments: 0,
+  views: 0,
+  tags: ["Tag 1", "Tag 2", "Tag 3"],
+};
+// Posts loaded: [{"author": "Test", "authorId": "test", "comments": 0, "date": "2025-07-04T00:45:48.862Z", "description": "This is a test", "likes": 0, "location": {"latitude": 37.4219999, "latitudeDelta": 0.01, "longitude": -122.0840575, "longitudeDelta": 0.01}, "postId": "post_1751589948869_qz19bdexu"}]
+type GET_POST_TEMPLATE = {
+  author: string;
+  authorId: string;
+  postId: string;
+  location: {
+    latitude: number;
+    latitudeDelta: number;
+    longitude: number;
+    longitudeDelta: number;
+  };
+  description: string;
+  date: string;
+  title: string;
+};
+
+// const POST_MARKER_TEMPLATE = {
+//   location: POST_LOCATION_TEMPLATE,
+//   postId: "Post ID",
+//   title: "Post Title",
+//   description: "Post Description",
+//   author: "Post Author",
+//   date: "Post Date",
+//   likes: 0,
+//   comments: 0,
 
 export default function HomeScreen() {
-  const firebaseConfig = {
-    apiKey: 'api-key',
-    authDomain: 'project-id.firebaseapp.com',
-    databaseURL: 'https://project-id.firebaseio.com',
-    projectId: 'project-id',
-    storageBucket: 'project-id.appspot.com',
-    messagingSenderId: 'sender-id',
-    appId: 'app-id',
-    measurementId: 'G-measurement-id',
-  };
-
+  // State
   const [user, setUser] = useState<{
     displayName: string;
     email: string;
     uid: string;
   } | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isPostModalVisible, setIsPostModalVisible] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<any>(null);
+  const [posts, setPosts] = useState<GET_POST_TEMPLATE[]>([]);
+  
+  // Refs
+  const textInputRef = useRef<TextInput>(null);
+  const mapRef = useRef<MapView>(null);
 
+  // Effects
   useEffect(() => {
     const auth = getAuth(app);
+    loadPosts();
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         setUser({
@@ -49,49 +118,24 @@ export default function HomeScreen() {
         setUser(null);
       }
     });
-    return unsubscribe; // Clean up the listener on unmount
+    return unsubscribe;
   }, []);
 
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState<any>(null);
-  const textInputRef = useRef<TextInput>(null);
-
-  const toggleModal = () => {
-    setIsModalVisible(!isModalVisible);
-    textInputRef.current?.blur(); 
+  // Data loading functions
+  const loadPosts = async () => {
+    try {
+      const posts = await getAllPosts();
+      console.log('Posts loaded:', posts);
+      setPosts(posts);
+    } catch (error) {
+      console.error('Error loading posts:', error);
+    }
   };
 
-  // Sample Post Data
-  const locationTitle = "Pin Title";
-  const geographicalLocation = "37°25'19.07\"N, 122°05'06.24\"W";
-  const locationLink = "https://www.google.com/maps?q=37.4219999,-122.0840575"; // Example link for Google Maps
-  const datePosted = "January 9, 2025";
-  const author = "John Doe";
-
-  const postLocation = {
-    latitude: 0,
-    latitudeDelta: 0,
-    longitude: 0,
-    longitudeDelta: 0,
-  }
-
-  const postInfo = {
-      title: "Post Title",
-      postId: "Post ID",
-      location: postLocation,
-      authorId: "Post Author ID",
-      images: ["Image 1", "Image 2", "Image 3"],
-      date: "Post Date",
-      description: "Post Description",
-      author: "Post Author",
-      likes: 0,
-      comments: 0,
-      views: 0,
-      tags: ["Tag 1", "Tag 2", "Tag 3"],
-  }
-  // Handle the like button action
-  const handleLike = () => {
-    console.log("Liked!");
+  // Event handlers
+  const toggleModal = () => {
+    setIsModalVisible(!isModalVisible);
+    textInputRef.current?.blur();
   };
 
   const getCurrentLocation = () => {
@@ -99,26 +143,76 @@ export default function HomeScreen() {
     console.log(currentLocation);
   };
 
-  // Navigates to the SignInScreen using expo-router
   const handleSignIn = () => {
-    // If using expo-router, you should push the route as a string path
-    // e.g., '/screens/SignInScreen' or the correct route for your app
     router.push('/signin');
   };
 
   const handlePost = () => {
-    const newPostInfo = postInfo;
-    newPostInfo.location = currentLocation;
-    newPostInfo.postId = "Post ID";
-    addPost(newPostInfo);
-    console.log("Post added!");
+    if (!user) {
+      // router.push('/signin');
+      // return;
+      setUser({
+        displayName: "Test",
+        email: "Test@example.com",
+        uid: "test",
+      }); 
+    }
+
+    if (!currentLocation) {
+      console.log("No current location available");
+      return;
+    }
+    setIsPostModalVisible(true);
   };
 
-  // Handle the comment button action
+  const handlePostSubmit = (postData: {
+    title: string;
+    location: any;
+    authorId: string;
+    date: string;
+    description: string;
+    authorName: string;
+    visibility: string;
+  }) => {
+    const newPostInfo = {
+      ...POST_INFO_TEMPLATE,
+      title: postData.title,
+      description: postData.description,
+      location: postData.location,
+      authorId: postData.authorId,
+      author: postData.authorName,
+      date: postData.date,
+      visibility: postData.visibility,
+    };
+    console.log("Attempting to add post with data:", newPostInfo);
+    console.log("Current user:", user);
+    addPost(newPostInfo);
+    loadPosts();
+    console.log("Post added!", postData);
+  };
+
   const handleComment = () => {
     console.log("Commented!");
   };
 
+  // Map zoom functions
+  const zoomIn = () => {
+    mapRef.current?.animateToRegion({
+      ...currentLocation,
+      latitudeDelta: currentLocation.latitudeDelta * 0.5,
+      longitudeDelta: currentLocation.longitudeDelta * 0.5,
+    }, 1000);
+  };
+
+  const zoomOut = () => {
+    mapRef.current?.animateToRegion({
+      ...currentLocation,
+      latitudeDelta: currentLocation.latitudeDelta * 2,
+      longitudeDelta: currentLocation.longitudeDelta * 2,
+    }, 1000);
+  };
+
+  // Render
   return (
     <SafeAreaView style={styles.safeArea}>
       <ThemedView style={styles.container}>
@@ -127,35 +221,67 @@ export default function HomeScreen() {
           <TouchableOpacity style={styles.navButton} onPress={toggleModal}>
             <Text style={styles.navButtonText}>Polis</Text>
           </TouchableOpacity>
-          {user!=null && <TouchableOpacity style={styles.navButton}>
-            <Text style={styles.navButtonText}>{user.email}</Text>
-            <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
-          </TouchableOpacity>
-          }
-          {user==null && <TouchableOpacity style={styles.navButton} onPress={handleSignIn}>
-                      <Text style={styles.navButtonText}>Sign In</Text>
-                      <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
-                    </TouchableOpacity>
-          }
+          {user != null && (
+            <TouchableOpacity style={styles.navButton}>
+              <Text style={styles.navButtonText}>{user.email}</Text>
+              <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
+            </TouchableOpacity>
+          )}
+          {user == null && (
+            <TouchableOpacity style={styles.navButton} onPress={handleSignIn}>
+              <Text style={styles.navButtonText}>Sign In</Text>
+              <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
+            </TouchableOpacity>
+          )}
         </ThemedView>
 
-        {/* Map Placeholder replaced with MapView */}
+        {/* Map */}
         <ThemedView style={styles.mapPlaceholder}>
           <MapView
+            ref={mapRef}
             style={styles.map}
-            initialRegion={{
-              latitude: 37.4219999,
-              longitude: -122.0840575,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
+            initialRegion={INITIAL_MAP_REGION}
             onRegionChangeComplete={(region) => setCurrentLocation(region)}
           >
-            {/* You can still have Markers here if you want */}
+            {posts.map((post, index) => (
+              <Marker
+                pinColor="black"
+                calloutAnchor={{ x: 0.5, y: 0.5 }}
+                key={index}
+                coordinate={{
+                  latitude: post.location.latitude,
+                  longitude: post.location.longitude,
+                }}
+                title={post.title || 'Post'}
+                description={post.author + '\n' + post.description || 'No description'}
+                onPress={() => {
+                  console.log('Marker pressed:', post);
+                  // You can add logic here to show post details
+                }}
+              >
+                <Callout>
+                  <View>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold' }}>{post.title + ' - ' + post.author}</Text>
+
+                    <Text style={{ fontSize: 14 }}>{post.description}</Text>
+                  </View>
+                </Callout>  
+              </Marker>
+            ))}
           </MapView>
 
           {/* Center dot overlay */}
           <View pointerEvents="none" style={styles.centerDot} />
+
+          {/* Zoom Controls */}
+          <View style={styles.zoomContainer}>
+            <TouchableOpacity style={styles.zoomButton} onPress={zoomIn}>
+              <Text style={styles.zoomButtonText}>+</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.zoomButton} onPress={zoomOut}>
+              <Text style={styles.zoomButtonText}>-</Text>
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity onPress={toggleModal} style={styles.pinButton}>
             <Entypo name="location-pin" size={24} color="black" />
@@ -163,8 +289,8 @@ export default function HomeScreen() {
         </ThemedView>
 
         {/* Search Box */}
-        <ThemedView style={styles.searchBoxContainer} >
-          <View style={styles.searchBoxWrapper} >
+        <ThemedView style={styles.searchBoxContainer}>
+          <View style={styles.searchBoxWrapper}>
             <EvilIcons name="search" size={24} color="#888" style={styles.icon} />
             <TextInput
               ref={textInputRef}
@@ -173,54 +299,52 @@ export default function HomeScreen() {
               placeholderTextColor="#888"
               onFocus={() => setIsModalVisible(false)}
             />
-            
           </View>
         </ThemedView>
 
+        {/* Post Button */}
         <View style={{ position: 'absolute', top: 200, right: 20, zIndex: 100 }}>
           <TouchableOpacity style={styles.postButton} onPress={handlePost}>
             <Text style={styles.postButtonText}>Post</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Popup Modal */}
+        {/* Location Info Modal */}
         {isModalVisible && (
-      <View style={styles.modalOverlay} pointerEvents="box-none">
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>{locationTitle}</Text>
-          <Text style={styles.modalMessage}>Location: 
-            <Text 
-              style={styles.link} 
-              onPress={() => Linking.openURL(locationLink)}
-            >
-              {` ${geographicalLocation}`}
-            </Text>
-          </Text>
-          <Text style={styles.modalMessage}>Date Posted: {datePosted}</Text>
-          <Text style={styles.modalMessage}>Author: {author}</Text>
-{/*           
-          <View >
-            <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
-              <Text style={styles.buttonText}>Like</Text>
-            </TouchableOpacity>
-            <TouchableOpacity  onPress={handleComment}>
-              <Text style={styles.buttonText}>Comment</Text>
-            </TouchableOpacity>
-            <Text style={styles.picHeader}>Pictures{"\n"}{"\n"}{"\n"}{"\n"}kj{"\n"}{"\n"}kj</Text>
-          </View> */}
-          
-          <TouchableOpacity style={styles.closeButton} onPress={toggleModal}>
-            <Feather name="x" size={20} color="white" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.triangle} />
-      </View>
-    )}
+          <View style={styles.modalOverlay} pointerEvents="box-none">
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{SAMPLE_POST_DATA.locationTitle}</Text>
+              <Text style={styles.modalMessage}>
+                Location:
+                <Text style={styles.link} onPress={() => Linking.openURL(SAMPLE_POST_DATA.locationLink)}>
+                  {` ${SAMPLE_POST_DATA.geographicalLocation}`}
+                </Text>
+              </Text>
+              <Text style={styles.modalMessage}>Date Posted: {SAMPLE_POST_DATA.datePosted}</Text>
+              <Text style={styles.modalMessage}>Author: {SAMPLE_POST_DATA.author}</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={toggleModal}>
+                <Feather name="x" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.triangle} />
+          </View>
+        )}
+
+        {/* Post Modal */}
+        <PostModal
+          userId={user?.uid || "anonymous"}
+          userName={user?.displayName || user?.email || "Anonymous"}
+          visible={isPostModalVisible}
+          onClose={() => setIsPostModalVisible(false)}
+          currentLocation={currentLocation}
+          onPost={handlePostSubmit}
+        />
       </ThemedView>
     </SafeAreaView>
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
   postButton: {
     position: 'absolute',
@@ -330,7 +454,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 80,
-    backgroundColor: 'transparent', // Transparent so background is usable
+    backgroundColor: 'transparent',
   },
   modalContent: {
     width: '90%',
@@ -350,7 +474,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 10,
     marginLeft: 10,
-  },  
+  },
   link: {
     fontSize: 14,
     color: 'blue',
@@ -360,21 +484,20 @@ const styles = StyleSheet.create({
     top: -1,
     width: 0,
     height: 0,
-    borderLeftWidth: 30, // Adjust width for triangle size
-    borderRightWidth: 30, // Adjust width for triangle size
-    borderBottomWidth: 15, // Adjust height for triangle size
+    borderLeftWidth: 30,
+    borderRightWidth: 30,
+    borderBottomWidth: 15,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderBottomColor: 'white', // Triangle color
-    borderRadius: 10, // Rounds the edges
-    transform: [{ rotate: '180deg' }], // Points the triangle downward
+    borderBottomColor: 'white',
+    borderRadius: 10,
+    transform: [{ rotate: '180deg' }],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -30 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 5,
   },
-  
   modalMessage: {
     fontSize: 16,
     color: 'black',
@@ -408,12 +531,39 @@ const styles = StyleSheet.create({
     left: '50%',
     width: 16,
     height: 16,
-    marginLeft: -8, // half of width
-    marginTop: -8,  // half of height
+    marginLeft: -8,
+    marginTop: -8,
     borderRadius: 8,
-    backgroundColor: 'transparent', // or any color you like
+    backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: 'black',
     zIndex: 10,
+  },
+  zoomContainer: {
+    position: 'absolute',
+    width: 50, 
+    height: 100,
+    top: 200,
+    right: 20,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  zoomButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  zoomButtonText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
   },
 });

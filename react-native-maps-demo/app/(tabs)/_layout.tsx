@@ -36,13 +36,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <FontAwesome name="globe" size={24} color={color} />,
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="post"
         options={{
           title: 'Post',
           tabBarIcon: ({ color }) => <Entypo name="pin" size={21} color={color} />,
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="interact"
         options={{

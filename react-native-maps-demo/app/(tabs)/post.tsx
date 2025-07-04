@@ -25,7 +25,7 @@ export default function SearchPage() {
       <ThemedView style={styles.container}>
         <TextInput
           style={styles.input}
-          placeholder="Location Name"
+          placeholder="Location Title"
           value={location}
           onChangeText={setLocation}
         />
