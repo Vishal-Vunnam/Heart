@@ -4,7 +4,7 @@ import { signIn, signUp } from '../firebase/auth';
 import { router } from 'expo-router';
 import { updateProfile } from 'firebase/auth';
 import { Keyboard } from 'react-native'
-
+import { addUser } from '../firebase/firestore';
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
@@ -32,6 +32,11 @@ export default function SignInScreen() {
         // and https://github.com/firebase/firebase-js-sdk/issues/7587
         if (user && username) {
           await updateProfile(user, { displayName: username });
+          await addUser({
+            displayName: username, 
+            email: email, 
+            uid: user.uid, 
+          })
         }
         Alert.alert('Success', 'Account created! You can now sign in.');
         setIsSignUp(false);

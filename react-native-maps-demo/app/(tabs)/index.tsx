@@ -255,7 +255,7 @@ export default function HomeScreen() {
                 title={post.title || 'Post'}
                 description={post.author + '\n' + post.description || 'No description'}
                 onPress={() => {
-                  console.log('Marker pressed:', post);
+                  setCurrentLocation(post.location);
                   // You can add logic here to show post details
                 }}
               >
