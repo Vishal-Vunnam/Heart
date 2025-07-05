@@ -388,7 +388,10 @@ export default function HomeScreen() {
             >
               <Animated.View style={[styles.discoverModalContent, { transform: [{ translateY: slideAnim }] }]}>
                 <View style={styles.dragHandle} />
-                <DiscoverModal />
+                <DiscoverModal onPostSelect={(post) => {
+                  openMarkerCallout(post.location);
+                  setIsDiscoverModalVisible(false);
+                }} />
               </Animated.View>
             </PanGestureHandler>
           </View>
