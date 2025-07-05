@@ -1,18 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { SafeAreaView, View, TextInput, StyleSheet, TouchableOpacity, Text, Pressable, Linking, Modal } from 'react-native';
+import { SafeAreaView, View, TextInput, StyleSheet, TouchableOpacity, Text, Pressable, Linking, Modal, Animated } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { ThemedView } from '@/components/ThemedView';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
 import Entypo from '@expo/vector-icons/Entypo';
 import { initializeApp } from 'firebase/app';
-import MapView, { Callout, Marker } from 'react-native-maps';
+import MapView, { Callout, MapMarker, Marker } from 'react-native-maps';
 import { addPost, getAllPosts } from '@/firebase/firestore';
 import { router, useRouter } from 'expo-router';
 import PostModal from '@/components/PostModal';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { app } from '@/firebase/firebaseConfig';
-
+import DiscoverModal from '@/components/DiscoverModal';
+import { GET_POST_TEMPLATE, Location, PostData } from '@/types';
 // Constants
 const FIREBASE_CONFIG = {
   apiKey: 'api-key',
@@ -62,20 +64,6 @@ const POST_INFO_TEMPLATE = {
   tags: ["Tag 1", "Tag 2", "Tag 3"],
 };
 // Posts loaded: [{"author": "Test", "authorId": "test", "comments": 0, "date": "2025-07-04T00:45:48.862Z", "description": "This is a test", "likes": 0, "location": {"latitude": 37.4219999, "latitudeDelta": 0.01, "longitude": -122.0840575, "longitudeDelta": 0.01}, "postId": "post_1751589948869_qz19bdexu"}]
-type GET_POST_TEMPLATE = {
-  author: string;
-  authorId: string;
-  postId: string;
-  location: {
-    latitude: number;
-    latitudeDelta: number;
-    longitude: number;
-    longitudeDelta: number;
-  };
-  description: string;
-  date: string;
-  title: string;
-};
 
 // const POST_MARKER_TEMPLATE = {
 //   location: POST_LOCATION_TEMPLATE,
@@ -96,10 +84,15 @@ export default function HomeScreen() {
   } | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isPostModalVisible, setIsPostModalVisible] = useState(false);
+  const [isDiscoverModalVisible, setIsDiscoverModalVisible] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
   const [posts, setPosts] = useState<GET_POST_TEMPLATE[]>([]);
+  const markerRef = useRef<MapMarker>(null);
   
-  // Refs
+  // Discover Modal Animation
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  
+  // Refs 
   const textInputRef = useRef<TextInput>(null);
   const mapRef = useRef<MapView>(null);
 
@@ -121,6 +114,11 @@ export default function HomeScreen() {
     return unsubscribe;
   }, []);
 
+  const openMarkerCallout = (markerLocation : Location) => {
+
+    mapRef.current?.animateToRegion(markerLocation, 1000);
+    
+  }
   // Data loading functions
   const loadPosts = async () => {
     try {
@@ -147,6 +145,52 @@ export default function HomeScreen() {
     router.push('/signin');
   };
 
+  const displayAccountInfo = () => {
+
+  };
+
+  // Discover Modal functions
+  const openDiscoverModal = () => {
+    setIsDiscoverModalVisible(true);
+    Animated.timing(slideAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeDiscoverModal = () => {
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsDiscoverModalVisible(false);
+    });
+  };
+
+  const onGestureEvent = Animated.event(
+    [{ nativeEvent: { translationY: slideAnim } }],
+    { useNativeDriver: true }
+  );
+
+  const onHandlerStateChange = (event: any) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      const { translationY } = event.nativeEvent;
+      
+      if (translationY > 100) {
+        // Swipe down - close modal
+        closeDiscoverModal();
+      } else {
+        // Swipe up or small movement - snap back
+        Animated.spring(slideAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+        }).start();
+      }
+    }
+  };
+
   const handlePost = () => {
     if (!user) {
       // router.push('/signin');
@@ -165,15 +209,7 @@ export default function HomeScreen() {
     setIsPostModalVisible(true);
   };
 
-  const handlePostSubmit = (postData: {
-    title: string;
-    location: any;
-    authorId: string;
-    date: string;
-    description: string;
-    authorName: string;
-    visibility: string;
-  }) => {
+  const handlePostSubmit = (postData: PostData) => {
     const newPostInfo = {
       ...POST_INFO_TEMPLATE,
       title: postData.title,
@@ -222,13 +258,13 @@ export default function HomeScreen() {
             <Text style={styles.navButtonText}>Polis</Text>
           </TouchableOpacity>
           {user != null && (
-            <TouchableOpacity style={styles.navButton}>
-              <Text style={styles.navButtonText}>{user.email}</Text>
+            <TouchableOpacity style={styles.navButton} onPress={displayAccountInfo}>
+              <Text style={styles.navButtonText}>{user.displayName || user.email}</Text>
               <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
             </TouchableOpacity>
           )}
           {user == null && (
-            <TouchableOpacity style={styles.navButton} onPress={handleSignIn}>
+            <TouchableOpacity style={styles.navButton}   onPress={handleSignIn}>
               <Text style={styles.navButtonText}>Sign In</Text>
               <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
             </TouchableOpacity>
@@ -248,6 +284,7 @@ export default function HomeScreen() {
                 pinColor="black"
                 calloutAnchor={{ x: 0.5, y: 0.5 }}
                 key={index}
+                ref={markerRef}
                 coordinate={{
                   latitude: post.location.latitude,
                   longitude: post.location.longitude,
@@ -255,8 +292,7 @@ export default function HomeScreen() {
                 title={post.title || 'Post'}
                 description={post.author + '\n' + post.description || 'No description'}
                 onPress={() => {
-                  setCurrentLocation(post.location);
-                  // You can add logic here to show post details
+                    openMarkerCallout(post.location);
                 }}
               >
                 <Callout>
@@ -302,10 +338,13 @@ export default function HomeScreen() {
           </View>
         </ThemedView>
 
-        {/* Post Button */}
+        {/* Action Buttons */}
         <View style={{ position: 'absolute', top: 200, right: 20, zIndex: 100 }}>
           <TouchableOpacity style={styles.postButton} onPress={handlePost}>
             <Text style={styles.postButtonText}>Post</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.discoverButton} onPress={openDiscoverModal}>
+            <Text style={styles.discoverButtonText}>Discover</Text>
           </TouchableOpacity>
         </View>
 
@@ -339,6 +378,21 @@ export default function HomeScreen() {
           currentLocation={currentLocation}
           onPost={handlePostSubmit}
         />
+
+        {/* Discover Modal */}
+        {isDiscoverModalVisible && (
+          <View style={styles.discoverModalOverlay}>
+            <PanGestureHandler
+              onGestureEvent={onGestureEvent}
+              onHandlerStateChange={onHandlerStateChange}
+            >
+              <Animated.View style={[styles.discoverModalContent, { transform: [{ translateY: slideAnim }] }]}>
+                <View style={styles.dragHandle} />
+                <DiscoverModal />
+              </Animated.View>
+            </PanGestureHandler>
+          </View>
+        )}
       </ThemedView>
     </SafeAreaView>
   );
@@ -565,5 +619,77 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+  },
+  discoverButton: {
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 8,
+    marginTop: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  discoverButtonText: {
+    color: 'black',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  discoverModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  discoverModalContent: {
+    backgroundColor: 'rgba(32, 32, 32, 0.8)', // Gray with low opacity
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: '70%',
+    paddingTop: 10,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#ccc',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  discoverContent: {
+    flex: 1,
+    // paddingHorizontal: 20,
+  },
+  discoverTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  discoverSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 30,
+  },
+  discoverItem: {
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    padding: 15,
+    // borderRadius: 10,
+    // marginBottom: 15,
+  },
+  discoverItemTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  discoverItemText: {
+    fontSize: 14,
+    color: '#666',
   },
 });

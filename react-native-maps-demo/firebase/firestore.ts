@@ -71,9 +71,9 @@ export async function addUser(userInfo: UserInfo){
 }
 
 export async function getAllUsers() {
+    console.log("getting users")
     const usersRef = collection(db, "users")
     const usersSnap = await getDocs(usersRef);
-
     return usersSnap.docs.map((doc) => {
         const data = doc.data();
         return {

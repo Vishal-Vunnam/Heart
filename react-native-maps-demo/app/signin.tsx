@@ -22,22 +22,14 @@ export default function SignInScreen() {
     try {
       if (isSignUp) {
         // until i can figure out textinputs to work
-        setUsername("Vishal")
-        setEmail("vunnamvishal@gmail.com")
-        setPassword("test123")
+        // setUsername("Vishal")
+        // setEmail("vunnamvishal@gmail.com")
+        // setPassword("test123")
         console.log("Signing up with email: " + email + " and password: " + password);
-        const user = await signUp(email, password);
+        const user = await signUp(email, password, username);
         // In React Native, updateProfile must be called on the currentUser from getAuth()
         // See: https://firebase.google.com/docs/reference/js/auth.md#updateprofile
         // and https://github.com/firebase/firebase-js-sdk/issues/7587
-        if (user && username) {
-          await updateProfile(user, { displayName: username });
-          await addUser({
-            displayName: username, 
-            email: email, 
-            uid: user.uid, 
-          })
-        }
         Alert.alert('Success', 'Account created! You can now sign in.');
         setIsSignUp(false);
         router.back();
