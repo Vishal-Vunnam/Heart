@@ -1,50 +1,211 @@
-# Welcome to your Expo app 👋
+# Heart - React Native Maps Demo
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native application that allows users to create location-based posts with images, view them on an interactive map, and discover content from other users.
 
-## Get started
+## 🚀 Features
 
-1. Install dependencies
+- **Interactive Map**: View posts on a map with custom markers
+- **Location-Based Posts**: Create posts with titles, descriptions, and images at specific locations
+- **Image Upload**: Upload images to Azure Blob Storage with automatic URL generation
+- **User Authentication**: Firebase authentication integration
+- **Post Discovery**: Browse and discover posts from other users
+- **Real-time Updates**: Posts are stored in Firebase Firestore for real-time synchronization
 
+## 🛠️ Tech Stack
+
+- **Frontend**: React Native with Expo
+- **Maps**: react-native-maps
+- **Authentication**: Firebase Auth
+- **Database**: Firebase Firestore
+- **Image Storage**: Azure Blob Storage
+- **Navigation**: Expo Router
+- **UI Components**: Custom themed components
+
+## 📋 Prerequisites
+
+- Node.js (v16 or higher)
+- npm or yarn
+- Expo CLI
+- iOS Simulator (for iOS development)
+- Android Studio (for Android development)
+- Azure Storage Account
+- Firebase Project
+
+## 🔧 Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd react-native-maps-demo
+   ```
+
+2. **Install dependencies**
    ```bash
    npm install
+   # or
+   yarn install
    ```
 
-2. Start the app
+3. **Configure Azure Blob Storage**
+   - Copy `azure-config.example.ts` to `azure-config.ts`
+   - Fill in your Azure Storage Account details:
+     ```typescript
+     export const AZURE_CONFIG = {
+       STORAGE_ACCOUNT: 'your-storage-account',
+       CONTAINER_NAME: 'your-container-name',
+       SAS_TOKEN: 'your-sas-token',
+     };
+     ```
 
-   ```bash
-    npx expo start
-   ```
+4. **Configure Firebase**
+   - Copy `firebase/firebaseConfig.example.ts` to `firebase/firebaseConfig.ts`
+   - Add your Firebase configuration:
+     ```typescript
+     export const firebaseConfig = {
+       apiKey: "your-api-key",
+       authDomain: "your-project.firebaseapp.com",
+       projectId: "your-project-id",
+       storageBucket: "your-project.appspot.com",
+       messagingSenderId: "your-sender-id",
+       appId: "your-app-id"
+     };
+     ```
 
-In the output, you'll find options to open the app in a
+5. **Set up Azure Storage**
+   - Create a Storage Account in Azure Portal
+   - Create a container for storing images
+   - Generate a SAS token with Read/Write permissions
+   - Configure CORS settings to allow your app domain
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+6. **Set up Firebase**
+   - Create a Firebase project
+   - Enable Authentication and Firestore
+   - Add your app to the Firebase project
+   - Download and add configuration files
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 🚀 Running the App
 
-## Get a fresh project
-
-When you're ready, run:
-
+### Development
 ```bash
-npm run reset-project
+# Start the development server
+npx expo start
+
+# Run on iOS simulator
+npx expo run:ios
+
+# Run on Android emulator
+npx expo run:android
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Production Build
+```bash
+# Build for iOS
+npx expo build:ios
 
-## Learn more
+# Build for Android
+npx expo build:android
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## 📱 Usage
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Creating Posts
+1. Navigate to the map view
+2. Tap the "+" button to create a new post
+3. Fill in the post details:
+   - Title
+   - Description
+   - Add images (optional)
+   - Set visibility (Public/Private)
+4. Tap "Post Location" to save
 
-## Join the community
+### Viewing Posts
+1. Posts appear as markers on the map
+2. Tap a marker to view post details
+3. Images in posts are clickable for full-screen view
 
-Join our community of developers creating universal apps.
+### Discovering Content
+1. Tap the glasses icon to open the discover modal
+2. Browse posts from other users
+3. Tap on posts to view them on the map
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 🏗️ Project Structure
+
+```
+react-native-maps-demo/
+├── app/                    # Expo Router pages
+│   ├── (tabs)/            # Tab navigation
+│   │   ├── index.tsx      # Main map view
+│   │   ├── post.tsx       # Post creation
+│   │   └── interact.tsx   # Interaction features
+│   └── signin.tsx         # Authentication
+├── components/            # Reusable components
+│   ├── PostModal.tsx      # Post creation modal
+│   ├── DiscoverModal.tsx  # Content discovery modal
+│   └── ThemedView.tsx     # Themed container
+├── firebase/              # Firebase configuration
+│   ├── firebaseConfig.ts  # Firebase setup
+│   ├── firestore.ts       # Database operations
+│   └── blob-storage.ts    # Azure blob operations
+├── types/                 # TypeScript type definitions
+├── constants/             # App constants
+└── assets/               # Images and static files
+```
+
+## 🔐 Security
+
+- Sensitive configuration files are gitignored
+- API keys and secrets are stored in environment variables
+- Azure SAS tokens have limited scope and expiration
+- Firebase security rules should be configured for production
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Images not loading**
+   - Check Azure SAS token permissions
+   - Verify CORS settings in Azure Storage
+   - Ensure image URLs are accessible
+
+2. **Firebase connection issues**
+   - Verify Firebase configuration
+   - Check network connectivity
+   - Ensure Firebase project is properly set up
+
+3. **Map not displaying**
+   - Check location permissions
+   - Verify API keys for map services
+   - Ensure device has internet connection
+
+### Debug Mode
+Enable debug logging by setting `__DEV__` to true in your environment.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Expo team for the excellent development platform
+- React Native Maps for the mapping functionality
+- Firebase for backend services
+- Azure for cloud storage solutions
+
+## 📞 Support
+
+For support and questions:
+- Create an issue in the repository
+- Check the troubleshooting section
+- Review the documentation
+
+---
+
+**Note**: This is a demo project. For production use, ensure proper security measures, error handling, and performance optimizations are implemented.
