@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { SafeAreaView, View, TextInput, StyleSheet, TouchableOpacity, Text, Pressable, Linking, Modal, Animated } from 'react-native';
+import { SafeAreaView, View, TextInput, StyleSheet, TouchableOpacity, Text, Pressable, Linking, Modal, Animated, Image, ActivityIndicator, Alert } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { ThemedView } from '@/components/ThemedView';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
@@ -8,13 +8,14 @@ import Feather from '@expo/vector-icons/Feather';
 import Entypo from '@expo/vector-icons/Entypo';
 import { initializeApp } from 'firebase/app';
 import MapView, { Callout, MapMarker, Marker } from 'react-native-maps';
-import { addPost, getAllPosts } from '@/firebase/firestore';
+import { addPost, getAllPosts, getPostbyAuthorID, getImagesbyUrl } from '@/firebase/firestore';
 import { router, useRouter } from 'expo-router';
 import PostModal from '@/components/PostModal';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { app } from '@/firebase/firebaseConfig';
 import DiscoverModal from '@/components/DiscoverModal';
-import { GET_POST_TEMPLATE, Location, PostData } from '@/types';
+import { GET_POST_TEMPLATE, Location, PostData, PolisType, PostRequestInfo, UserInfo } from '@/types';
+import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/firebase/blob-storage';
 // Constants
 const FIREBASE_CONFIG = {
   apiKey: 'api-key',
@@ -42,27 +43,6 @@ const INITIAL_MAP_REGION = {
   longitudeDelta: 0.01,
 };
 
-const POST_LOCATION_TEMPLATE = {
-  latitude: 0,
-  latitudeDelta: 0,
-  longitude: 0,
-  longitudeDelta: 0,
-};
-
-const POST_INFO_TEMPLATE = {
-  title: "Post Title",
-  postId: "Post ID",
-  location: POST_LOCATION_TEMPLATE,
-  authorId: "Post Author ID",
-  images: ["Image 1", "Image 2", "Image 3"],
-  date: "Post Date",
-  description: "Post Description",
-  author: "Post Author",
-  likes: 0,
-  comments: 0,
-  views: 0,
-  tags: ["Tag 1", "Tag 2", "Tag 3"],
-};
 // Posts loaded: [{"author": "Test", "authorId": "test", "comments": 0, "date": "2025-07-04T00:45:48.862Z", "description": "This is a test", "likes": 0, "location": {"latitude": 37.4219999, "latitudeDelta": 0.01, "longitude": -122.0840575, "longitudeDelta": 0.01}, "postId": "post_1751589948869_qz19bdexu"}]
 
 // const POST_MARKER_TEMPLATE = {
@@ -75,6 +55,82 @@ const POST_INFO_TEMPLATE = {
 //   likes: 0,
 //   comments: 0,
 
+function debugLog(...args: any[]) {
+  if (__DEV__) {
+    console.log('[DEBUG]', ...args);
+  }
+}
+
+function ImageLoader({ imageUrl }: { imageUrl: string }) {
+  const [localUri, setLocalUri] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    getImageFromBlobUrl(imageUrl)
+      .then(blob => {
+        const objectUrl = URL.createObjectURL(blob);
+        if (isMounted) {
+          setLocalUri(objectUrl);
+          setLoading(false);
+        }
+        // Clean up the object URL when the component unmounts
+        return () => URL.revokeObjectURL(objectUrl);
+      })
+      .catch(() => setLoading(false));
+    return () => { isMounted = false; };
+  }, [imageUrl]);
+
+  if (loading) {
+    return <ActivityIndicator size="small" />;
+  }
+
+  if (!localUri) {
+    return <View style={{ width: 100, height: 100, backgroundColor: '#eee' }} />;
+  }
+
+  return (
+    <Image
+      source={{ uri: localUri }}
+      style={{ width: 100, height: 100, marginVertical: 4, borderRadius: 8 }}
+      resizeMode="cover"
+    />
+  );
+}
+
+function renderPostImages(images?: string[]) {
+  if (!images || images.length === 0) return null;
+  return images.map((imageUrl, idx) => (
+    <TouchableOpacity
+      key={idx}
+      onPress={() => {
+        // Show image full screen
+        Alert.alert(
+          'Image',
+          'View full screen?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'View', 
+              onPress: () => {
+                // You can implement a modal or navigation to show full screen image
+                // For now, we'll just show an alert with the image URL
+                console.log('Full screen image URL:', getImageUrlWithSAS(imageUrl));
+              }
+            }
+          ]
+        );
+      }}
+    >
+      <Image
+        source={{ uri: getImageUrlWithSAS(imageUrl) }}
+        style={{ width: 100, height: 100, marginVertical: 4, borderRadius: 8 }}
+        resizeMode="cover"
+      />
+    </TouchableOpacity>
+  ));
+}
 export default function HomeScreen() {
   // State
   const [user, setUser] = useState<{
@@ -87,6 +143,7 @@ export default function HomeScreen() {
   const [isDiscoverModalVisible, setIsDiscoverModalVisible] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
   const [posts, setPosts] = useState<GET_POST_TEMPLATE[]>([]);
+  const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const markerRef = useRef<MapMarker>(null);
   
   // Discover Modal Animation
@@ -99,7 +156,7 @@ export default function HomeScreen() {
   // Effects
   useEffect(() => {
     const auth = getAuth(app);
-    loadPosts();
+    // loadPosts();
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         setUser({
@@ -114,21 +171,37 @@ export default function HomeScreen() {
     return unsubscribe;
   }, []);
 
+
+  useEffect(() => {
+    if (selectedPolis) {
+      if (selectedPolis.isUser) {
+        getPostbyAuthorID(selectedPolis.userInfo.uid).then((userPosts) => {
+          setPosts(userPosts);
+
+        });
+      } else {
+        // Tags coming soon 
+      }
+    }
+  }, [selectedPolis]);
+
   const openMarkerCallout = (markerLocation : Location) => {
 
     mapRef.current?.animateToRegion(markerLocation, 1000);
     
   }
   // Data loading functions
-  const loadPosts = async () => {
-    try {
-      const posts = await getAllPosts();
-      console.log('Posts loaded:', posts);
-      setPosts(posts);
-    } catch (error) {
-      console.error('Error loading posts:', error);
-    }
-  };
+  // const loadPosts = async () => {
+  //   try {
+  //     const posts = await getAllPosts();
+  //     console.log('Posts loaded:', posts);
+  //     setPosts(posts);
+  //   } catch (error) {
+  //     console.error('Error loading posts:', error);
+  //   }
+  // };
+
+
 
   // Event handlers
   const toggleModal = () => {
@@ -208,22 +281,23 @@ export default function HomeScreen() {
     }
     setIsPostModalVisible(true);
   };
-
-  const handlePostSubmit = (postData: PostData) => {
+  const handlePostSubmit = (postData: PostRequestInfo) => {
+    if (!user) {
+      console.log("No user signed in, cannot submit post.");
+      return;
+    }
     const newPostInfo = {
-      ...POST_INFO_TEMPLATE,
       title: postData.title,
       description: postData.description,
       location: postData.location,
       authorId: postData.authorId,
-      author: postData.authorName,
-      date: postData.date,
-      visibility: postData.visibility,
+      author: postData.author,
+      images: postData.images,
+      // Add any other required fields here
     };
     console.log("Attempting to add post with data:", newPostInfo);
     console.log("Current user:", user);
     addPost(newPostInfo);
-    loadPosts();
     console.log("Post added!", postData);
   };
 
@@ -292,16 +366,16 @@ export default function HomeScreen() {
                 title={post.title || 'Post'}
                 description={post.author + '\n' + post.description || 'No description'}
                 onPress={() => {
-                    openMarkerCallout(post.location);
+                  openMarkerCallout(post.location);
                 }}
               >
                 <Callout>
                   <View>
                     <Text style={{ fontSize: 16, fontWeight: 'bold' }}>{post.title + ' - ' + post.author}</Text>
-
                     <Text style={{ fontSize: 14 }}>{post.description}</Text>
+                    {renderPostImages(post.images)}
                   </View>
-                </Callout>  
+                </Callout>
               </Marker>
             ))}
           </MapView>
@@ -309,7 +383,7 @@ export default function HomeScreen() {
           {/* Center dot overlay */}
           <View pointerEvents="none" style={styles.centerDot} />
 
-          {/* Zoom Controls */}
+          {/* Zoom Controls
           <View style={styles.zoomContainer}>
             <TouchableOpacity style={styles.zoomButton} onPress={zoomIn}>
               <Text style={styles.zoomButtonText}>+</Text>
@@ -317,34 +391,20 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.zoomButton} onPress={zoomOut}>
               <Text style={styles.zoomButtonText}>-</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           <TouchableOpacity onPress={toggleModal} style={styles.pinButton}>
             <Entypo name="location-pin" size={24} color="black" />
           </TouchableOpacity>
         </ThemedView>
 
-        {/* Search Box */}
-        <ThemedView style={styles.searchBoxContainer}>
-          <View style={styles.searchBoxWrapper}>
-            <EvilIcons name="search" size={24} color="#888" style={styles.icon} />
-            <TextInput
-              ref={textInputRef}
-              style={styles.searchBox}
-              placeholder="Search, #tag, location"
-              placeholderTextColor="#888"
-              onFocus={() => setIsModalVisible(false)}
-            />
-          </View>
-        </ThemedView>
-
         {/* Action Buttons */}
-        <View style={{ position: 'absolute', top: 200, right: 20, zIndex: 100 }}>
-          <TouchableOpacity style={styles.postButton} onPress={handlePost}>
-            <Text style={styles.postButtonText}>Post</Text>
+        <View style={styles.actionButtonContainer}>
+          <TouchableOpacity style={styles.iconButton} onPress={handlePost}>
+            <Image source={require('../../assets/images/plus.png')} style={styles.iconImage} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.discoverButton} onPress={openDiscoverModal}>
-            <Text style={styles.discoverButtonText}>Discover</Text>
+          <TouchableOpacity style={styles.iconButton} onPress={openDiscoverModal}>
+            <Image source={require('../../assets/images/glasses.png')} style={styles.iconImage} />
           </TouchableOpacity>
         </View>
 
@@ -388,10 +448,18 @@ export default function HomeScreen() {
             >
               <Animated.View style={[styles.discoverModalContent, { transform: [{ translateY: slideAnim }] }]}>
                 <View style={styles.dragHandle} />
-                <DiscoverModal onPostSelect={(post) => {
-                  openMarkerCallout(post.location);
-                  setIsDiscoverModalVisible(false);
-                }} />
+                <DiscoverModal
+                  onPostSelect={(post) => {
+                    openMarkerCallout(post.location);
+                    setIsDiscoverModalVisible(false);
+                  }}
+                  onPolisSelect={(polis:PolisType) => {
+                    console.log("pospospos");
+                    setSelectedPolis(polis);
+                    setIsDiscoverModalVisible(false);
+                  }
+                  }
+                />
               </Animated.View>
             </PanGestureHandler>
           </View>
@@ -488,6 +556,11 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  iconImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   pinButton: {
     position: 'absolute',
@@ -645,11 +718,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(32,32,32,0.85)',
     justifyContent: 'flex-end',
   },
   discoverModalContent: {
-    backgroundColor: 'rgba(32, 32, 32, 0.8)', // Gray with low opacity
+    backgroundColor: 'rgba(32,32,32,0.8)', // Gray with low opacity
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     height: '70%',
@@ -695,4 +768,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  actionButtonContainer: {
+    position: 'absolute',
+    top: 100,
+    right: 20,
+    zIndex: 100,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 1, // or use marginBottom on iconButton if gap is not supported
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12, // for spacing between buttons
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  // iconImage: {
+  //   width: 32,
+  //   height: 32,
+  //   resizeMode: 'contain',
+  // },
 });

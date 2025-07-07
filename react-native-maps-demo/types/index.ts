@@ -13,6 +13,7 @@ export type GET_POST_TEMPLATE = {
   description: string;
   date: string;
   title: string;
+  images?: string[];
 };
 
 export type UserInfo = {
@@ -36,4 +37,41 @@ export type PostData = {
   description: string;
   authorName: string;
   visibility: string;
+  images?: string[];
 }; 
+
+
+export type PolisType = 
+  | { isUser: true; userInfo: UserInfo }
+  | { isUser: false; tag: string };
+  
+export type PostRequestInfo = {
+    title: string;
+    location: {
+        latitude: number;
+        latitudeDelta: number;
+        longitude: number;
+        longitudeDelta: number;
+    };
+    authorId: string;
+    author:string; 
+    images?: string[];
+    description: string;
+    tags?: string[];
+}
+export type PostDBInfo = {
+    title: string;
+    postId: string;
+    location: {
+        latitude: number;
+        latitudeDelta: number;
+        longitude: number;
+        longitudeDelta: number;
+    };
+    authorId: string;
+    images_url_blob?: string[];
+    date: string;
+    description: string;
+    author: string;
+    tags?: string[];
+}
