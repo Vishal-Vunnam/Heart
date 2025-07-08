@@ -144,7 +144,7 @@ export default function HomeScreen() {
   const [currentLocation, setCurrentLocation] = useState<any>(null);
   const [posts, setPosts] = useState<GET_POST_TEMPLATE[]>([]);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
-  const markerRef = useRef<MapMarker>(null);
+  const markerRefs = useRef<{ [key: string]: MapMarker | null }>({});
   
   // Discover Modal Animation
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -164,7 +164,16 @@ export default function HomeScreen() {
           email: firebaseUser.email ?? "",
           uid: firebaseUser.uid,
         });
-      } else {
+        setSelectedPolis({
+          isUser: true,
+          userInfo: {
+            displayName: firebaseUser.displayName ?? "",
+            email: firebaseUser.email ?? "",
+            uid: firebaseUser.uid,
+          }
+        });
+      }
+      else{
         setUser(null);
       }
     });
@@ -185,11 +194,23 @@ export default function HomeScreen() {
     }
   }, [selectedPolis]);
 
-  const openMarkerCallout = (markerLocation : Location) => {
+  const handleMarkerPress = (post: GET_POST_TEMPLATE) => {
+    // Animate to marker
+    mapRef.current?.animateToRegion(
+      {
+        latitude: post.location.latitude,
+        longitude: post.location.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      },
+      500 // duration in ms
+    );
 
-    mapRef.current?.animateToRegion(markerLocation, 1000);
-    
-  }
+    setTimeout(() => {
+      markerRefs.current[post.postId]?.showCallout();
+    }, 600); // slightly longer than animation duration
+  };
+
   // Data loading functions
   // const loadPosts = async () => {
   //   try {
@@ -355,24 +376,26 @@ export default function HomeScreen() {
           >
             {posts.map((post, index) => (
               <Marker
+                ref={ref => { markerRefs.current[post.postId] = ref; }}
                 pinColor="black"
                 calloutAnchor={{ x: 0.5, y: 0.5 }}
                 key={index}
-                ref={markerRef}
                 coordinate={{
                   latitude: post.location.latitude,
                   longitude: post.location.longitude,
                 }}
-                title={post.title || 'Post'}
-                description={post.author + '\n' + post.description || 'No description'}
-                onPress={() => {
-                  openMarkerCallout(post.location);
-                }}
+                // title={post.title || 'Post'}
+                // description={post.author + '\n' + post.description || 'No description'}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleMarkerPress(post);
+                }
+                }
               >
-                <Callout>
-                  <View>
-                    <Text style={{ fontSize: 16, fontWeight: 'bold' }}>{post.title + ' - ' + post.author}</Text>
-                    <Text style={{ fontSize: 14 }}>{post.description}</Text>
+                <Callout tooltip>
+                  <View style={styles.calloutContainer}>
+                    <Text style={styles.calloutTitle}>{post.title + ' - ' + post.author}</Text>
+                    <Text style={styles.calloutDescription}>{post.description}</Text>
                     {renderPostImages(post.images)}
                   </View>
                 </Callout>
@@ -393,9 +416,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View> */}
 
-          <TouchableOpacity onPress={toggleModal} style={styles.pinButton}>
-            <Entypo name="location-pin" size={24} color="black" />
-          </TouchableOpacity>
         </ThemedView>
 
         {/* Action Buttons */}
@@ -450,7 +470,7 @@ export default function HomeScreen() {
                 <View style={styles.dragHandle} />
                 <DiscoverModal
                   onPostSelect={(post) => {
-                    openMarkerCallout(post.location);
+                    handleMarkerPress(post);
                     setIsDiscoverModalVisible(false);
                   }}
                   onPolisSelect={(polis:PolisType) => {
@@ -792,9 +812,28 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
-  // iconImage: {
-  //   width: 32,
-  //   height: 32,
-  //   resizeMode: 'contain',
-  // },
+  calloutContainer: {
+    backgroundColor: 'rgba(32,32,32,0.95)',
+    borderRadius: 12,
+    padding: 14,
+    minWidth: 340,
+    maxWidth: 340,
+    alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  calloutTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  calloutDescription: {
+    color: '#bbb',
+    fontSize: 14,
+    marginBottom: 8,
+  },
 });
