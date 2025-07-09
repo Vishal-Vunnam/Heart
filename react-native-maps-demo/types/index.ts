@@ -33,6 +33,7 @@ export type PostData = {
   title: string;
   location: any;
   authorId: string;
+  tag?: string;
   date: string;
   description: string;
   authorName: string;
@@ -53,6 +54,7 @@ export type PostRequestInfo = {
         longitude: number;
         longitudeDelta: number;
     };
+    tag?: string;
     authorId: string;
     author:string; 
     images?: string[];

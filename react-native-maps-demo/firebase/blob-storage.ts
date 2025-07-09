@@ -1,7 +1,7 @@
-import { AZURE_CONFIG } from "@/azure-config";
+import { PHOTOS_AZURE_CONFIG } from "@/azure-config";
 
 export async function uploadToAzureBlob(fileUri: string, blobName: string): Promise<string> {
-  const { STORAGE_ACCOUNT, CONTAINER_NAME, SAS_TOKEN } = AZURE_CONFIG;
+  const { STORAGE_ACCOUNT, CONTAINER_NAME, SAS_TOKEN } = PHOTOS_AZURE_CONFIG;
   const blobUrl = `https://${STORAGE_ACCOUNT}.blob.core.windows.net/${CONTAINER_NAME}/${blobName}?${SAS_TOKEN}`;
   console.log('[uploadToAzureBlob] blobUrl:', blobUrl);
   try {
@@ -43,7 +43,7 @@ export async function uploadToAzureBlob(fileUri: string, blobName: string): Prom
 }
 
 export function getImageUrlWithSAS(blobUrl: string): string {
-  const { SAS_TOKEN } = AZURE_CONFIG;
+  const { SAS_TOKEN } = PHOTOS_AZURE_CONFIG;
   return blobUrl.includes('?') ? blobUrl : `${blobUrl}${SAS_TOKEN.startsWith('?') ? SAS_TOKEN : '?' + SAS_TOKEN}`;
 }
 

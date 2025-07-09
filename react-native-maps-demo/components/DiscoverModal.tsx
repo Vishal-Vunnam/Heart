@@ -1,12 +1,31 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+// =====================
+// Imports
+// =====================
 import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+} from 'react-native';
+import EvilIcons from '@expo/vector-icons/EvilIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+// Internal imports
 import { getPostbyAuthorID, getAllUsers } from '@/firebase/firestore';
+import { getImageUrlWithSAS } from '@/firebase/blob-storage';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { Button } from 'react-native';
-import EvilIcons from '@expo/vector-icons/EvilIcons';
-import { UserInfo, PolisType } from '@/types';
+import { PolisType } from '@/types';
 
+// =====================
+// Constants & Types
+// =====================
+const SEARCH_HISTORY_KEY = 'search_history';
 
 type User = {
   uid: string;
@@ -15,65 +34,84 @@ type User = {
   [key: string]: any;
 };
 
+// =====================
+// AsyncStorage Utilities
+// =====================
+export async function saveSearch(user: User) {
+  let history = await getSearchHistory();
+  history = [user, ...history.filter((u) => u.uid !== user.uid)];
+  history = history.slice(0, 10);
+  await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+}
+
+
+export async function getSearchHistory(): Promise<User[]> {
+  const raw = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+export async function clearSearchHistory() {
+  await AsyncStorage.removeItem(SEARCH_HISTORY_KEY);
+}
+
+// =====================
+// DiscoverModal Component
+// =====================
 const DiscoverModal = ({
   onPostSelect,
   onPolisSelect,
+  setPolis
 }: {
   onPostSelect: (post: any) => void;
   onPolisSelect?: (polis: any) => void;
+  setPolis: PolisType | null
 }) => {
-  const [open, setOpen] = useState(false);
+  // ----- State & Refs -----
   const [posts, setPosts] = useState<any[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedPolis, setSelectedPolis] = useState<PolisType | null> (null);
+  const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const textInputRef = useRef<TextInput>(null);
   const [searchText, setSearchText] = useState('');
-  const [isTyping, setIsTyping] = useState<boolean>(false); 
+  const [isTyping, setIsTyping] = useState<boolean>(false);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
 
+  // ----- Effects -----
   useEffect(() => {
-    // Fetch all users on mount
+    // Fetch all users on mount ( THIS IS TEMPORARY #WILLNOTSCALE)
     getAllUsers().then(setUsers);
-  }, []); 
+    setSelectedPolis(setPolis);
+  }, []);
 
   useEffect(() => {
-    if (selectedUser && selectedUser.uid) {
+    if (selectedPolis && selectedPolis.isUser) {
       setFilteredUsers([]);
-      getPostbyAuthorID(selectedUser.uid).then((userPosts) => {
+      getPostbyAuthorID(selectedPolis.userInfo.uid).then((userPosts) => {
         setPosts(userPosts);
       });
-      const polis: PolisType = {
-        isUser: true,
-        userInfo: {
-          displayName: selectedUser.displayName || "",
-          email: selectedUser.email,
-          uid: selectedUser.uid,
-        }
-      };
-      setSelectedPolis(polis);
-
     } else {
       setPosts([]);
     }
-  }, [selectedUser]);
+  }, [selectedPolis]);
 
+  // ----- Handlers & Utilities -----
   const handleSearchInputChange = (text: string) => {
     setSearchText(text);
-
     if (text.length > 0) {
-      const matches = users.filter(user =>
-        user.email.toLowerCase().includes(text.toLowerCase()) ||
-        (user.displayName && user.displayName.toLowerCase().includes(text.toLowerCase()))
+      const matches = users.filter(
+        (user) =>
+          user.email.toLowerCase().includes(text.toLowerCase()) ||
+          (user.displayName && user.displayName.toLowerCase().includes(text.toLowerCase()))
       );
       setFilteredUsers(matches);
     } else {
-      setFilteredUsers([]);
-      setSelectedUser(null);
-      setPosts([]);
+      getSearchHistory().then((searchHistory) => {
+        setFilteredUsers(searchHistory);
+      });
     }
   };
 
+  // ----- Render -----
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -85,7 +123,7 @@ const DiscoverModal = ({
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.postsContainer}>       
+        <View style={styles.postsContainer}>
           {/* Search Box */}
           <ThemedView style={styles.searchBoxContainer}>
             <View style={styles.searchBoxWrapper}>
@@ -97,85 +135,122 @@ const DiscoverModal = ({
                 placeholderTextColor="#888"
                 onChangeText={handleSearchInputChange}
                 value={searchText}
-                onFocus={() => setIsTyping(true)}
+                onFocus={async () => {
+                  const history = await getSearchHistory();
+                  setFilteredUsers(history && history.length > 0 ? history : users);
+                  setIsTyping(true);
+                }}
                 onBlur={() => setIsTyping(false)}
               />
             </View>
             {/* 👇 Suggestion Dropdown */}
-            {filteredUsers.length > 0 && isTyping && (
-              <View style={styles.suggestionBox}>
-                {filteredUsers.map((user, index) => (
-                  <TouchableOpacity
-                    key={user.uid || index}
-                    style={styles.suggestionItem}
-                    onPress={() => {
-                      setSelectedUser(user);
-                      setSearchText(user.email);
-                      setIsTyping(false);
-                    }}
-                  >
-                    <Text style={styles.userName}>{user.displayName || 'No name'}</Text>
-                    <Text style={styles.userEmail}>{user.email}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
           </ThemedView>
-          {selectedUser && <ThemedView style={styles.infoDisplay}>
-            <View style={styles.infoLeft}>
-              <Text style={styles.displayName}>{selectedUser?.displayName || selectedUser?.email}</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.infoRight}
-              onPress={() => {
-                if (onPolisSelect) {
-                  onPolisSelect(selectedPolis);
-                }
-              }}
-            >
-              <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 16 }}>View {selectedUser.displayName}'s City</Text>
-            </TouchableOpacity>
-            <View style={styles.infoRight}>
-              <Text style={styles.infoStatLabel}>Posts</Text>
-              <Text style={styles.infoStatValue}>{posts.length}</Text>
-              {/* Add more stats/info here if needed */}
-            </View>
-          </ThemedView>}
-          <ThemedView style={styles.postDisplay}>
-            {posts.length > 0 ? (
-              posts.map((post, index) => (
+          {isTyping ? (
+            <View style={styles.suggestionBox}>
+              {filteredUsers.map((user, index) => (
                 <TouchableOpacity
-                  key={index}
-                  style={styles.postItem}
+                  key={user.uid || index}
+                  style={styles.suggestionItem}
                   onPress={() => {
-                    if (onPolisSelect) onPolisSelect(selectedPolis);
-                    if (onPostSelect) onPostSelect(post);
+                    setSelectedPolis({
+                      isUser: true,
+                      userInfo: {
+                        displayName: user.displayName ?? '',
+                        email: user.email,
+                        uid: user.uid
+                      }
+                    })
+                    saveSearch(user);
+                    setSearchText(user.email);
+                    setIsTyping(false);
+                    textInputRef.current?.blur();
                   }}
                 >
-                  <ThemedText style={styles.postTitle}>{post.title}</ThemedText>
-                  <ThemedText style={styles.postDescription}>{post.description}</ThemedText>
-                  <ThemedText style={styles.postDate}>{post.date}</ThemedText>
-                  <ThemedText style={styles.postAuthor}>By: {post.author}</ThemedText>
+                  <Text style={styles.userName}>{user.displayName || 'No name'}</Text>
+                  <Text style={styles.userEmail}>{user.email}</Text>
                 </TouchableOpacity>
-              ))
-            ) : selectedUser ? (
-              <Text style={styles.noPosts}>No posts found for this user.</Text>
-            ) : null}
-          </ThemedView>
+              ))}
+            </View>
+          ) : selectedPolis ? (
+            <>
+              <ThemedView style={styles.infoDisplay}>
+                <View style={styles.infoLeft}>
+                  <Text style={styles.displayName}>
+                    {selectedPolis.isUser
+                      ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
+                      : selectedPolis.tag}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.infoRight}
+                  onPress={() => {
+                    if (onPolisSelect) {
+                      onPolisSelect(selectedPolis);
+                    }
+                  }}
+                >
+                  <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 16 }}>
+                    View{' '}
+                    {selectedPolis.isUser
+                      ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
+                      : selectedPolis.tag}
+                    {"'"}s City
+                  </Text>
+                </TouchableOpacity>
+                <View style={styles.infoRight}>
+                  <Text style={styles.infoStatLabel}>Posts</Text>
+                  <Text style={styles.infoStatValue}>{posts.length}</Text>
+                </View>
+              </ThemedView>
+              <ThemedView style={styles.postDisplay}>
+                {posts.length > 0 ? (
+                  posts.map((post, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.postItem}
+                      onPress={() => {
+                        if (onPolisSelect) onPolisSelect(selectedPolis);
+                        if (onPostSelect) onPostSelect(post);
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={styles.postTitle}>{post.title}</ThemedText>
+                        <ThemedText style={styles.postDescription}>{post.description}</ThemedText>
+                        <ThemedText style={styles.postDate}>{post.date}</ThemedText>
+                        <ThemedText style={styles.postAuthor}>By: {post.author}</ThemedText>
+                      </View>
+                      {post.images && post.images.length > 0 && (
+                          <ScrollView horizontal style={{ marginLeft: 18 }}>
+                            <Image
+                              source={{ uri: getImageUrlWithSAS(post.images[0]) }}
+                              style={{ width: 100, height: 100, borderRadius: 8 }}
+                              resizeMode="cover"
+                            />
+                          </ScrollView>
+                      )}
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text style={styles.noPosts}>No posts found for this user.</Text>
+                )}
+              </ThemedView>
+            </>
+          ) : null}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
-export default DiscoverModal;
-
+// =====================
+// Styles
+// =====================
 const styles = StyleSheet.create({
   infoDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(32,32,32,0.85)',
+    backgroundColor: 'rgb(253, 253, 253)',
     borderRadius: 12,
     marginTop: 10,
     marginBottom: 10,
@@ -188,10 +263,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   displayName: {
-    color: '#fff',
+    color: 'black',
     fontSize: 20,
     fontWeight: 'bold',
     letterSpacing: 0.5,
+    fontFamily: 'Averia',
   },
   infoRight: {
     alignItems: 'flex-end',
@@ -199,15 +275,17 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   infoStatLabel: {
-    color: '#bbb',
+    color: 'black',
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: 'Averia',
   },
   infoStatValue: {
-    color: '#fff',
+    color: 'black',
     fontSize: 18,
     fontWeight: 'bold',
     marginTop: 2,
+    fontFamily: 'Averia',
   },
   discoverView: {
     backgroundColor: 'transparent',
@@ -215,61 +293,61 @@ const styles = StyleSheet.create({
   },
   email: {
     fontSize: 16,
+    color: 'white',
   },
   postsContainer: {
-    zIndex: 1, // Lower than search suggestions
+    zIndex: 1,
   },
   postsTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: 'white',
   },
   postItem: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'transparent',
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row', // Added for horizontal layout
+    alignItems: 'center', // Added for vertical alignment
   },
-  
   postTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#fff',
+    color: 'white',
   },
   postDescription: {
     fontSize: 14,
-    color: '#ddd',
+    color: 'white',
     marginTop: 4,
   },
   postDate: {
     fontSize: 12,
-    color: '#aaa',
+    color: 'white',
     marginTop: 4,
   },
-  
   postDisplay: {
     marginTop: 20,
     backgroundColor: 'transparent',
   },
-
   postAuthor: {
-
+    color: 'white',
   },
   noPosts: {
     fontSize: 16,
-    color: 'gray',
+    color: 'white',
   },
   searchBoxContainer: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)', // subtle white tint
+    backgroundColor: 'transparent',
     padding: 10,
     borderRadius: 12,
     zIndex: 1000,
     position: 'relative',
-    backdropFilter: 'blur(6px)', // NOTE: This works only on web/with BlurView on mobile
+    backdropFilter: 'blur(6px)',
   },
-  
   searchBoxWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -287,7 +365,8 @@ const styles = StyleSheet.create({
   searchBox: {
     flex: 1,
     fontSize: 16,
-    color: '#000',
+    color: 'black',
+    backgroundColor: 'transparent',
   },
   searchButton: {
     backgroundColor: '#007AFF',
@@ -309,10 +388,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#333',
+    color: 'white',
   },
   userItem: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -328,22 +407,20 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: 'white',
     marginBottom: 4,
   },
   userName: {
     fontSize: 14,
-    color: '#666',
+    color: 'white',
   }, 
   suggestionBox: {
     position: 'absolute',
     top: 40,
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    backgroundColor: 'transparent',
+    color: 'white',
     marginTop: 4,
     elevation: 10,
     shadowColor: '#000',
@@ -353,15 +430,19 @@ const styles = StyleSheet.create({
     maxHeight: 200,
     overflow: 'scroll',
     zIndex: 1001,
+    borderTopWidth: 1,
+    borderTopColor: '#ccc',
   },
-  
-  
   suggestionItem: {
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderBottomWidth: 0.5,
     borderBottomColor: '#ccc',
+    color: 'white',
   },
-  
-  
 });
+
+// =====================
+// Export
+// =====================
+export default DiscoverModal;

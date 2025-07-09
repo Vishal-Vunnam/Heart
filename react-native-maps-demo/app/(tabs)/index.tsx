@@ -1,21 +1,56 @@
+// React & React Native core
 import React, { useState, useRef, useEffect } from 'react';
-import { SafeAreaView, View, TextInput, StyleSheet, TouchableOpacity, Text, Pressable, Linking, Modal, Animated, Image, ActivityIndicator, Alert } from 'react-native';
+import {
+  SafeAreaView,
+  View,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  Pressable,
+  Linking,
+  Modal,
+  Animated,
+  Image,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+
+// Gesture Handler
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import { ThemedView } from '@/components/ThemedView';
+
+// Navigation
+import { router, useRouter } from 'expo-router';
+
+// Firebase
+import { initializeApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { app } from '@/firebase/firebaseConfig';
+
+// Map & Map Clustering
+import MapView from 'react-native-map-clustering';
+import { Callout, MapMarker, Marker } from 'react-native-maps';
+
+// Icons
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
 import Entypo from '@expo/vector-icons/Entypo';
-import { initializeApp } from 'firebase/app';
-import MapView, { Callout, MapMarker, Marker } from 'react-native-maps';
-import { addPost, getAllPosts, getPostbyAuthorID, getImagesbyUrl } from '@/firebase/firestore';
-import { router, useRouter } from 'expo-router';
+
+// Components
+import { ThemedView } from '@/components/ThemedView';
 import PostModal from '@/components/PostModal';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { app } from '@/firebase/firebaseConfig';
 import DiscoverModal from '@/components/DiscoverModal';
-import { GET_POST_TEMPLATE, Location, PostData, PolisType, PostRequestInfo, UserInfo } from '@/types';
+
+// Firebase Firestore & Storage
+import { addPost, getAllPosts, getPostbyAuthorID, getImagesbyUrl } from '@/firebase/firestore';
 import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/firebase/blob-storage';
+
+// Types
+import { GET_POST_TEMPLATE, Location, PostData, PolisType, PostRequestInfo, UserInfo } from '@/types';
+
+// Styles
+import { indexStyles as styles } from '../styles/indexstyles';
 // Constants
 const FIREBASE_CONFIG = {
   apiKey: 'api-key',
@@ -44,16 +79,6 @@ const INITIAL_MAP_REGION = {
 };
 
 // Posts loaded: [{"author": "Test", "authorId": "test", "comments": 0, "date": "2025-07-04T00:45:48.862Z", "description": "This is a test", "likes": 0, "location": {"latitude": 37.4219999, "latitudeDelta": 0.01, "longitude": -122.0840575, "longitudeDelta": 0.01}, "postId": "post_1751589948869_qz19bdexu"}]
-
-// const POST_MARKER_TEMPLATE = {
-//   location: POST_LOCATION_TEMPLATE,
-//   postId: "Post ID",
-//   title: "Post Title",
-//   description: "Post Description",
-//   author: "Post Author",
-//   date: "Post Date",
-//   likes: 0,
-//   comments: 0,
 
 function debugLog(...args: any[]) {
   if (__DEV__) {
@@ -132,7 +157,7 @@ function renderPostImages(images?: string[]) {
   ));
 }
 export default function HomeScreen() {
-  // State
+  // 1. State variables
   const [user, setUser] = useState<{
     displayName: string;
     email: string;
@@ -144,16 +169,13 @@ export default function HomeScreen() {
   const [currentLocation, setCurrentLocation] = useState<any>(null);
   const [posts, setPosts] = useState<GET_POST_TEMPLATE[]>([]);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
+  const [currentRegion, setCurrentRegion] = useState(INITIAL_MAP_REGION);
   const markerRefs = useRef<{ [key: string]: MapMarker | null }>({});
-  
-  // Discover Modal Animation
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  
-  // Refs 
-  const textInputRef = useRef<TextInput>(null);
   const mapRef = useRef<MapView>(null);
+  const textInputRef = useRef<TextInput>(null);
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
-  // Effects
+  // 2. Effects
   useEffect(() => {
     const auth = getAuth(app);
     // loadPosts();
@@ -194,17 +216,22 @@ export default function HomeScreen() {
     }
   }, [selectedPolis]);
 
+  // 3. Event Handlers
   const handleMarkerPress = (post: GET_POST_TEMPLATE) => {
     // Animate to marker
-    mapRef.current?.animateToRegion(
-      {
-        latitude: post.location.latitude,
-        longitude: post.location.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      },
-      500 // duration in ms
-    );
+    if (mapRef.current && 'animateCamera' in mapRef.current) {
+      // @ts-ignore
+      mapRef.current.animateCamera(
+        {
+          center: {
+            latitude: post.location.latitude,
+            longitude: post.location.longitude,
+          },
+          zoom: 16,
+        },
+        { duration: 500 }
+      );
+    }
 
     setTimeout(() => {
       markerRefs.current[post.postId]?.showCallout();
@@ -222,9 +249,6 @@ export default function HomeScreen() {
   //   }
   // };
 
-
-
-  // Event handlers
   const toggleModal = () => {
     setIsModalVisible(!isModalVisible);
     textInputRef.current?.blur();
@@ -240,7 +264,13 @@ export default function HomeScreen() {
   };
 
   const displayAccountInfo = () => {
-
+    if (user) {
+      setSelectedPolis({
+        isUser: true,
+        userInfo: user
+      });
+      openDiscoverModal();
+    }
   };
 
   // Discover Modal functions
@@ -287,13 +317,9 @@ export default function HomeScreen() {
 
   const handlePost = () => {
     if (!user) {
-      // router.push('/signin');
-      // return;
-      setUser({
-        displayName: "Test",
-        email: "Test@example.com",
-        uid: "test",
-      }); 
+      router.push('/signin');
+      return;
+
     }
 
     if (!currentLocation) {
@@ -328,39 +354,49 @@ export default function HomeScreen() {
 
   // Map zoom functions
   const zoomIn = () => {
-    mapRef.current?.animateToRegion({
-      ...currentLocation,
-      latitudeDelta: currentLocation.latitudeDelta * 0.5,
-      longitudeDelta: currentLocation.longitudeDelta * 0.5,
-    }, 1000);
+    if (mapRef.current && currentLocation) {
+      (mapRef.current as any).animateToRegion({
+        ...currentLocation,
+        latitudeDelta: currentLocation.latitudeDelta * 0.5,
+        longitudeDelta: currentLocation.longitudeDelta * 0.5,
+      }, 1000);
+    }
   };
 
   const zoomOut = () => {
-    mapRef.current?.animateToRegion({
-      ...currentLocation,
-      latitudeDelta: currentLocation.latitudeDelta * 2,
-      longitudeDelta: currentLocation.longitudeDelta * 2,
-    }, 1000);
+    if (mapRef.current && currentLocation) {
+      (mapRef.current as any).animateToRegion({
+        ...currentLocation,
+        latitudeDelta: currentLocation.latitudeDelta * 2,
+        longitudeDelta: currentLocation.longitudeDelta * 2,
+      }, 1000);
+    }
   };
 
-  // Render
+
+  // 4. Utility/Render Helpers
+  // const debugLog = (...args: any[]) => { ... };
+  // const renderPostImages = (images?: string[]) => { ... };
+
+  // 5. Main JSX
   return (
     <SafeAreaView style={styles.safeArea}>
       <ThemedView style={styles.container}>
         {/* Navigation Bar */}
         <ThemedView style={styles.navBar}>
           <TouchableOpacity style={styles.navButton} onPress={toggleModal}>
+            <Image source={require('../../assets/images/polis_logo.png')} style={{ width: 42, height: 42, marginRight: 6 }} />
             <Text style={styles.navButtonText}>Polis</Text>
           </TouchableOpacity>
           {user != null && (
             <TouchableOpacity style={styles.navButton} onPress={displayAccountInfo}>
-              <Text style={styles.navButtonText}>{user.displayName || user.email}</Text>
+              <Text style={styles.signInText}>{user.displayName || user.email}</Text>
               <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
             </TouchableOpacity>
           )}
           {user == null && (
             <TouchableOpacity style={styles.navButton}   onPress={handleSignIn}>
-              <Text style={styles.navButtonText}>Sign In</Text>
+              <Text style={styles.signInText}>Sign In</Text>
               <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
             </TouchableOpacity>
           )}
@@ -371,6 +407,7 @@ export default function HomeScreen() {
           <MapView
             ref={mapRef}
             style={styles.map}
+            clusterColor="grey"
             initialRegion={INITIAL_MAP_REGION}
             onRegionChangeComplete={(region) => setCurrentLocation(region)}
           >
@@ -406,16 +443,6 @@ export default function HomeScreen() {
           {/* Center dot overlay */}
           <View pointerEvents="none" style={styles.centerDot} />
 
-          {/* Zoom Controls
-          <View style={styles.zoomContainer}>
-            <TouchableOpacity style={styles.zoomButton} onPress={zoomIn}>
-              <Text style={styles.zoomButtonText}>+</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.zoomButton} onPress={zoomOut}>
-              <Text style={styles.zoomButtonText}>-</Text>
-            </TouchableOpacity>
-          </View> */}
-
         </ThemedView>
 
         {/* Action Buttons */}
@@ -424,7 +451,7 @@ export default function HomeScreen() {
             <Image source={require('../../assets/images/plus.png')} style={styles.iconImage} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={openDiscoverModal}>
-            <Image source={require('../../assets/images/glasses.png')} style={styles.iconImage} />
+            <Image source={require('../../assets/images/binoculars.png')} style={styles.iconImage} />
           </TouchableOpacity>
         </View>
 
@@ -473,12 +500,12 @@ export default function HomeScreen() {
                     handleMarkerPress(post);
                     setIsDiscoverModalVisible(false);
                   }}
-                  onPolisSelect={(polis:PolisType) => {
+                  onPolisSelect={(polis: PolisType) => {
                     console.log("pospospos");
                     setSelectedPolis(polis);
                     setIsDiscoverModalVisible(false);
-                  }
-                  }
+                  }}
+                  setPolis={selectedPolis != null ? selectedPolis : null}
                 />
               </Animated.View>
             </PanGestureHandler>
@@ -488,352 +515,3 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
-// Styles
-const styles = StyleSheet.create({
-  postButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  postButtonText: {
-    color: 'black',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  navBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: 'black'
-  },
-  navButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-  },
-  navButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 4,
-  },
-  accountIcon: {
-    color: '#ffffff',
-  },
-  searchBoxContainer: {
-    position: 'absolute',
-    top: 80,
-    left: '5%',
-    right: '5%',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  searchBoxWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    height: 30,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    paddingHorizontal: 12,
-    backgroundColor: 'white',
-  },
-  icon: {
-    marginRight: 8,
-  },
-  searchBox: {
-    flex: 1,
-    fontSize: 16,
-    color: '#000',
-  },
-  mapPlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#e0e0e0',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    overflow: 'hidden',
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  iconImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-  },
-  pinButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 40,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 80,
-    backgroundColor: 'transparent',
-  },
-  modalContent: {
-    width: '90%',
-    height: 273,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-    overflow: 'scroll'
-  },
-  modalTitle: {
-    fontSize: 24,
-    color: 'black',
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginLeft: 10,
-  },
-  link: {
-    fontSize: 14,
-    color: 'blue',
-    textDecorationLine: 'underline',
-  },
-  triangle: {
-    top: -1,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 30,
-    borderRightWidth: 30,
-    borderBottomWidth: 15,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: 'white',
-    borderRadius: 10,
-    transform: [{ rotate: '180deg' }],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -30 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  modalMessage: {
-    fontSize: 16,
-    color: 'black',
-    marginLeft: 10,
-  },
-  closeButton: {
-    position: 'absolute',
-    right: -10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-  },
-  likeButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-  },
-  commentButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-  },
-  picHeader: {
-    textDecorationLine: 'underline',
-    fontSize: 14,
-    color: 'black',
-    marginTop: 10,
-    marginLeft: 10,
-  },
-  centerDot: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: 16,
-    height: 16,
-    marginLeft: -8,
-    marginTop: -8,
-    borderRadius: 8,
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: 'black',
-    zIndex: 10,
-  },
-  zoomContainer: {
-    position: 'absolute',
-    width: 50, 
-    height: 100,
-    top: 200,
-    right: 20,
-    backgroundColor: 'white',
-    borderRadius: 8,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  zoomButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  zoomButtonText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  discoverButton: {
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 8,
-    marginTop: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  discoverButtonText: {
-    color: 'black',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  discoverModalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(32,32,32,0.85)',
-    justifyContent: 'flex-end',
-  },
-  discoverModalContent: {
-    backgroundColor: 'rgba(32,32,32,0.8)', // Gray with low opacity
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: '70%',
-    paddingTop: 10,
-  },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#ccc',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  discoverContent: {
-    flex: 1,
-    // paddingHorizontal: 20,
-  },
-  discoverTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  discoverSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 30,
-  },
-  discoverItem: {
-    backgroundColor: '#f8f9fa',
-    borderBottomWidth: 1,
-    padding: 15,
-    // borderRadius: 10,
-    // marginBottom: 15,
-  },
-  discoverItemTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  discoverItemText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  actionButtonContainer: {
-    position: 'absolute',
-    top: 100,
-    right: 20,
-    zIndex: 100,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 1, // or use marginBottom on iconButton if gap is not supported
-  },
-  iconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12, // for spacing between buttons
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  calloutContainer: {
-    backgroundColor: 'rgba(32,32,32,0.95)',
-    borderRadius: 12,
-    padding: 14,
-    minWidth: 340,
-    maxWidth: 340,
-    alignItems: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  calloutTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 6,
-  },
-  calloutDescription: {
-    color: '#bbb',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-});
