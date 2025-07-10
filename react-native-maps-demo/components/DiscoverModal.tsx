@@ -18,10 +18,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Internal imports
 import { getPostbyAuthorID, getAllUsers } from '@/firebase/firestore';
 import { getImageUrlWithSAS } from '@/firebase/blob-storage';
+import { PostView } from './PostView';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { PolisType } from '@/types';
-
+import { PolisType, PostData } from '@/types';
+import {getCurrentUser} from '@/firebase/auth';
+import { router } from 'expo-router';
 // =====================
 // Constants & Types
 // =====================
@@ -69,19 +71,41 @@ const DiscoverModal = ({
   // ----- State & Refs -----
   const [posts, setPosts] = useState<any[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [isLoggedInUser, setIsLoggedInUser] = useState<boolean> (false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const textInputRef = useRef<TextInput>(null);
   const [searchText, setSearchText] = useState('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [inPostView, setPostView] = useState<PostData | null> (null);
 
   // ----- Effects -----
   useEffect(() => {
     // Fetch all users on mount ( THIS IS TEMPORARY #WILLNOTSCALE)
     getAllUsers().then(setUsers);
     setSelectedPolis(setPolis);
-  }, []);
+
+    // Get current authorized user and compare userids
+    (async () => {
+      try {
+        const currentUser = await getCurrentUser();
+        if (
+          currentUser &&
+          setPolis &&
+          (setPolis as any).isUser &&
+          (setPolis as any).userInfo &&
+          (setPolis as any).userInfo.uid
+        ) {
+          setIsLoggedInUser((currentUser as any).uid === (setPolis as any).userInfo.uid);
+        } else {
+          setIsLoggedInUser(false);
+        }
+      } catch {
+        setIsLoggedInUser(false);
+      }
+    })();
+  }, [setPolis]);
 
   useEffect(() => {
     if (selectedPolis && selectedPolis.isUser) {
@@ -89,8 +113,26 @@ const DiscoverModal = ({
       getPostbyAuthorID(selectedPolis.userInfo.uid).then((userPosts) => {
         setPosts(userPosts);
       });
+
+      // Get current authorized user and compare userids
+      getCurrentUser()
+        .then((currentUser: any) => {
+          if (
+            currentUser &&
+            selectedPolis &&
+            selectedPolis.isUser &&
+            selectedPolis.userInfo &&
+            selectedPolis.userInfo.uid
+          ) {
+            setIsLoggedInUser(currentUser.uid === selectedPolis.userInfo.uid);
+          } else {
+            setIsLoggedInUser(false);
+          }
+        })
+        .catch(() => setIsLoggedInUser(false));
     } else {
       setPosts([]);
+      setIsLoggedInUser(false);
     }
   }, [selectedPolis]);
 
@@ -180,6 +222,11 @@ const DiscoverModal = ({
                       ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
                       : selectedPolis.tag}
                   </Text>
+                  {isLoggedInUser && (
+                    <TouchableOpacity style={styles.settingsButton} onPress={()=>router.push('/editprofile')}>
+                      <Text style={styles.settingsText}>⚙️ User Settings</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <TouchableOpacity
                   style={styles.infoRight}
@@ -191,10 +238,12 @@ const DiscoverModal = ({
                 >
                   <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 16 }}>
                     View{' '}
-                    {selectedPolis.isUser
-                      ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
-                      : selectedPolis.tag}
-                    {"'"}s City
+                    {isLoggedInUser
+                      ? "My City"
+                      : `${selectedPolis.isUser
+                          ? (selectedPolis.userInfo.displayName || selectedPolis.userInfo.email)
+                          : selectedPolis.tag}'s City`
+                    }
                   </Text>
                 </TouchableOpacity>
                 <View style={styles.infoRight}>
@@ -235,6 +284,8 @@ const DiscoverModal = ({
                 )}
               </ThemedView>
             </>
+          ) : inPostView ? (
+            <PostView post={inPostView} />
           ) : null}
         </View>
       </ScrollView>
@@ -305,9 +356,9 @@ const styles = StyleSheet.create({
   },
   postItem: {
     backgroundColor: 'transparent',
-    borderRadius: 12,
+    // borderRadius: 12,
     padding: 12,
-    marginBottom: 10,
+    // marginBottom: 10,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     flexDirection: 'row', // Added for horizontal layout
@@ -414,6 +465,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'white',
   }, 
+  settingsButton: {
+    backgroundColor: '#E0E0E0',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  settingsText: {
+    color: '#333',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   suggestionBox: {
     position: 'absolute',
     top: 40,

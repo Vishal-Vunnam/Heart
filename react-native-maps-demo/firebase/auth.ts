@@ -55,3 +55,12 @@ export function signUp(email: string, password: string, displayName: string) {
 export function logOut() {
   return signOut(auth);
 }
+
+export function getCurrentUser() {
+  return new Promise((resolve, reject) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      unsubscribe();
+      resolve(user);
+    }, reject);
+  });
+}

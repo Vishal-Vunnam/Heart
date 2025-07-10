@@ -32,7 +32,9 @@ export const indexStyles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 10,
-    backgroundColor: 'black'
+    backgroundColor: 'white',
+    borderBottomWidth: 2,
+    borderBottomColor: '#1E3A5F',
   },
   navButton: {
     flexDirection: 'row',
@@ -40,14 +42,14 @@ export const indexStyles = StyleSheet.create({
     padding: 8,
   },
   navButtonText: {
-    color: '#ffffff',
+    color: '#1E3A5F',
     fontSize: 30,
     fontWeight: 'bold',
     marginRight: 4,
     fontFamily: 'Avenir', // Use Avenir for a modern, geometric sans-serif look
   },
   signInText: {
-    color: '#ffffff',
+    color: '#1E3A5F',
     fontSize: 20,
     fontWeight: 'bold',
     marginRight: 4,
@@ -55,7 +57,7 @@ export const indexStyles = StyleSheet.create({
   },
 
   accountIcon: {
-    color: '#ffffff',
+    color: '#1E3A5F',
   },
   searchBoxContainer: {
     position: 'absolute',
@@ -357,5 +359,40 @@ export const indexStyles = StyleSheet.create({
     color: '#bbb',
     fontSize: 14,
     marginBottom: 8,
+  },
+  customCalloutOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  customCalloutContainer: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  closeCalloutButton: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ff4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  closeCalloutText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });

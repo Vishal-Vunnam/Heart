@@ -1,5 +1,5 @@
-import { Stack, Link } from 'expo-router';
-import { StyleSheet, View, Text } from 'react-native';
+import { Stack, router } from 'expo-router';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 
 import React from 'react';
@@ -11,9 +11,9 @@ export default function HomePage() {
       <ThemedView style={styles.container}>
         <Text style={styles.title}>Welcome to Heart!</Text>
         <Text style={styles.subtitle}>Your map-based social experience.</Text>
-        <Link href="/(tabs)" style={styles.button}>
+        <TouchableOpacity style={styles.button} onPress={() => router.push('/(tabs)' as any)}>
           <Text style={styles.buttonText}>Enter App</Text>
-        </Link>
+        </TouchableOpacity>
       </ThemedView>
     </>
   );

@@ -4,12 +4,9 @@ import {
   SafeAreaView,
   View,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
   Text,
-  Pressable,
   Linking,
-  Modal,
   Animated,
   Image,
   ActivityIndicator,
@@ -20,11 +17,10 @@ import {
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 
 // Navigation
-import { router, useRouter } from 'expo-router';
+import { router } from 'expo-router';
 
 // Firebase
-import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/firebase/firebaseConfig';
 
 // Map & Map Clustering
@@ -32,36 +28,24 @@ import MapView from 'react-native-map-clustering';
 import { Callout, MapMarker, Marker } from 'react-native-maps';
 
 // Icons
-import EvilIcons from '@expo/vector-icons/EvilIcons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
-import Entypo from '@expo/vector-icons/Entypo';
 
 // Components
 import { ThemedView } from '@/components/ThemedView';
 import PostModal from '@/components/PostModal';
 import DiscoverModal from '@/components/DiscoverModal';
+import CustomCallout from '@/components/CustomCallout';
 
 // Firebase Firestore & Storage
-import { addPost, getAllPosts, getPostbyAuthorID, getImagesbyUrl } from '@/firebase/firestore';
+import { addPost, getPostbyAuthorID } from '@/firebase/firestore';
 import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/firebase/blob-storage';
 
 // Types
-import { GET_POST_TEMPLATE, Location, PostData, PolisType, PostRequestInfo, UserInfo } from '@/types';
+import { GET_POST_TEMPLATE, PolisType, PostRequestInfo } from '@/types';
 
 // Styles
 import { indexStyles as styles } from '../styles/indexstyles';
-// Constants
-const FIREBASE_CONFIG = {
-  apiKey: 'api-key',
-  authDomain: 'project-id.firebaseapp.com',
-  databaseURL: 'https://project-id.firebaseio.com',
-  projectId: 'project-id',
-  storageBucket: 'project-id.appspot.com',
-  messagingSenderId: 'sender-id',
-  appId: 'app-id',
-  measurementId: 'G-measurement-id',
-};
 
 const SAMPLE_POST_DATA = {
   locationTitle: "Pin Title",
@@ -77,52 +61,6 @@ const INITIAL_MAP_REGION = {
   latitudeDelta: 0.01,
   longitudeDelta: 0.01,
 };
-
-// Posts loaded: [{"author": "Test", "authorId": "test", "comments": 0, "date": "2025-07-04T00:45:48.862Z", "description": "This is a test", "likes": 0, "location": {"latitude": 37.4219999, "latitudeDelta": 0.01, "longitude": -122.0840575, "longitudeDelta": 0.01}, "postId": "post_1751589948869_qz19bdexu"}]
-
-function debugLog(...args: any[]) {
-  if (__DEV__) {
-    console.log('[DEBUG]', ...args);
-  }
-}
-
-function ImageLoader({ imageUrl }: { imageUrl: string }) {
-  const [localUri, setLocalUri] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
-    getImageFromBlobUrl(imageUrl)
-      .then(blob => {
-        const objectUrl = URL.createObjectURL(blob);
-        if (isMounted) {
-          setLocalUri(objectUrl);
-          setLoading(false);
-        }
-        // Clean up the object URL when the component unmounts
-        return () => URL.revokeObjectURL(objectUrl);
-      })
-      .catch(() => setLoading(false));
-    return () => { isMounted = false; };
-  }, [imageUrl]);
-
-  if (loading) {
-    return <ActivityIndicator size="small" />;
-  }
-
-  if (!localUri) {
-    return <View style={{ width: 100, height: 100, backgroundColor: '#eee' }} />;
-  }
-
-  return (
-    <Image
-      source={{ uri: localUri }}
-      style={{ width: 100, height: 100, marginVertical: 4, borderRadius: 8 }}
-      resizeMode="cover"
-    />
-  );
-}
 
 function renderPostImages(images?: string[]) {
   if (!images || images.length === 0) return null;
@@ -169,11 +107,14 @@ export default function HomeScreen() {
   const [currentLocation, setCurrentLocation] = useState<any>(null);
   const [posts, setPosts] = useState<GET_POST_TEMPLATE[]>([]);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
-  const [currentRegion, setCurrentRegion] = useState(INITIAL_MAP_REGION);
   const markerRefs = useRef<{ [key: string]: MapMarker | null }>({});
   const mapRef = useRef<MapView>(null);
   const textInputRef = useRef<TextInput>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const [selectedPost, setSelectedPost] = useState<GET_POST_TEMPLATE | null>(null);
+  const [zoomingToMarker, setZoomingToMarker] = useState(false);
+  const isProgrammaticMove = useRef(false);
+
 
   // 2. Effects
   useEffect(() => {
@@ -217,26 +158,29 @@ export default function HomeScreen() {
   }, [selectedPolis]);
 
   // 3. Event Handlers
-  const handleMarkerPress = (post: GET_POST_TEMPLATE) => {
-    // Animate to marker
-    if (mapRef.current && 'animateCamera' in mapRef.current) {
-      // @ts-ignore
-      mapRef.current.animateCamera(
-        {
-          center: {
-            latitude: post.location.latitude,
-            longitude: post.location.longitude,
-          },
-          zoom: 16,
+  const handleMarkerPress = async (post: GET_POST_TEMPLATE) => {
+    if (!mapRef.current) return;
+  
+    isProgrammaticMove.current = true;
+  
+    // @ts-ignore - animateCamera exists on MapView
+    mapRef.current.animateCamera(
+      {
+        center: {
+          latitude: post.location.latitude + 0.002, // small vertical offset for callout visibility
+          longitude: post.location.longitude,
         },
-        { duration: 500 }
-      );
-    }
-
+        zoom: 16,
+      },
+      { duration: 500 }
+    );
+  
+    // Wait for animation to finish before clearing flag
     setTimeout(() => {
-      markerRefs.current[post.postId]?.showCallout();
-    }, 600); // slightly longer than animation duration
+      isProgrammaticMove.current = false;
+    }, 600); // a bit longer than animation
   };
+  
 
   // Data loading functions
   // const loadPosts = async () => {
@@ -252,11 +196,6 @@ export default function HomeScreen() {
   const toggleModal = () => {
     setIsModalVisible(!isModalVisible);
     textInputRef.current?.blur();
-  };
-
-  const getCurrentLocation = () => {
-    console.log("Getting current location!");
-    console.log(currentLocation);
   };
 
   const handleSignIn = () => {
@@ -348,32 +287,6 @@ export default function HomeScreen() {
     console.log("Post added!", postData);
   };
 
-  const handleComment = () => {
-    console.log("Commented!");
-  };
-
-  // Map zoom functions
-  const zoomIn = () => {
-    if (mapRef.current && currentLocation) {
-      (mapRef.current as any).animateToRegion({
-        ...currentLocation,
-        latitudeDelta: currentLocation.latitudeDelta * 0.5,
-        longitudeDelta: currentLocation.longitudeDelta * 0.5,
-      }, 1000);
-    }
-  };
-
-  const zoomOut = () => {
-    if (mapRef.current && currentLocation) {
-      (mapRef.current as any).animateToRegion({
-        ...currentLocation,
-        latitudeDelta: currentLocation.latitudeDelta * 2,
-        longitudeDelta: currentLocation.longitudeDelta * 2,
-      }, 1000);
-    }
-  };
-
-
   // 4. Utility/Render Helpers
   // const debugLog = (...args: any[]) => { ... };
   // const renderPostImages = (images?: string[]) => { ... };
@@ -389,10 +302,18 @@ export default function HomeScreen() {
             <Text style={styles.navButtonText}>Polis</Text>
           </TouchableOpacity>
           {user != null && (
-            <TouchableOpacity style={styles.navButton} onPress={displayAccountInfo}>
-              <Text style={styles.signInText}>{user.displayName || user.email}</Text>
-              <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
+            <>
+            <TouchableOpacity onPress={() => router.push('/editprofile')}>
+            <Image
+              source={require('../../assets/images/Settings.png')}
+              style={{ width: 20, height: 20, marginLeft: 120, tintColor: '#1E3A5F' }}
+            />
             </TouchableOpacity>
+              <TouchableOpacity style={styles.navButton} onPress={displayAccountInfo}>
+                <Text style={styles.signInText}>{user.displayName || user.email}</Text>
+                <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
+              </TouchableOpacity>
+            </>
           )}
           {user == null && (
             <TouchableOpacity style={styles.navButton}   onPress={handleSignIn}>
@@ -409,40 +330,72 @@ export default function HomeScreen() {
             style={styles.map}
             clusterColor="grey"
             initialRegion={INITIAL_MAP_REGION}
-            onRegionChangeComplete={(region) => setCurrentLocation(region)}
+            onRegionChangeComplete={(region) => {
+              setCurrentLocation(region);
+              if (!isProgrammaticMove.current && selectedPost) {
+                setSelectedPost(null);
+                // Close the marker callout as well
+                if (selectedPost && markerRefs.current[selectedPost.postId]) {
+                  markerRefs.current[selectedPost.postId]?.hideCallout?.();
+                }
+              }
+            }}
           >
             {posts.map((post, index) => (
               <Marker
                 ref={ref => { markerRefs.current[post.postId] = ref; }}
                 pinColor="black"
-                calloutAnchor={{ x: 0.5, y: 0.5 }}
                 key={index}
                 coordinate={{
                   latitude: post.location.latitude,
                   longitude: post.location.longitude,
                 }}
-                // title={post.title || 'Post'}
-                // description={post.author + '\n' + post.description || 'No description'}
-                onPress={(e) => {
+                onPress={async (e) => {
                   e.stopPropagation();
-                  handleMarkerPress(post);
-                }
-                }
-              >
-                <Callout tooltip>
-                  <View style={styles.calloutContainer}>
-                    <Text style={styles.calloutTitle}>{post.title + ' - ' + post.author}</Text>
-                    <Text style={styles.calloutDescription}>{post.description}</Text>
-                    {renderPostImages(post.images)}
-                  </View>
-                </Callout>
-              </Marker>
+                  await handleMarkerPress(post);
+                  // Set selected post after a short delay to sync with camera animation
+                  setTimeout(() => setSelectedPost(post), 100);
+                }}
+                
+              />
             ))}
           </MapView>
 
           {/* Center dot overlay */}
           <View pointerEvents="none" style={styles.centerDot} />
 
+          {/* Custom Callout Overlay */}
+          {selectedPost && (
+            <View style={styles.customCalloutOverlay} pointerEvents="box-none">
+              <View style={styles.customCalloutContainer}>
+                <CustomCallout
+                  post={selectedPost}
+                  onLike={() => {
+                    console.log("Like post:", selectedPost.postId);
+                    // TODO: Implement like functionality
+                  }}
+                  onComment={() => {
+                    console.log("Comment on post:", selectedPost.postId);
+                    // TODO: Implement comment functionality
+                  }}
+                  onShare={() => {
+                    console.log("Share post:", selectedPost.postId);
+                    // TODO: Implement share functionality
+                  }}
+                  onViewDetails={() => {
+                    handleMarkerPress(selectedPost);
+                    setSelectedPost(null);
+                  }}
+                />
+                <TouchableOpacity 
+                  style={styles.closeCalloutButton}
+                  onPress={() => setSelectedPost(null)}
+                >
+                  <Text style={styles.closeCalloutText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </ThemedView>
 
         {/* Action Buttons */}
