@@ -38,22 +38,15 @@ import DiscoverModal from '@/components/DiscoverModal';
 import CustomCallout from '@/components/CustomCallout';
 
 // Firebase Firestore & Storage
-import { addPost, getPostbyAuthorID } from '@/firebase/firestore';
+import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/firebase/firestore';
 import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/firebase/blob-storage';
 
 // Types
-import { GET_POST_TEMPLATE, PolisType, PostRequestInfo } from '@/types';
+import { PolisType, PostDBInfo, PostRequestInfo } from '@/types';
 
 // Styles
 import { indexStyles as styles } from '../styles/indexstyles';
 
-const SAMPLE_POST_DATA = {
-  locationTitle: "Pin Title",
-  geographicalLocation: "37°25'19.07\"N, 122°05'06.24\"W",
-  locationLink: "https://www.google.com/maps?q=37.4219999,-122.0840575",
-  datePosted: "January 9, 2025",
-  author: "John Doe",
-};
 
 const INITIAL_MAP_REGION = {
   latitude: 37.4219999,
@@ -105,16 +98,16 @@ export default function HomeScreen() {
   const [isPostModalVisible, setIsPostModalVisible] = useState(false);
   const [isDiscoverModalVisible, setIsDiscoverModalVisible] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
-  const [posts, setPosts] = useState<GET_POST_TEMPLATE[]>([]);
+  const [posts, setPosts] = useState<PostDBInfo[]>([]);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const markerRefs = useRef<{ [key: string]: MapMarker | null }>({});
   const mapRef = useRef<MapView>(null);
   const textInputRef = useRef<TextInput>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const [selectedPost, setSelectedPost] = useState<GET_POST_TEMPLATE | null>(null);
+  const [selectedPost, setSelectedPost] = useState<PostDBInfo | null>(null);
   const [zoomingToMarker, setZoomingToMarker] = useState(false);
   const isProgrammaticMove = useRef(false);
-
+  const [discoverUserId, setDiscoverUserId] = useState<string | null>(null);
 
   // 2. Effects
   useEffect(() => {
@@ -143,7 +136,6 @@ export default function HomeScreen() {
     return unsubscribe;
   }, []);
 
-
   useEffect(() => {
     if (selectedPolis) {
       if (selectedPolis.isUser) {
@@ -152,28 +144,49 @@ export default function HomeScreen() {
 
         });
       } else {
-        // Tags coming soon 
+        getPostbyTag(selectedPolis.tag).then((tagPosts) => {
+          setPosts(tagPosts); 
+        })
       }
     }
   }, [selectedPolis]);
 
   // 3. Event Handlers
-  const handleMarkerPress = async (post: GET_POST_TEMPLATE) => {
+  const handleMarkerPress = async (post: PostDBInfo) => {
     if (!mapRef.current) return;
   
     isProgrammaticMove.current = true;
   
-    // @ts-ignore - animateCamera exists on MapView
-    mapRef.current.animateCamera(
-      {
-        center: {
-          latitude: post.location.latitude + 0.002, // small vertical offset for callout visibility
-          longitude: post.location.longitude,
-        },
-        zoom: 16,
-      },
-      { duration: 500 }
-    );
+    try {
+      // Try animateCamera first (for newer versions)
+      if ('animateCamera' in mapRef.current) {
+        // @ts-ignore - animateCamera exists on MapView
+        mapRef.current.animateCamera(
+          {
+            center: {
+              latitude: post.location.latitude + 0.002, // small vertical offset for callout visibility
+              longitude: post.location.longitude,
+            },
+            zoom: 16,
+          },
+          { duration: 500 }
+        );
+      } else {
+        // Fallback to animateToRegion for older versions
+        // @ts-ignore - animateToRegion exists on MapView
+        mapRef.current.animateToRegion(
+          {
+            latitude: post.location.latitude + 0.002,
+            longitude: post.location.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          },
+          500
+        );
+      }
+    } catch (error) {
+      console.error('Map animation error:', error);
+    }
   
     // Wait for animation to finish before clearing flag
     setTimeout(() => {
@@ -267,29 +280,55 @@ export default function HomeScreen() {
     }
     setIsPostModalVisible(true);
   };
-  const handlePostSubmit = (postData: PostRequestInfo) => {
+  const handlePostSubmit = async (postData: PostRequestInfo) => {
     if (!user) {
       console.log("No user signed in, cannot submit post.");
       return;
     }
-    const newPostInfo = {
-      title: postData.title,
-      description: postData.description,
-      location: postData.location,
-      authorId: postData.authorId,
-      author: postData.author,
-      images: postData.images,
-      // Add any other required fields here
-    };
-    console.log("Attempting to add post with data:", newPostInfo);
-    console.log("Current user:", user);
-    addPost(newPostInfo);
-    console.log("Post added!", postData);
+    try {
+      await addPost(postData);
+      console.log("Post added!", postData);
+      // Reload posts to show the new post on the map
+      setSelectedPolis({
+        isUser: true,
+        userInfo: user})
+    } catch (error) {
+      console.error("Failed to add post:", error);
+    }
   };
 
   // 4. Utility/Render Helpers
   // const debugLog = (...args: any[]) => { ... };
   // const renderPostImages = (images?: string[]) => { ... };
+
+  // Helper to render the current polis header
+  const isPolisDisplayActive = !!selectedPolis;
+  const renderPolisHeader = () => {
+    if (!selectedPolis) {
+      return null;
+    }
+    if (selectedPolis.isUser) {
+      const { displayName, email } = selectedPolis.userInfo;
+      return (
+        <View style={styles.polisDisplay}>
+          <Text style={styles.polisDisplayText}>
+            Viewing {displayName ? displayName : email}'s City
+          </Text>
+        </View>
+      );
+    }
+    // For tag polis (future)
+    if ('tag' in selectedPolis) {
+      return (
+        <View style={styles.polisDisplay }>
+          <Text style={styles.polisDisplayText}>
+            Viewing Posts in #{selectedPolis.tag} 
+          </Text>
+        </View>
+      );
+    }
+    return null;
+  };
 
   // 5. Main JSX
   return (
@@ -323,6 +362,9 @@ export default function HomeScreen() {
           )}
         </ThemedView>
 
+        {/* Polis Header */}
+        {renderPolisHeader()}
+
         {/* Map */}
         <ThemedView style={styles.mapPlaceholder}>
           <MapView
@@ -353,10 +395,9 @@ export default function HomeScreen() {
                 onPress={async (e) => {
                   e.stopPropagation();
                   await handleMarkerPress(post);
-                  // Set selected post after a short delay to sync with camera animation
-                  setTimeout(() => setSelectedPost(post), 100);
+                  // Set selected post after animation starts
+                  setTimeout(() => setSelectedPost(post), 200);
                 }}
-                
               />
             ))}
           </MapView>
@@ -364,52 +405,58 @@ export default function HomeScreen() {
           {/* Center dot overlay */}
           <View pointerEvents="none" style={styles.centerDot} />
 
-          {/* Custom Callout Overlay */}
-          {selectedPost && (
-            <View style={styles.customCalloutOverlay} pointerEvents="box-none">
-              <View style={styles.customCalloutContainer}>
-                <CustomCallout
-                  post={selectedPost}
-                  onLike={() => {
-                    console.log("Like post:", selectedPost.postId);
-                    // TODO: Implement like functionality
-                  }}
-                  onComment={() => {
-                    console.log("Comment on post:", selectedPost.postId);
-                    // TODO: Implement comment functionality
-                  }}
-                  onShare={() => {
-                    console.log("Share post:", selectedPost.postId);
-                    // TODO: Implement share functionality
-                  }}
-                  onViewDetails={() => {
-                    handleMarkerPress(selectedPost);
-                    setSelectedPost(null);
-                  }}
-                />
-                <TouchableOpacity 
-                  style={styles.closeCalloutButton}
-                  onPress={() => setSelectedPost(null)}
-                >
-                  <Text style={styles.closeCalloutText}>✕</Text>
-                </TouchableOpacity>
-              </View>
+          {/* Action Buttons and Custom Callout Overlay as siblings */}
+          <View style={{ flex: 1 }} pointerEvents="box-none">
+            {/* Action Buttons */}
+            <View style={styles.actionButtonContainer}>
+              <TouchableOpacity style={styles.iconButton} onPress={handlePost}>
+                <Image source={require('../../assets/images/plus.png')} style={styles.iconImage} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={openDiscoverModal}>
+                <Image source={require('../../assets/images/binoculars.png')} style={styles.iconImage} />
+              </TouchableOpacity>
             </View>
-          )}
+            {/* Custom Callout Overlay */}
+            {selectedPost && (
+              <View style={styles.customCalloutOverlay} pointerEvents="box-none">
+                <View style={styles.customCalloutContainer}>
+                  <CustomCallout
+                    post={selectedPost}
+                    onLike={() => {
+                      console.log("Like post:", selectedPost.postId);
+                      // TODO: Implement like functionality
+                    }}
+                    onComment={() => {
+                      console.log("Comment on post:", selectedPost.postId);
+                      // TODO: Implement comment functionality
+                    }}
+                    onShare={() => {
+                      console.log("Share post:", selectedPost.postId);
+                      // TODO: Implement share functionality
+                    }}
+                    onViewDetails={() => {
+                      handleMarkerPress(selectedPost);
+                      setSelectedPost(null);
+                    }}
+                    onSelectNewPolis={(polis) => {
+                      setSelectedPolis(polis);
+                      setSelectedPost(null); // close callout marker
+                    }}
+                  />
+                  <TouchableOpacity 
+                    style={styles.closeCalloutButton}
+                    onPress={() => {console.log(selectedPost); setSelectedPost(null)}}
+                  >
+                    <Text style={styles.closeCalloutText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
         </ThemedView>
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtonContainer}>
-          <TouchableOpacity style={styles.iconButton} onPress={handlePost}>
-            <Image source={require('../../assets/images/plus.png')} style={styles.iconImage} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={openDiscoverModal}>
-            <Image source={require('../../assets/images/binoculars.png')} style={styles.iconImage} />
-          </TouchableOpacity>
-        </View>
-
         {/* Location Info Modal */}
-        {isModalVisible && (
+        {/* {isModalVisible && (
           <View style={styles.modalOverlay} pointerEvents="box-none">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>{SAMPLE_POST_DATA.locationTitle}</Text>
@@ -427,7 +474,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.triangle} />
           </View>
-        )}
+        )} */}
 
         {/* Post Modal */}
         <PostModal
@@ -454,11 +501,16 @@ export default function HomeScreen() {
                     setIsDiscoverModalVisible(false);
                   }}
                   onPolisSelect={(polis: PolisType) => {
-                    console.log("pospospos");
                     setSelectedPolis(polis);
                     setIsDiscoverModalVisible(false);
                   }}
-                  setPolis={selectedPolis != null ? selectedPolis : null}
+                  setPolis={
+                    discoverUserId
+                      ? { isUser: true, userInfo: { uid: discoverUserId, displayName: '', email: '' } }
+                      : selectedPolis != null
+                        ? selectedPolis
+                        : null
+                  }
                 />
               </Animated.View>
             </PanGestureHandler>

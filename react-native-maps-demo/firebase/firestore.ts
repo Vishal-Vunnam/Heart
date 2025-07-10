@@ -3,16 +3,58 @@ import { app } from './firebaseConfig';
 import { getDocs, doc, getDoc, query, where } from 'firebase/firestore';
 import { collection, addDoc } from 'firebase/firestore';
 import { uploadToAzureBlob } from './blob-storage';
-import type { PostRequestInfo, UserInfo } from '@/types';
+import type { PostDBInfo, PostRequestInfo, UserInfo } from '@/types';
 
 export const db = getFirestore(app);
 
+// -----------------------------
+// JSON STRUCTURE COMMENTS
+// -----------------------------
+
+/**
+ * User JSON structure (in "users" collection):
+ * {
+ *   displayName: string,
+ *   email: string,
+ *   uid: string,
+ *   // ...other optional fields
+ * }
+ */
+
+/**
+ * Post JSON structure (in "posts" collection):
+ * {
+ *   postId: string,
+ *   title: string,
+ *   description: string,
+ *   author: string,
+ *   authorId: string,
+ *   date: number | string, // timestamp or ISO string
+ *   images: string[],      // array of image URLs
+ *   location: {
+ *     latitude: number,
+ *     longitude: number,
+ *     latitudeDelta: number,
+ *     longitudeDelta: number
+ *   },
+ *   // Optional fields:
+ *   // tags: string[],
+ *   // comments: number,
+ *   // likes: number,
+ *   // views: number,
+ *   // visibility: string
+ * }
+ */
+
+// Example post location structure
 const postLocation = {
     latitude: 0,
     latitudeDelta: 0,
     longitude: 0,
     longitudeDelta: 0,
 }
+
+// Example post structure
 const postPopulate = {
     postId: "Post ID",
     location: postLocation,
@@ -27,7 +69,7 @@ const postInfo = {
     date: "Post Date",
     description: "Post Description",
     author: "Post Author",
-    // tags: ["Tag 1", "Tag 2", "Tag 3"],
+    tags: ["Tag 1", "Tag 2", "Tag 3"],
 }
 
 // Generates a unique postId using current timestamp and random string
@@ -35,7 +77,12 @@ function generateUniquePostId() {
     return `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-
+/**
+ * Uploads local image URIs to Azure Blob Storage and returns their URLs.
+ * @param localUris Array of local image URIs
+ * @param userId User ID to use in blob naming
+ * @returns Promise<string[]> Array of uploaded image URLs
+ */
 async function uploadImagesAndGetUrls(localUris: string[], userId: string): Promise<string[]> {
     console.log('Uploading images:', localUris);
     const uploadPromises = localUris.map(async (uri, idx) => {
@@ -54,6 +101,23 @@ async function uploadImagesAndGetUrls(localUris: string[], userId: string): Prom
     return await Promise.all(uploadPromises);
 }
 
+/**
+ * Adds a new post to the "posts" collection.
+ * @param postInfo PostRequestInfo
+ * @returns Firestore DocumentReference
+ *
+ * Post JSON structure:
+ * {
+ *   postId: string,
+ *   title: string,
+ *   description: string,
+ *   author: string,
+ *   authorId: string,
+ *   date: number,
+ *   images: string[],
+ *   location: { latitude, longitude, latitudeDelta, longitudeDelta }
+ * }
+ */
 export async function addPost(postInfo: PostRequestInfo) {
     try {
         console.log('addPost called with:', postInfo);
@@ -84,6 +148,18 @@ export async function addPost(postInfo: PostRequestInfo) {
     }
 }
 
+/**
+ * Adds a new user to the "users" collection.
+ * @param userInfo UserInfo
+ * @returns Firestore DocumentReference
+ *
+ * User JSON structure:
+ * {
+ *   displayName: string,
+ *   email: string,
+ *   uid: string
+ * }
+ */
 export async function addUser(userInfo: UserInfo){
     try {
         const userWithId = { 
@@ -97,6 +173,17 @@ export async function addUser(userInfo: UserInfo){
     }
 }
 
+/**
+ * Gets all users from the "users" collection.
+ * @returns Array<{ displayName, email, uid }>
+ *
+ * User JSON structure:
+ * {
+ *   displayName: string,
+ *   email: string,
+ *   uid: string
+ * }
+ */
 export async function getAllUsers() {
     console.log("getting users")
     const usersRef = collection(db, "users")
@@ -111,12 +198,31 @@ export async function getAllUsers() {
     });
 }
 
-// [{"author": "Test", "authorId": "test", "comments": 0, "date": "2025-07-04T00:45:48.862Z", "description": "This is a test", "images": ["Image 1", "Image 2", "Image 3"], "likes": 0, "location": {"latitude": 37.4219999, "latitudeDelta": 0.01, "longitude": -122.0840575, "longitudeDelta": 0.01}, "postId": "post_1751589948869_qz19bdexu", "tags": ["Tag 1", "Tag 2", "Tag 3"], "title": "Test", "views": 0, "visibility": "Public"}]
+/**
+ * Gets all posts from the "posts" collection.
+ * @returns Array of post objects
+ *
+ * Post JSON structure:
+ * {
+ *   author: string,
+ *   authorId: string,
+ *   date: number | string,
+ *   description: string,
+ *   title: string,
+ *   images: string[],
+ *   postId: string,
+ *   location: { latitude, longitude, latitudeDelta, longitudeDelta }
+ * }
+ */
 
-export async function getAllPosts() {
+
+/**
+ * Gets all posts from the "posts" collection.
+ * @returns Promise<PostDBInfo[]>
+ */
+export async function getAllPosts(): Promise<PostDBInfo[]> {
     const postsRef = collection(db, "posts");
     const postsSnap = await getDocs(postsRef);
-    // Only return postId and location for each post
     return postsSnap.docs.map((doc) => {
         const data = doc.data();
         return {
@@ -125,17 +231,37 @@ export async function getAllPosts() {
             date: data.date,
             description: data.description,
             title: data.title,
-            images: data.images || [],
+            images_url_blob: data.images || [],
             postId: data.postId,
             location: data.location,
-        };
+            tags: data.tags || [],
+        } as PostDBInfo;
     });
 }
 
-export async function getPost(postId: string) {
+/**
+ * Gets a single post by postId.
+ * @param postId string
+ * @returns Post object or undefined
+ *
+ * Post JSON structure: see above
+ */
+export async function getPost(postId: string): Promise<PostDBInfo | undefined> {
     const postRef = doc(db, "posts", postId);
     const postSnap = await getDoc(postRef);
-    return postSnap.data();
+    const data = postSnap.data();
+    if (!data) return undefined;
+    return {
+        author: data.author,
+        authorId: data.authorId,
+        date: data.date,
+        description: data.description,
+        title: data.title,
+        images_url_blob: data.images || [],
+        postId: data.postId,
+        location: data.location,
+        tags: data.tags || [],
+    } as PostDBInfo;
 }
 
 /**
@@ -158,7 +284,14 @@ export async function getImagesbyUrl(imageURL: string): Promise<Blob> {
     }
 }
 
-export async function getPostbyAuthorID(authorId: string) { 
+/**
+ * Gets all posts by a specific authorId.
+ * @param authorId string
+ * @returns Array of post objects
+ *
+ * Post JSON structure: see above
+ */
+export async function getPostbyAuthorID(authorId: string): Promise<PostDBInfo[]> { 
     const querySnapshot = await getDocs(query(collection(db, "posts"), where("authorId", "==", authorId)));
     return querySnapshot.docs.map((doc) => {
         const data = doc.data();
@@ -168,9 +301,30 @@ export async function getPostbyAuthorID(authorId: string) {
             date: data.date,
             description: data.description,
             title: data.title,
-            images: data.images || [],
+            images_url_blob: data.images || [],
             postId: data.postId,
             location: data.location,
-        };
+            tags: data.tags || [],
+        } as PostDBInfo;
+    });
+}
+
+export async function getPostbyTag(tag: string): Promise<PostDBInfo[]> {
+    const querySnapshot = await getDocs(
+        query(collection(db, "posts"), where("tags", "array-contains", tag))
+    );
+    return querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+            author: data.author,
+            authorId: data.authorId,
+            date: data.date,
+            description: data.description,
+            title: data.title,
+            images_url_blob: data.images || [],
+            postId: data.postId,
+            location: data.location,
+            tags: data.tags || [],
+        } as PostDBInfo;
     });
 }

@@ -27,6 +27,10 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
   // 1. Add state for tab selection
   const [activeTab, setActiveTab] = useState<'post' | 'event'>('post');
 
+  // Tag input state
+  const [tagInput, setTagInput] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+
   const pickImage = async () => {
     try {
       // Request permissions
@@ -58,7 +62,31 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  
+  // Tag input handlers
+  const handleAddTag = () => {
+    const trimmed = tagInput.trim();
+    if (trimmed.length > 0 && !tags.includes(trimmed)) {
+      setTags(prev => [...prev, trimmed]);
+      setTagInput('');
+    }
+  };
+
+  const handleTagInputChange = (text: string) => {
+    // If user types comma or space, add tag
+    if (text.endsWith(',') || text.endsWith(' ')) {
+      const trimmed = text.trim().replace(/,$/, '');
+      if (trimmed.length > 0 && !tags.includes(trimmed)) {
+        setTags(prev => [...prev, trimmed]);
+      }
+      setTagInput('');
+    } else {
+      setTagInput(text);
+    }
+  };
+
+  const handleRemoveTag = (index: number) => {
+    setTags(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handlePostLocation = async () => {
     // Example: Gather post data from form state or props
@@ -69,11 +97,18 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
       author: userName, // assume you have authorName in state/props
       images: selectedImages, // assume you have localImageUris: string[]
       description: description, // assume you have description in state/props
-      tags: [], // assume you have tags in state/props (optional)
+      tags: tags, // now using tags from state
     };
     try {
       await onPost(postData);
       // Optionally, handle success (e.g., close modal, show message)
+      // Clear all inputs
+      setLocationTitle('');
+      setDescription('');
+      setSelectedImages([]);
+      setTags([]);
+      setTagInput('');
+      setActiveTab('post');
       if (typeof onClose === 'function') {
         onClose();
       }
@@ -149,6 +184,42 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
                 onChangeText={setDescription}
                 multiline
               />
+              {/* Tag Input Section */}
+              <View style={modalStyles.tagSection}>
+                <Text style={modalStyles.label}>Tags (Optional)</Text>
+                <View style={modalStyles.tagInputRow}>
+                  <TextInput
+                    style={[modalStyles.input, modalStyles.tagInput]}
+                    placeholder="Add tag and press enter, comma, or space"
+                    placeholderTextColor="#888"
+                    value={tagInput}
+                    onChangeText={handleTagInputChange}
+                    onSubmitEditing={handleAddTag}
+                    blurOnSubmit={false}
+                    returnKeyType="done"
+                  />
+                  <TouchableOpacity
+                    style={modalStyles.addTagButton}
+                    onPress={handleAddTag}
+                  >
+                    <Feather name="plus" size={18} color="#007bff" />
+                  </TouchableOpacity>
+                </View>
+                {/* Tag Chips */}
+                <View style={modalStyles.tagChipsContainer}>
+                  {tags.map((tag, idx) => (
+                    <View key={idx} style={modalStyles.tagChip}>
+                      <Text style={modalStyles.tagChipText}>#{tag}</Text>
+                      <TouchableOpacity
+                        style={modalStyles.removeTagButton}
+                        onPress={() => handleRemoveTag(idx)}
+                      >
+                        <Feather name="x" size={14} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
               {activeTab == 'event' && (
                 <View>
                   <Text style={modalStyles.label}>Event Start Time</Text>
@@ -258,7 +329,7 @@ const modalStyles = StyleSheet.create({
   },
   input: {
     backgroundColor: 'rgb(255, 255, 255)',
-    color: 'white',
+    color: 'black',
     height: 44,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -363,6 +434,7 @@ const modalStyles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
     marginTop: 4,
+    color: 'black'
   },
   tabButton: {
     flex: 1,
@@ -386,7 +458,58 @@ const modalStyles = StyleSheet.create({
   tabButtonTextActive: {
     color: '#fff',
   },
+  // Tag input and chips styles
+  tagSection: {
+    marginBottom: 18,
+  },
+  tagInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  tagInput: {
+    flex: 1,
+    marginBottom: 0,
+    marginRight: 8,
+    color: 'black',
+  },
+  addTagButton: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#007bff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tagChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007bff',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  tagChipText: {
+    color: 'black',
+    fontSize: 14,
+    marginRight: 4,
+  },
+  removeTagButton: {
+    backgroundColor: '#ff4444',
+    borderRadius: 10,
+    padding: 2,
+    marginLeft: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
-
 
 export default PostModal; 

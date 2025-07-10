@@ -84,6 +84,7 @@ const DiscoverModal = ({
   useEffect(() => {
     // Fetch all users on mount ( THIS IS TEMPORARY #WILLNOTSCALE)
     getAllUsers().then(setUsers);
+    
     setSelectedPolis(setPolis);
 
     // Get current authorized user and compare userids
