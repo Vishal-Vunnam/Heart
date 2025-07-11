@@ -108,6 +108,13 @@ export default function HomeScreen() {
   const [zoomingToMarker, setZoomingToMarker] = useState(false);
   const isProgrammaticMove = useRef(false);
   const [discoverUserId, setDiscoverUserId] = useState<string | null>(null);
+  const [showedPostsChanges, setShowedPostsChanges] = useState<boolean> (false);
+
+  // Handler to trigger posts refresh after deletion
+  const handlePostsChange = () => {
+    setShowedPostsChanges(true);
+    setSelectedPost(null); // This will close the callout and remove the marker
+  };
 
   // 2. Effects
   useEffect(() => {
@@ -149,7 +156,11 @@ export default function HomeScreen() {
         })
       }
     }
-  }, [selectedPolis]);
+    setShowedPostsChanges(false);
+    console.log("i am here")
+  }, [selectedPolis, showedPostsChanges]);
+
+
 
   // 3. Event Handlers
   const handleMarkerPress = async (post: PostDBInfo) => {
@@ -345,7 +356,7 @@ export default function HomeScreen() {
             <TouchableOpacity onPress={() => router.push('/editprofile')}>
             <Image
               source={require('../../assets/images/Settings.png')}
-              style={{ width: 20, height: 20, marginLeft: 120, tintColor: '#1E3A5F' }}
+              style={{ width: 20, height: 20, marginLeft: 120, tintColor: 'white' }}
             />
             </TouchableOpacity>
               <TouchableOpacity style={styles.navButton} onPress={displayAccountInfo}>
@@ -421,6 +432,7 @@ export default function HomeScreen() {
               <View style={styles.customCalloutOverlay} pointerEvents="box-none">
                 <View style={styles.customCalloutContainer}>
                   <CustomCallout
+                    isUserLoggedIn={selectedPost.authorId == user?.uid}
                     post={selectedPost}
                     onLike={() => {
                       console.log("Like post:", selectedPost.postId);
@@ -441,6 +453,11 @@ export default function HomeScreen() {
                     onSelectNewPolis={(polis) => {
                       setSelectedPolis(polis);
                       setSelectedPost(null); // close callout marker
+                    }}
+                    onPostsChange={handlePostsChange}
+                    onPostDeleted={() => {
+                      setSelectedPost(null); // This will close the callout and remove the marker
+                      setShowedPostsChanges(true); // Refresh posts
                     }}
                   />
                   <TouchableOpacity 

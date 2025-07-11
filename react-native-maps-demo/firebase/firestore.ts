@@ -1,8 +1,8 @@
 import { getFirestore } from 'firebase/firestore';
 import { app } from './firebaseConfig';
-import { getDocs, doc, getDoc, query, where } from 'firebase/firestore';
+import { getDocs, doc, deleteDoc, getDoc, query, where } from 'firebase/firestore';
 import { collection, addDoc } from 'firebase/firestore';
-import { uploadToAzureBlob } from './blob-storage';
+import { uploadToAzureBlob, deleteFromAzureBlob } from './blob-storage';
 import type { PostDBInfo, PostRequestInfo, UserInfo } from '@/types';
 
 export const db = getFirestore(app);
@@ -147,6 +147,53 @@ export async function addPost(postInfo: PostRequestInfo) {
         throw error;
     }
 }
+
+/**
+ * Deletes a post from the "posts" collection by its postId.
+ * @param post PostDBInfo - The post object to delete.
+ * @returns Promise<void>
+ */
+
+export async function deletePost(post: PostDBInfo) {
+  if (!post || !post.postId) {
+    console.error("No post or postId provided to deletePost");
+    return;
+  }
+
+  try {
+    // Find the Firestore document with the correct postId field (not doc id)
+    const postsRef = collection(db, 'posts');
+    const q = query(postsRef, where('postId', '==', post.postId));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      console.warn(`No Firestore post found with postId: ${post.postId}`);
+    }
+
+    // Delete all matching docs (should only be one, but just in case)
+    for (const docSnap of querySnapshot.docs) {
+      await deleteDoc(docSnap.ref);
+      console.log(`Deleted Firestore post with doc id: ${docSnap.id}`);
+    }
+
+    // Delete all images associated with the post from Azure Blob Storage
+    const tmp_images = post.images_url_blob || [];
+    if (Array.isArray(tmp_images) && tmp_images.length > 0) {
+      for (const imageUrl of tmp_images) {
+        try {
+          await deleteFromAzureBlob(imageUrl);
+          console.log(`Deleted image from Azure: ${imageUrl}`);
+        } catch (err) {
+          console.error(`Failed to delete image from Azure: ${imageUrl}`, err);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error deleting post: ", error);
+    throw error;
+  }
+}
+
 
 /**
  * Adds a new user to the "users" collection.

@@ -41,7 +41,23 @@ export async function uploadToAzureBlob(fileUri: string, blobName: string): Prom
     throw error;
   }
 }
-
+export async function deleteFromAzureBlob(blobUrl: string): Promise<string> {
+  try {
+    // Append SAS token if not present
+    const urlWithSAS = getImageUrlWithSAS(blobUrl);
+    const response = await fetch(urlWithSAS, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to delete blob: ${response.status} ${response.statusText} ${errorText}`);
+    }
+    return "Blob deleted successfully";
+  } catch (error) {
+    console.error('[deleteFromAzureBlob] Error:', error);
+    throw error;
+  }
+}
 export function getImageUrlWithSAS(blobUrl: string): string {
   const { SAS_TOKEN } = PHOTOS_AZURE_CONFIG;
   return blobUrl.includes('?') ? blobUrl : `${blobUrl}${SAS_TOKEN.startsWith('?') ? SAS_TOKEN : '?' + SAS_TOKEN}`;

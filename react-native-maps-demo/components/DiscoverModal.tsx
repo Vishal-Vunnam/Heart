@@ -303,9 +303,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'rgb(253, 253, 253)',
-    borderRadius: 12,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     marginTop: 10,
-    marginBottom: 10,
+    marginBottom: -20,
     paddingVertical: 12,
     paddingHorizontal: 18,
     minHeight: 60,
@@ -353,15 +356,18 @@ const styles = StyleSheet.create({
   postsTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: 'black',
   },
   postItem: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(32, 32, 32, 0.69)',
     // borderRadius: 12,
     padding: 12,
     // marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+    borderColor: 'rgba(255, 255, 255, 0.63)',
     flexDirection: 'row', // Added for horizontal layout
     alignItems: 'center', // Added for vertical alignment
   },
@@ -369,16 +375,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: 'white',
+    // There is no 'textOutline' property in React Native styles.
+    // To achieve a text outline, you would need to use textShadow properties:
+    textShadowColor: 'black',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 4,
   },
   postDescription: {
     fontSize: 14,
     color: 'white',
     marginTop: 4,
+    textShadowColor: 'black',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 4,
   },
   postDate: {
     fontSize: 12,
     color: 'white',
     marginTop: 4,
+    textShadowColor: 'black',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 4,
   },
   postDisplay: {
     marginTop: 20,
@@ -386,6 +403,9 @@ const styles = StyleSheet.create({
   },
   postAuthor: {
     color: 'white',
+    textShadowColor: 'black',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 4,
   },
   noPosts: {
     fontSize: 16,

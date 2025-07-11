@@ -32,9 +32,9 @@ export const indexStyles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 10,
-    backgroundColor: 'white',
+    backgroundColor: '#000',
     borderBottomWidth: 2,
-    borderBottomColor: '#1E3A5F',
+    borderBottomColor: '#111',
   },
   navButton: {
     flexDirection: 'row',
@@ -42,28 +42,28 @@ export const indexStyles = StyleSheet.create({
     padding: 8,
   },
   navButtonText: {
-    color: '#1E3A5F',
+    color: '#fff',
     fontSize: 30,
     fontWeight: 'bold',
     marginRight: 4,
     fontFamily: 'Avenir', // Use Avenir for a modern, geometric sans-serif look
   },
   polisDisplay: {
-    backgroundColor: '#1E3A5F', // Polis blue
+    backgroundColor: '#000',
     paddingVertical: 8,
     paddingHorizontal: 16,
     justifyContent: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    color: 'white',
+    borderBottomColor: '#222',
+    color: '#fff',
   },
   polisDisplayText: {
-    color: 'white',
+    color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
   },
   signInText: {
-    color: '#1E3A5F',
+    color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
     marginRight: 4,
@@ -71,7 +71,7 @@ export const indexStyles = StyleSheet.create({
   },
 
   accountIcon: {
-    color: '#1E3A5F',
+    color: '#fff',
   },
   searchBoxContainer: {
     position: 'absolute',
@@ -238,15 +238,15 @@ export const indexStyles = StyleSheet.create({
     bottom: 0,
     // backgroundColor: 'rgba(32,32,32,0.85)',
     justifyContent: 'flex-end',
-    zIndex: 100,
+    // zIndex: 100,
     elevation: 100,
   },
   discoverModalContent: {
-    backgroundColor: 'rgb(30, 58, 95)', // Polis blue with high opacity
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     height: '70%',
     paddingTop: 10,
+    backgroundColor: 'rgba(32, 32, 32, 0.69)',
   },
   dragHandle: {
     width: 40,
@@ -304,7 +304,7 @@ export const indexStyles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#1E3A5F",
+    backgroundColor: "black",
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12, // for spacing between buttons
@@ -372,7 +372,7 @@ export const indexStyles = StyleSheet.create({
     elevation: 4,
   },
   closeCalloutText: {
-    color: 'white',
+    color: 'black',
     fontSize: 14,
     fontWeight: 'bold',
   },
