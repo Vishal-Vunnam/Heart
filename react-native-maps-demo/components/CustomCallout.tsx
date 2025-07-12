@@ -16,6 +16,7 @@ interface CustomCalloutProps {
   onSelectNewPolis?: (polis: PolisType) => void;
   onPostsChange: () => void; 
   onPostDeleted?: () => void;
+  onEdit?: () => void;
 }
 
 const CustomCallout: React.FC<CustomCalloutProps> = ({
@@ -27,7 +28,8 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
   onViewDetails,
   onSelectNewPolis,
   onPostsChange,
-  onPostDeleted
+  onPostDeleted,
+  onEdit
 }) => {
   const [imageLoadingStates, setImageLoadingStates] = useState<{ [key: number]: boolean }>({});
   const [imageErrorStates, setImageErrorStates] = useState<{ [key: number]: boolean }>({});
@@ -114,6 +116,10 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
             }}
             
             onClose={() => setShowActionSheet(false)}
+            onEdit={() => {
+              setShowActionSheet(false);
+              if (onEdit) onEdit();
+            }}
             // You can add onEdit, onDelete, onReport handlers here if needed
           />
         )}

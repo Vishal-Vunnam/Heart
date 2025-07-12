@@ -21,7 +21,7 @@ import { getImageUrlWithSAS } from '@/firebase/blob-storage';
 import { PostView } from './PostView';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { PolisType, PostData } from '@/types';
+import { PolisType, PostDBInfo } from '@/types';
 import {getCurrentUser} from '@/firebase/auth';
 import { router } from 'expo-router';
 // =====================
@@ -59,35 +59,27 @@ export async function clearSearchHistory() {
 // =====================
 // DiscoverModal Component
 // =====================
-const DiscoverModal = ({
-  onPostSelect,
-  onPolisSelect,
-  setPolis
-}: {
-  onPostSelect: (post: any) => void;
-  onPolisSelect?: (polis: any) => void;
-  setPolis: PolisType | null
-}) => {
-  // ----- State & Refs -----
-  const [posts, setPosts] = useState<any[]>([]);
+interface DiscoverModalProps {
+  onPostSelect: (post: PostDBInfo) => void;
+  onPolisSelect?: (polis: PolisType) => void;
+  setPolis: PolisType | null;
+}
+
+const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSelect, setPolis }) => {
+  // State
+  const [posts, setPosts] = useState<PostDBInfo[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [isLoggedInUser, setIsLoggedInUser] = useState<boolean> (false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isLoggedInUser, setIsLoggedInUser] = useState(false);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const textInputRef = useRef<TextInput>(null);
   const [searchText, setSearchText] = useState('');
-  const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [inPostView, setPostView] = useState<PostData | null> (null);
 
-  // ----- Effects -----
+  // Fetch users and set initial polis
   useEffect(() => {
-    // Fetch all users on mount ( THIS IS TEMPORARY #WILLNOTSCALE)
     getAllUsers().then(setUsers);
-    
     setSelectedPolis(setPolis);
-
-    // Get current authorized user and compare userids
     (async () => {
       try {
         const currentUser = await getCurrentUser();
@@ -108,14 +100,13 @@ const DiscoverModal = ({
     })();
   }, [setPolis]);
 
+  // Fetch posts for selected polis
   useEffect(() => {
     if (selectedPolis && selectedPolis.isUser) {
       setFilteredUsers([]);
       getPostbyAuthorID(selectedPolis.userInfo.uid).then((userPosts) => {
         setPosts(userPosts);
       });
-
-      // Get current authorized user and compare userids
       getCurrentUser()
         .then((currentUser: any) => {
           if (
@@ -137,7 +128,7 @@ const DiscoverModal = ({
     }
   }, [selectedPolis]);
 
-  // ----- Handlers & Utilities -----
+  // Search input handler
   const handleSearchInputChange = (text: string) => {
     setSearchText(text);
     if (text.length > 0) {
@@ -154,7 +145,7 @@ const DiscoverModal = ({
     }
   };
 
-  // ----- Render -----
+  // Render
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -186,8 +177,8 @@ const DiscoverModal = ({
                 onBlur={() => setIsTyping(false)}
               />
             </View>
-            {/* 👇 Suggestion Dropdown */}
           </ThemedView>
+          {/* Suggestion Dropdown */}
           {isTyping ? (
             <View style={styles.suggestionBox}>
               {filteredUsers.map((user, index) => (
@@ -200,9 +191,9 @@ const DiscoverModal = ({
                       userInfo: {
                         displayName: user.displayName ?? '',
                         email: user.email,
-                        uid: user.uid
-                      }
-                    })
+                        uid: user.uid,
+                      },
+                    });
                     saveSearch(user);
                     setSearchText(user.email);
                     setIsTyping(false);
@@ -224,7 +215,7 @@ const DiscoverModal = ({
                       : selectedPolis.tag}
                   </Text>
                   {isLoggedInUser && (
-                    <TouchableOpacity style={styles.settingsButton} onPress={()=>router.push('/editprofile')}>
+                    <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/editprofile')}>
                       <Text style={styles.settingsText}>⚙️ User Settings</Text>
                     </TouchableOpacity>
                   )}
@@ -240,11 +231,10 @@ const DiscoverModal = ({
                   <Text style={{ color: '#007AFF', fontWeight: 'bold', fontSize: 16 }}>
                     View{' '}
                     {isLoggedInUser
-                      ? "My City"
+                      ? 'My City'
                       : `${selectedPolis.isUser
-                          ? (selectedPolis.userInfo.displayName || selectedPolis.userInfo.email)
-                          : selectedPolis.tag}'s City`
-                    }
+                          ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
+                          : selectedPolis.tag}'s City`}
                   </Text>
                 </TouchableOpacity>
                 <View style={styles.infoRight}>
@@ -269,14 +259,14 @@ const DiscoverModal = ({
                         <ThemedText style={styles.postDate}>{post.date}</ThemedText>
                         <ThemedText style={styles.postAuthor}>By: {post.author}</ThemedText>
                       </View>
-                      {post.images && post.images.length > 0 && (
-                          <ScrollView horizontal style={{ marginLeft: 18 }}>
-                            <Image
-                              source={{ uri: getImageUrlWithSAS(post.images[0]) }}
-                              style={{ width: 100, height: 100, borderRadius: 8 }}
-                              resizeMode="cover"
-                            />
-                          </ScrollView>
+                      {post.images_url_blob && post.images_url_blob.length > 0 && (
+                        <ScrollView horizontal style={{ marginLeft: 18 }}>
+                          <Image
+                            source={{ uri: getImageUrlWithSAS(post.images_url_blob[0]) }}
+                            style={{ width: 100, height: 100, borderRadius: 8 }}
+                            resizeMode="cover"
+                          />
+                        </ScrollView>
                       )}
                     </TouchableOpacity>
                   ))
@@ -285,8 +275,6 @@ const DiscoverModal = ({
                 )}
               </ThemedView>
             </>
-          ) : inPostView ? (
-            <PostView post={inPostView} />
           ) : null}
         </View>
       </ScrollView>
@@ -294,240 +282,388 @@ const DiscoverModal = ({
   );
 };
 
-// =====================
-// Styles
-// =====================
+// Enhanced styles for DiscoverModal component
 const styles = StyleSheet.create({
-  infoDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgb(253, 253, 253)',
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    marginTop: 10,
-    marginBottom: -20,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    minHeight: 60,
-  },
-  infoLeft: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  displayName: {
-    color: 'black',
-    fontSize: 20,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-    fontFamily: 'Averia',
-  },
-  infoRight: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    minWidth: 60,
-  },
-  infoStatLabel: {
-    color: 'black',
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: 'Averia',
-  },
-  infoStatValue: {
-    color: 'black',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 2,
-    fontFamily: 'Averia',
-  },
+  // Main container with better backdrop
   discoverView: {
     backgroundColor: 'transparent',
     flex: 1,
   },
-  email: {
-    fontSize: 16,
-    color: 'white',
+  
+  // Enhanced modal overlay with better backdrop
+  discoverModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)', // Darker, more professional backdrop
+    justifyContent: 'flex-end',
+    zIndex: 100,
+    elevation: 100,
   },
+  
+  // Improved modal content container
+  discoverModalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '85%', // Increased height for better content display
+    paddingTop: 0,
+    backgroundColor: '#1a1a1a', // Darker, more modern background
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  
+  // Enhanced drag handle
+  dragHandle: {
+    width: 50,
+    height: 5,
+    backgroundColor: '#555',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  
+  // Posts container with better spacing
   postsContainer: {
     zIndex: 1,
+    flex: 1,
+    paddingHorizontal: 0,
   },
-  postsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'black',
-  },
-  postItem: {
-    backgroundColor: 'rgba(32, 32, 32, 0.69)',
-    // borderRadius: 12,
-    padding: 12,
-    // marginBottom: 10,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderLeftWidth: 0,
-    borderRightWidth: 0,
-    borderColor: 'rgba(255, 255, 255, 0.63)',
-    flexDirection: 'row', // Added for horizontal layout
-    alignItems: 'center', // Added for vertical alignment
-  },
-  postTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
-    // There is no 'textOutline' property in React Native styles.
-    // To achieve a text outline, you would need to use textShadow properties:
-    textShadowColor: 'black',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 4,
-  },
-  postDescription: {
-    fontSize: 14,
-    color: 'white',
-    marginTop: 4,
-    textShadowColor: 'black',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 4,
-  },
-  postDate: {
-    fontSize: 12,
-    color: 'white',
-    marginTop: 4,
-    textShadowColor: 'black',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 4,
-  },
-  postDisplay: {
-    marginTop: 20,
-    backgroundColor: 'transparent',
-  },
-  postAuthor: {
-    color: 'white',
-    textShadowColor: 'black',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 4,
-  },
-  noPosts: {
-    fontSize: 16,
-    color: 'white',
-  },
+  
+  // Enhanced search box container
   searchBoxContainer: {
     alignItems: 'center',
     backgroundColor: 'transparent',
-    padding: 10,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 0,
     zIndex: 1000,
     position: 'relative',
-    backdropFilter: 'blur(6px)',
+    marginBottom: 8,
   },
+  
+  // Improved search box wrapper
   searchBoxWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    height: 30,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    paddingHorizontal: 12,
-    backgroundColor: 'white',
+    height: 44, // Increased height for better touch targets
+    borderRadius: 22,
+    borderWidth: 0, // Remove border for cleaner look
+    paddingHorizontal: 16,
+    backgroundColor: '#2a2a2a',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
+  
+  // Enhanced search icon
   icon: {
-    marginRight: 8,
+    marginRight: 12,
+    color: '#888',
   },
+  
+  // Improved search input
   searchBox: {
     flex: 1,
     fontSize: 16,
-    color: 'black',
+    color: '#ffffff',
     backgroundColor: 'transparent',
+    paddingVertical: 0,
   },
-  searchButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  searchButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  usersContainer: {
-    marginTop: 60,
-    paddingHorizontal: 16,
-  },
-  usersTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: 'white',
-  },
-  userItem: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  userEmail: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
-    marginBottom: 4,
-  },
-  userName: {
-    fontSize: 14,
-    color: 'white',
-  }, 
-  settingsButton: {
-    backgroundColor: '#E0E0E0',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginTop: 4,
-    alignSelf: 'flex-start',
-  },
-  settingsText: {
-    color: '#333',
-    fontSize: 12,
-    fontWeight: '600',
-  },
+  
+  // Enhanced suggestion box
   suggestionBox: {
     position: 'absolute',
-    top: 40,
-    left: 0,
-    right: 0,
-    backgroundColor: 'transparent',
-    color: 'white',
+    top: 68,
+    left: 16,
+    right: 16,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
     marginTop: 4,
-    elevation: 10,
+    elevation: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    maxHeight: 200,
-    overflow: 'scroll',
+    maxHeight: 250,
+    overflow: 'hidden',
     zIndex: 1001,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
   },
+  
+  // Improved suggestion items
   suggestionItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#ccc',
-    color: 'white',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    backgroundColor: 'transparent',
+  },
+  
+  // Enhanced user name styling
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  
+  // Enhanced user email styling
+  userEmail: {
+    fontSize: 14,
+    color: '#888',
+  },
+  
+  // Improved info display
+  infoDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#2a2a2a',
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    minHeight: 80,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  
+  // Enhanced info left section
+  infoLeft: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  
+  // Improved display name
+  displayName: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+    fontFamily: 'Averia',
+    marginBottom: 4,
+  },
+  
+  // Enhanced settings button
+  settingsButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  
+  settingsText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  
+  // Improved info right section
+  infoRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: 80,
+    marginLeft: 12,
+  },
+  
+  // Enhanced stat labels
+  infoStatLabel: {
+    color: '#888',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Averia',
+    textAlign: 'right',
+  },
+  
+  infoStatValue: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginTop: 2,
+    fontFamily: 'Averia',
+    textAlign: 'right',
+  },
+  
+  // Enhanced post display
+  postDisplay: {
+    marginTop: 0,
+    backgroundColor: 'transparent',
+    flex: 1,
+  },
+  
+  // Improved post items
+  postItem: {
+    backgroundColor: '#2a2a2a',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  
+  // Enhanced post titles
+  postTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 4,
+    lineHeight: 22,
+  },
+  
+  // Improved post descriptions
+  postDescription: {
+    fontSize: 14,
+    color: '#ccc',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  
+  // Enhanced post metadata
+  postDate: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 2,
+  },
+  
+  postAuthor: {
+    fontSize: 12,
+    color: '#888',
+    fontStyle: 'italic',
+  },
+  
+  // Improved no posts message
+  noPosts: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 40,
+    fontStyle: 'italic',
+  },
+  
+  // Enhanced view city button
+  viewCityButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginBottom: 8,
+  },
+  
+  viewCityButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
 
-// =====================
-// Export
-// =====================
+// // Additional component improvements
+// const DiscoverModalEnhanced = ({
+//   onPostSelect,
+//   onPolisSelect,
+//   setPolis,
+//   visible,
+//   onClose
+// }) => {
+//   // ... existing state and logic ...
+  
+//   const handleBackdropPress = () => {
+//     if (onClose) {
+//       onClose();
+//     }
+//   };
+  
+//   return (
+//     <Modal
+//       visible={visible}
+//       animationType="slide"
+//       transparent={true}
+//       onRequestClose={onClose}
+//     >
+//       <TouchableWithoutFeedback onPress={handleBackdropPress}>
+//         <View style={styles.discoverModalOverlay}>
+//           <TouchableWithoutFeedback onPress={() => {}}>
+//             <View style={styles.discoverModalContent}>
+//               <View style={styles.dragHandle} />
+              
+//               {/* Header with close button */}
+//               <View style={styles.headerContainer}>
+//                 <Text style={styles.modalTitle}>Discover</Text>
+//                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+//                   <Text style={styles.closeButtonText}>✕</Text>
+//                 </TouchableOpacity>
+//               </View>
+              
+//               {/* Rest of your existing modal content */}
+//               <KeyboardAvoidingView
+//                 style={{ flex: 1 }}
+//                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+//                 keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+//               >
+//                 {/* Your existing ScrollView and content */}
+//               </KeyboardAvoidingView>
+//             </View>
+//           </TouchableWithoutFeedback>
+//         </View>
+//       </TouchableWithoutFeedback>
+//     </Modal>
+//   );
+// };
+
+// Additional header styles
+const headerStyles = StyleSheet.create({
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    fontFamily: 'Averia',
+  },
+  
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  closeButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});
+
 export default DiscoverModal;

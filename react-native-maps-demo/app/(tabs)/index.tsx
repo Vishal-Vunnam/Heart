@@ -36,6 +36,7 @@ import { ThemedView } from '@/components/ThemedView';
 import PostModal from '@/components/PostModal';
 import DiscoverModal from '@/components/DiscoverModal';
 import CustomCallout from '@/components/CustomCallout';
+import EditPostModal from '@/components/EditPostModal';
 
 // Firebase Firestore & Storage
 import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/firebase/firestore';
@@ -109,11 +110,27 @@ export default function HomeScreen() {
   const isProgrammaticMove = useRef(false);
   const [discoverUserId, setDiscoverUserId] = useState<string | null>(null);
   const [showedPostsChanges, setShowedPostsChanges] = useState<boolean> (false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [postToEdit, setPostToEdit] = useState<PostDBInfo | null>(null);
 
   // Handler to trigger posts refresh after deletion
   const handlePostsChange = () => {
     setShowedPostsChanges(true);
     setSelectedPost(null); // This will close the callout and remove the marker
+  };
+
+  // Handler for edit
+  const handleEdit = (post: PostDBInfo) => {
+    setPostToEdit(post);
+    setEditModalVisible(true);
+  };
+  // Handler for submit
+  const handleEditSubmit = (editedPost: PostDBInfo) => {
+    // Update the post in posts state (replace by postId)
+    setPosts(prevPosts => prevPosts.map(p => p.postId === editedPost.postId ? editedPost : p));
+    setEditModalVisible(false);
+    setPostToEdit(null);
+    setSelectedPost(editedPost); // Optionally show the updated post
   };
 
   // 2. Effects
@@ -459,6 +476,7 @@ export default function HomeScreen() {
                       setSelectedPost(null); // This will close the callout and remove the marker
                       setShowedPostsChanges(true); // Refresh posts
                     }}
+                    onEdit={() => handleEdit(selectedPost)}
                   />
                   <TouchableOpacity 
                     style={styles.closeCalloutButton}
@@ -532,6 +550,15 @@ export default function HomeScreen() {
               </Animated.View>
             </PanGestureHandler>
           </View>
+        )}
+
+        {/* Edit Post Modal */}
+        {editModalVisible && postToEdit && (
+          <EditPostModal
+            onClose={() => { setEditModalVisible(false); setPostToEdit(null); }}
+            oldPostInfo={postToEdit}
+            onEdit={handleEditSubmit}
+          />
         )}
       </ThemedView>
     </SafeAreaView>

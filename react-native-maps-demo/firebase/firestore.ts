@@ -1,4 +1,4 @@
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, updateDoc } from 'firebase/firestore';
 import { app } from './firebaseConfig';
 import { getDocs, doc, deleteDoc, getDoc, query, where } from 'firebase/firestore';
 import { collection, addDoc } from 'firebase/firestore';
@@ -144,6 +144,103 @@ export async function addPost(postInfo: PostRequestInfo) {
         return postRef;
     } catch (error) {
         console.error("Error adding post: ", error);
+        throw error;
+    }
+}
+
+
+export async function editPost(oldPostInfo: PostDBInfo, newPostInfo: PostDBInfo, newImages: string[]) {
+    // Find the Firestore document with the correct postId field (not doc id)
+    if (oldPostInfo == newPostInfo) return; 
+    if (!oldPostInfo || !oldPostInfo.postId) {
+        console.error("No post or postId provided to editPost");
+        return;
+    }
+    // Check for things that should not change while editing a post
+    if (
+        oldPostInfo.postId !== newPostInfo.postId ||
+        oldPostInfo.authorId !== newPostInfo.authorId ||
+        oldPostInfo.author !== newPostInfo.author ||
+        oldPostInfo.date !== newPostInfo.date
+    ) {
+        console.error("Attempted to change immutable post fields (postId, authorId, author, or date) during editPost");
+        return;
+    }
+    if (oldPostInfo.images_url_blob !== newPostInfo.images_url_blob){
+        console.error("Incorrect format for changing images");
+        return;
+    }
+    try {
+        const postsRef = collection(db, 'posts');
+        const q = query(postsRef, where('postId', '==', oldPostInfo.postId));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.warn(`No Firestore post found with postId: ${oldPostInfo.postId}`);
+            return;
+        }
+
+        // Update all matching docs (should only be one, but just in case)
+        for (const docSnap of querySnapshot.docs) {
+            await updateDoc(docSnap.ref, {
+                title: newPostInfo.title,
+                description: newPostInfo.description,
+                location: newPostInfo.location,
+                tags: newPostInfo.tags,
+                // images: newPostInfo.images, // Don't worry about new images, handled elsewhere
+            });
+            console.log(`Edited Firestore post with doc id: ${docSnap.id}`);
+        }
+    } catch (error) {
+        console.error("Error editing post: ", error);
+        throw error;
+    }
+    if (Array.isArray(newImages) && newImages.length > 0) {
+        // Add new images to the post using addPicturesToPost
+        await addPicturesToPost(newPostInfo, newImages);
+    }
+}
+
+/**
+ * Adds a picture URL to the images array of a post in Firestore.
+ * @param postInfo PostDBInfo - The post object (must contain postId).
+ * @param imageUrl string - The image URL to add.
+ * @returns Promise<void>
+ */
+export async function addPicturesToPost(postInfo: PostDBInfo, imageUrls: string[]) {
+    if (!postInfo || !postInfo.postId) {
+        console.error("No post or postId provided to addPictureToPost");
+        return;
+    }
+    try {
+        // Find the Firestore document with the correct postId field (not doc id)
+        const postsRef = collection(db, 'posts');
+        const q = query(postsRef, where('postId', '==', postInfo.postId));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.warn(`No Firestore post found with postId: ${postInfo.postId}`);
+            return;
+        }
+        // Add image to Blob
+        let imagesBlobUrls = imageUrls
+        try {
+            imagesBlobUrls = await uploadImagesAndGetUrls(imageUrls, postInfo.authorId);
+        }
+        catch (error){
+            console.error("Error uploading picture to blob storage: ", error);
+            throw error;
+        }
+        // Update all matching docs (should only be one, but just in case)
+        for (const docSnap of querySnapshot.docs) {
+            const data = docSnap.data();
+            const currentImages: string[] = Array.isArray(data.images) ? data.images : [];
+            const updatedImages = [...currentImages, ...imagesBlobUrls];
+            await updateDoc(docSnap.ref, { images: updatedImages });
+            console.log(`Added image to Firestore post with doc id: ${docSnap.id}`);
+        }
+    } catch (error) {
+        console.error("Error adding picture to post: ", error);
         throw error;
     }
 }
