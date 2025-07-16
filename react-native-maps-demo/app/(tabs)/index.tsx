@@ -43,7 +43,7 @@ import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/firebas
 import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/firebase/blob-storage';
 
 // Types
-import { PolisType, PostDBInfo, PostRequestInfo } from '@/types';
+import { PolisType, PostDBInfo, PostRequestInfo, UserInfo } from '@/types';
 
 // Styles
 import { indexStyles as styles } from '../styles/indexstyles';
@@ -90,11 +90,7 @@ function renderPostImages(images?: string[]) {
 }
 export default function HomeScreen() {
   // 1. State variables
-  const [user, setUser] = useState<{
-    displayName: string;
-    email: string;
-    uid: string;
-  } | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isPostModalVisible, setIsPostModalVisible] = useState(false);
   const [isDiscoverModalVisible, setIsDiscoverModalVisible] = useState(false);
@@ -143,6 +139,7 @@ export default function HomeScreen() {
           displayName: firebaseUser.displayName ?? "",
           email: firebaseUser.email ?? "",
           uid: firebaseUser.uid,
+          photoURL: firebaseUser.photoURL
         });
         setSelectedPolis({
           isUser: true,
@@ -150,6 +147,7 @@ export default function HomeScreen() {
             displayName: firebaseUser.displayName ?? "",
             email: firebaseUser.email ?? "",
             uid: firebaseUser.uid,
+            photoURL: firebaseUser.photoURL
           }
         });
       }
@@ -339,6 +337,12 @@ export default function HomeScreen() {
       const { displayName, email } = selectedPolis.userInfo;
       return (
         <View style={styles.polisDisplay}>
+          {selectedPolis.userInfo.photoURL ? (
+            <Image
+              source={{ uri: selectedPolis.userInfo.photoURL }}
+              style={styles.profilePicPolis}
+            />
+          ) : null}
           <Text style={styles.polisDisplayText}>
             Viewing {displayName ? displayName : email}'s City
           </Text>
@@ -541,7 +545,7 @@ export default function HomeScreen() {
                   }}
                   setPolis={
                     discoverUserId
-                      ? { isUser: true, userInfo: { uid: discoverUserId, displayName: '', email: '' } }
+                      ? { isUser: true, userInfo: { uid: discoverUserId, displayName: '', email: '', photoURL: null } }
                       : selectedPolis != null
                         ? selectedPolis
                         : null

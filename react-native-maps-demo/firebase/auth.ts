@@ -27,22 +27,25 @@ export function signIn(email: string, password: string) {
 // No, you do not need this. The updateProfile function is already provided by Firebase Auth and should be imported directly where needed.
 
 // Sign Up
-export function signUp(email: string, password: string, displayName: string) {
+export function signUp(email: string, password: string, displayName: string, photoURL: string) {
   console.log("Signing up with email:", email);
   return createUserWithEmailAndPassword(auth, email, password)
     .then((userCredential) => {
       const user = userCredential.user;
       console.log("Signed up user:", user);
-      
-      // Update display name if provided
-      if (displayName) {
-        return updateProfile(user, { displayName })
-          .then(() => {
-            console.log("Display name updated:", displayName);
-            return user;
-          });
+
+      // Update display name and photoURL if provided
+      if (displayName || photoURL) {
+        return updateProfile(user, { 
+          displayName: displayName || undefined, 
+          photoURL: photoURL || undefined 
+        })
+        .then(() => {
+          console.log("Display name and/or photoURL updated:", displayName, photoURL);
+          return user;
+        });
       }
-      console.log("final account info", user)
+      console.log("final account info", user);
       return user;
     })
     .catch((error) => {

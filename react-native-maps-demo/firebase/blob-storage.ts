@@ -1,8 +1,12 @@
 import { PHOTOS_AZURE_CONFIG } from "@/azure-config";
 
-export async function uploadToAzureBlob(fileUri: string, blobName: string): Promise<string> {
-  const { STORAGE_ACCOUNT, CONTAINER_NAME, SAS_TOKEN } = PHOTOS_AZURE_CONFIG;
-  const blobUrl = `https://${STORAGE_ACCOUNT}.blob.core.windows.net/${CONTAINER_NAME}/${blobName}?${SAS_TOKEN}`;
+export async function uploadToAzureBlob(
+  fileUri: string,
+  blobName: string,
+  containerName: 'post-images' | 'profile-pics'
+): Promise<string> {
+  const { STORAGE_ACCOUNT, SAS_TOKEN } = PHOTOS_AZURE_CONFIG;
+  const blobUrl = `https://${STORAGE_ACCOUNT}.blob.core.windows.net/${containerName}/${blobName}?${SAS_TOKEN}`;
   console.log('[uploadToAzureBlob] blobUrl:', blobUrl);
   try {
     // Fetch the file as a blob/binary
@@ -33,7 +37,7 @@ export async function uploadToAzureBlob(fileUri: string, blobName: string): Prom
     }
 
     // Return the public URL (if container is public or via SAS)
-    const publicUrl = `https://${STORAGE_ACCOUNT}.blob.core.windows.net/${CONTAINER_NAME}/${blobName}`;
+    const publicUrl = `https://${STORAGE_ACCOUNT}.blob.core.windows.net/${containerName}/${blobName}`;
     console.log('[uploadToAzureBlob] Upload successful, publicUrl:', publicUrl);
     return publicUrl;
   } catch (error) {

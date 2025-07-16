@@ -4,6 +4,7 @@ export type UserInfo = {
   displayName: string; 
   email: string;
   uid: string;
+  photoURL: string | null; 
 };
 
 export type Location = { 

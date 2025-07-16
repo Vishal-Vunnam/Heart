@@ -90,7 +90,7 @@ async function uploadImagesAndGetUrls(localUris: string[], userId: string): Prom
         const blobName = `${userId}_${Date.now()}_${idx}.${ext}`;
         try {
             console.log(`Uploading image ${uri} as ${blobName}`);
-            const url = await uploadToAzureBlob(uri, blobName);
+            const url = await uploadToAzureBlob(uri, blobName, 'post-images');
             console.log(`Successfully uploaded ${uri} to ${url}`);
             return url;
         } catch (err) {
@@ -338,6 +338,7 @@ export async function getAllUsers() {
             displayName: data.displayName,
             email: data.email,
             uid: data.uid,
+            photoURL: data.photoURL
         };
     });
 }

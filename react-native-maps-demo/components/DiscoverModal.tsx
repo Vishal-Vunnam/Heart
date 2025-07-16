@@ -21,7 +21,7 @@ import { getImageUrlWithSAS } from '@/firebase/blob-storage';
 import { PostView } from './PostView';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { PolisType, PostDBInfo } from '@/types';
+import { PolisType, PostDBInfo, UserInfo } from '@/types';
 import {getCurrentUser} from '@/firebase/auth';
 import { router } from 'expo-router';
 // =====================
@@ -29,17 +29,12 @@ import { router } from 'expo-router';
 // =====================
 const SEARCH_HISTORY_KEY = 'search_history';
 
-type User = {
-  uid: string;
-  email: string;
-  displayName?: string;
-  [key: string]: any;
-};
+
 
 // =====================
 // AsyncStorage Utilities
 // =====================
-export async function saveSearch(user: User) {
+export async function saveSearch(user: UserInfo) {
   let history = await getSearchHistory();
   history = [user, ...history.filter((u) => u.uid !== user.uid)];
   history = history.slice(0, 10);
@@ -47,7 +42,7 @@ export async function saveSearch(user: User) {
 }
 
 
-export async function getSearchHistory(): Promise<User[]> {
+export async function getSearchHistory(): Promise<UserInfo[]> {
   const raw = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
   return raw ? JSON.parse(raw) : [];
 }
@@ -68,13 +63,13 @@ interface DiscoverModalProps {
 const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSelect, setPolis }) => {
   // State
   const [posts, setPosts] = useState<PostDBInfo[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserInfo[]>([]);
   const [isLoggedInUser, setIsLoggedInUser] = useState(false);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const textInputRef = useRef<TextInput>(null);
   const [searchText, setSearchText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserInfo[]>([]);
 
   // Fetch users and set initial polis
   useEffect(() => {
@@ -89,6 +84,7 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
           (setPolis as any).isUser &&
           (setPolis as any).userInfo &&
           (setPolis as any).userInfo.uid
+          (setPolis as any).userInfo.photoURL
         ) {
           setIsLoggedInUser((currentUser as any).uid === (setPolis as any).userInfo.uid);
         } else {
@@ -192,6 +188,7 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
                         displayName: user.displayName ?? '',
                         email: user.email,
                         uid: user.uid,
+                        photoURL: user.photoURL
                       },
                     });
                     saveSearch(user);
@@ -200,25 +197,43 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
                     textInputRef.current?.blur();
                   }}
                 >
-                  <Text style={styles.userName}>{user.displayName || 'No name'}</Text>
-                  <Text style={styles.userEmail}>{user.email}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {user.photoURL ? (
+                      <Image
+                        source={{ uri: user.photoURL }}
+                        style={styles.profilePicSmall}
+                      />
+                    ) : null}
+                    <View>
+                      <Text style={styles.userName}>{user.displayName || 'No name'}</Text>
+                      <Text style={styles.userEmail}>{user.email}</Text>
+                    </View>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
           ) : selectedPolis ? (
             <>
               <ThemedView style={styles.infoDisplay}>
-                <View style={styles.infoLeft}>
-                  <Text style={styles.displayName}>
-                    {selectedPolis.isUser
-                      ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
-                      : selectedPolis.tag}
-                  </Text>
-                  {isLoggedInUser && (
-                    <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/editprofile')}>
-                      <Text style={styles.settingsText}>⚙️ User Settings</Text>
-                    </TouchableOpacity>
-                  )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  {selectedPolis.isUser && selectedPolis.userInfo.photoURL ? (
+                    <Image
+                      source={{ uri: selectedPolis.userInfo.photoURL }}
+                      style={styles.profilePicMedium}
+                    />
+                  ) : null}
+                  <View style={styles.infoLeft}>
+                    <Text style={styles.displayName}>
+                      {selectedPolis.isUser
+                        ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
+                        : selectedPolis.tag}
+                    </Text>
+                    {isLoggedInUser && (
+                      <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/editprofile')}>
+                        <Text style={styles.settingsText}>⚙️ User Settings</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
                 <TouchableOpacity
                   style={styles.infoRight}
@@ -575,6 +590,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
     textAlign: 'center',
+  },
+  profilePicSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 10,
+    backgroundColor: '#222',
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  profilePicMedium: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 14,
+    backgroundColor: '#222',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
 });
 

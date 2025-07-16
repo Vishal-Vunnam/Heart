@@ -6,6 +6,8 @@ import { updateProfile } from 'firebase/auth';
 import { Keyboard } from 'react-native'
 import { addUser } from '../firebase/firestore';
 import { ThemedView } from '@/components/ThemedView';
+import { uploadToAzureBlob } from '@/firebase/blob-storage';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
@@ -13,11 +15,25 @@ export default function SignInScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
-  // Fix: Add missing value and onChangeText for password and confirmPassword fields
-  // Also, updateProfile must be called on the currentUser, not the returned user object from signUp
-  // (Firebase v9+ returns userCredential.user, but our signUp returns user, which is correct)
-  // But updateProfile expects the user object from getAuth().currentUser in React Native
+  // Helper to pick an image from the library
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Camera roll permissions are required to select a profile picture.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  };
 
   const handleAuth = async () => {
     try {
@@ -27,12 +43,27 @@ export default function SignInScreen() {
         // setEmail("vunnamvishal@gmail.com")
         // setPassword("test123")
         console.log("Signing up with email: " + email + " and password: " + password);
-        const user = await signUp(email, password, username);
-        // In React Native, updateProfile must be called on the currentUser from getAuth()
-        // See: https://firebase.google.com/docs/reference/js/auth.md#updateprofile
-        // and https://github.com/firebase/firebase-js-sdk/issues/7587
+
+        // If a photo is selected, upload it to Azure Blob Storage and get the URL
+        let photoURL = '';
+        if (photoUri) {
+          try {
+            // Use filename based on email and timestamp for uniqueness
+            const fileName = `profile_${email.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}.jpg`;
+            // Dynamically import to avoid circular deps if not needed
+            photoURL = await uploadToAzureBlob(photoUri, fileName, 'profile-pics');
+          } catch (err) {
+            console.error('Failed to upload profile picture:', err);
+            Alert.alert('Error', 'Failed to upload profile picture. Please try again.');
+            return;
+          }
+        }
+
+        const user = await signUp(email, password, username, photoURL);
+
         Alert.alert('Success', 'Account created! You can now sign in.');
         setIsSignUp(false);
+        setPhotoUri(null);
         router.back();
       } else {
         await signIn(email, password);
@@ -64,15 +95,30 @@ export default function SignInScreen() {
           </Text>
 
           {isSignUp && (
-            <TextInput
-              style={styles.input}
-              placeholder="Username"
-              placeholderTextColor="#888"
-              secureTextEntry={false}
-              value={username}
-              onChangeText={setUsername}
-              onSubmitEditing={() => Keyboard.dismiss()}
-            />
+            <>
+              <TextInput
+                style={styles.input}
+                placeholder="Username"
+                placeholderTextColor="#888"
+                secureTextEntry={false}
+                value={username}
+                onChangeText={setUsername}
+                onSubmitEditing={() => Keyboard.dismiss()}
+              />
+              <TouchableOpacity style={styles.photoPickerButton} onPress={pickImage}>
+                <Text style={styles.photoPickerButtonText}>
+                  {photoUri ? 'Change Profile Picture' : 'Add Profile Picture'}
+                </Text>
+              </TouchableOpacity>
+              {photoUri && (
+                <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                  <Image
+                    source={{ uri: photoUri }}
+                    style={styles.profilePreview}
+                  />
+                </View>
+              )}
+            </>
           )}
           
           <TextInput
@@ -107,7 +153,10 @@ export default function SignInScreen() {
 
           <TouchableOpacity
             style={styles.toggleButton}
-            onPress={() => setIsSignUp((prev) => !prev)}
+            onPress={() => {
+              setIsSignUp((prev) => !prev);
+              setPhotoUri(null);
+            }}
           >
             <Text style={styles.toggleText}>
               {isSignUp
@@ -180,6 +229,27 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
     color: '#333',
+  },
+  photoPickerButton: {
+    backgroundColor: '#e0e7ff',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  photoPickerButtonText: {
+    color: '#3f68df',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  profilePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginTop: 4,
+    borderWidth: 2,
+    borderColor: '#3f68df',
   },
   authButton: {
     backgroundColor: '#3f68df',

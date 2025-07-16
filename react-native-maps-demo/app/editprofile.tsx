@@ -11,6 +11,7 @@ export default function EditProfileScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [bio, setBio] = useState('');
+  const [profilePic, setProfilePic] = useState<string | null>(null);
 
   React.useEffect(() => {
     async function loadUserInfo() {
@@ -20,6 +21,7 @@ export default function EditProfileScreen() {
           const firebaseUser = user as FirebaseUser;
           setEmail(firebaseUser.email || '');
           setUsername(firebaseUser.displayName || '');
+          setProfilePic(firebaseUser.photoURL || null);
           // Fetch Firestore user doc for bio
           const db = getFirestore(app);
           const usersRef = collection(db, 'users');
@@ -30,6 +32,7 @@ export default function EditProfileScreen() {
             setUsername(data.displayName || '');
             setEmail(data.email || '');
             setBio(data.bio || '');
+            setProfilePic(data.photoURL || firebaseUser.photoURL || null);
           }
         }
       } catch (err) {
@@ -68,6 +71,14 @@ export default function EditProfileScreen() {
 
         {/* Form Container */}
         <View style={styles.formContainer}>
+          {profilePic && (
+            <View style={{ alignItems: 'center', marginBottom: 18 }}>
+              <Image
+                source={{ uri: profilePic }}
+                style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: '#fff', backgroundColor: '#222' }}
+              />
+            </View>
+          )}
           <Text style={styles.title}>Edit Profile</Text>
           <Text style={styles.subtitle}>Update your account information</Text>
 
