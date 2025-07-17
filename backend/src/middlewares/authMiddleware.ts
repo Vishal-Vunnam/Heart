@@ -5,7 +5,7 @@ import {
     signOut, 
     updateProfile
   } from 'firebase/auth';
-  import { app } from './firebaseConfig';
+  import app from '../config/firebaseConfig';
   
   const auth = getAuth(app);
   

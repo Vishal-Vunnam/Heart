@@ -1,4 +1,6 @@
 import * as sql from 'mssql';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 const { AZURE_SQL_CONNECTION_STRING } = process.env;
 

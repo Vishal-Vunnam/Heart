@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { ThemedText } from './ThemedText';
-import { getImageUrlWithSAS} from '@/firebase/blob-storage';
-import { deletePost } from '@/firebase/firestore';
-import { PolisType, PostDBInfo } from '@/types';
+import { getImageUrlWithSAS} from '@/backend/blob-storage';
+import { deletePost } from '@/backend/firestore';
+import { PolisType, PostDBInfo } from '@/types/types';
 import PostActionSheet from './PostActionSheet';
 
 interface CustomCalloutProps {

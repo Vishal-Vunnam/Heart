@@ -21,7 +21,7 @@ import { router } from 'expo-router';
 
 // Firebase
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { app } from '@/firebase/firebaseConfig';
+import { app } from '@/backend/firebaseConfig';
 
 // Map & Map Clustering
 import MapView from 'react-native-map-clustering';
@@ -39,11 +39,11 @@ import CustomCallout from '@/components/CustomCallout';
 import EditPostModal from '@/components/EditPostModal';
 
 // Firebase Firestore & Storage
-import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/firebase/firestore';
-import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/firebase/blob-storage';
+import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/backend/firestore';
+import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/backend/blob-storage';
 
 // Types
-import { PolisType, PostDBInfo, PostRequestInfo, UserInfo } from '@/types';
+import { PolisType, PostDBInfo, PostRequestInfo, UserInfo } from '@/types/types';
 
 // Styles
 import { indexStyles as styles } from '../styles/indexstyles';

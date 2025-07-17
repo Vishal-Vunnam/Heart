@@ -16,13 +16,13 @@ import {
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Internal imports
-import { getPostbyAuthorID, getAllUsers } from '@/firebase/firestore';
-import { getImageUrlWithSAS } from '@/firebase/blob-storage';
+import { getPostbyAuthorID, getAllUsers } from '@/backend/firestore';
+import { getImageUrlWithSAS } from '@/backend/blob-storage';
 import { PostView } from './PostView';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { PolisType, PostDBInfo, UserInfo } from '@/types';
-import {getCurrentUser} from '@/firebase/auth';
+import { PolisType, PostDBInfo, UserInfo } from '@/types/types';
+import {getCurrentUser} from '@/backend/auth';
 import { router } from 'expo-router';
 // =====================
 // Constants & Types

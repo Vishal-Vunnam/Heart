@@ -4,8 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import DropDownPicker from 'react-native-dropdown-picker';
 import * as ImagePicker from 'expo-image-picker';
-import type { PostDBInfo } from '@/types';
-import { getImageUrlWithSAS, deleteFromAzureBlob } from '@/firebase/blob-storage';
+import type { PostDBInfo } from '@/types/types';
+import { getImageUrlWithSAS, deleteFromAzureBlob } from '@/backend/blob-storage';
 // import { uploadImage, generateFileName } from '@/firebase/blob-storage';
 
 interface EditPostModalProps {

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Image } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
-import { getCurrentUser } from '@/firebase/auth';
+import { getCurrentUser } from '@/backend/auth';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { app } from '@/firebase/firebaseConfig';
+import { app } from '@/backend/firebaseConfig';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 export default function EditProfileScreen() {

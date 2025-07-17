@@ -14,11 +14,11 @@ import {
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Internal imports
-import { getPostbyAuthorID, getAllUsers } from '@/firebase/firestore';
-import { getImageUrlWithSAS } from '@/firebase/blob-storage';
+import { getPostbyAuthorID, getAllUsers } from '@/backend/firestore';
+import { getImageUrlWithSAS } from '@/backend/blob-storage';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { PolisType, PostData } from '@/types';
+import { PolisType, PostData } from '@/types/types';
 type Post = {
   title: string;
   description: string;

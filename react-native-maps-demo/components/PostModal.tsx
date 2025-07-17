@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import DropDownPicker from 'react-native-dropdown-picker';
 import * as ImagePicker from 'expo-image-picker';
-import type { PostRequestInfo } from '@/types';
+import type { PostRequestInfo } from '@/types/types';
 // import { uploadImage, generateFileName } from '@/firebase/blob-storage';
 
 // PostModal Component

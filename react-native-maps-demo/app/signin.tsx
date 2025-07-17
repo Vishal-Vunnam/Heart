@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, Image, SafeAreaView } from 'react-native';
-import { signIn, signUp } from '../firebase/auth';
+import { signIn, signUp } from '../../backend/auth';
 import { router } from 'expo-router';
 import { updateProfile } from 'firebase/auth';
 import { Keyboard } from 'react-native'
-import { addUser } from '../firebase/firestore';
+import { addUser } from '../../backend/firestore';
 import { ThemedView } from '@/components/ThemedView';
-import { uploadToAzureBlob } from '@/firebase/blob-storage';
+import { uploadToAzureBlob } from '@/backend/blob-storage';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function SignInScreen() {

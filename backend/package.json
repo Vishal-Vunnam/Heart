@@ -19,10 +19,15 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@azure/storage-blob": "^12.27.0",
     "@types/cors": "^2.8.19",
+    "azure": "^0.5.2",
+    "config": "^4.0.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
-    "mssql": "^11.0.1"
+    "firebase": "^11.10.0",
+    "mssql": "^11.0.1",
+    "uuid": "^11.1.0"
   }
 }
