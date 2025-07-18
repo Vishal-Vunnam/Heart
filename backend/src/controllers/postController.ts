@@ -1,24 +1,32 @@
-import { getFirestore, updateDoc, getDocs, doc, deleteDoc, getDoc, query, where, collection, addDoc } from 'firebase/firestore';
+import { Router, Request, Response } from 'express';
 import { uploadToAzureBlob, deleteFromAzureBlob } from '../utils/blobStorage';
 import type { PostInfo, EventInfo, UserInfo, PolisType } from '../types/types';
 import { executeQuery } from '../utils/dbUtils';
 import { v4 as uuidv4 } from 'uuid';
 
+const router = Router();
 
-export async function addPost(postInfo: PostInfo, tags?: []) {
+/**
+ * Route: POST /posts
+ * Adds a new post.
+ */
+router.post('/posts', async (req: Request, res: Response) => {
   try {
+    const postInfo: PostInfo = req.body.postInfo || req.body;
+    const tags: string[] = req.body.tags || [];
+
     // Validate required fields
     if (!postInfo) {
-      throw new Error('Missing postInfo object.');
+      return res.status(400).json({ success: false, error: 'Missing postInfo object.' });
     }
     if (!postInfo.userId) {
-      throw new Error('Missing required field: authorId.');
+      return res.status(400).json({ success: false, error: 'Missing required field: authorId.' });
     }
     if (!postInfo.title) {
-      throw new Error('Missing required field: title.');
+      return res.status(400).json({ success: false, error: 'Missing required field: title.' });
     }
     if (!postInfo.description) {
-      throw new Error('Missing required field: description.');
+      return res.status(400).json({ success: false, error: 'Missing required field: description.' });
     }
     if (
       typeof postInfo.latitude !== 'number' ||
@@ -26,7 +34,7 @@ export async function addPost(postInfo: PostInfo, tags?: []) {
       typeof postInfo.latitudeDelta !== 'number' ||
       typeof postInfo.longitudeDelta !== 'number'
     ) {
-      throw new Error('Missing or invalid location fields.');
+      return res.status(400).json({ success: false, error: 'Missing or invalid location fields.' });
     }
 
     const uniquePostId = uuidv4();
@@ -48,472 +56,421 @@ export async function addPost(postInfo: PostInfo, tags?: []) {
     ];
 
     const result = await executeQuery(query, params);
-    try {
-      if (result.rowsAffected && result.rowsAffected[0] === 1) {
-        if (Array.isArray(tags) && tags.length > 0) {
-          for (const tag of tags) {
-            try {
-              // Insert tag into tags table if it doesn't exist, then insert into post_tags
-              const tagId = require('crypto').createHash('sha256').update(tag).digest('hex');
-              // Insert tag if not exists
-              await executeQuery(
-                `
-                IF NOT EXISTS (SELECT 1 FROM tags WHERE name = @param0)
-                BEGIN
-                  INSERT INTO tags (id, name) VALUES (@param1, @param0)
-                END
-                `,
-                [tag, tagId]
-              );
 
-              await executeQuery(
-                `
-                  IF NOT EXISTS (
-                    SELECT 1 FROM post_tags WHERE postId = @param0 AND tagId = @param1
-                  )
-                  BEGIN
-                    INSERT INTO post_tags (postId, tagId)
-                    VALUES (@param0, @param1)
-                  END
-                `,
-                [uniquePostId, tagId]
-              );
-            } catch (tagError: any) {
-              // If a tag insert fails, log and return error
-              return {
-                success: false,
-                error: `Failed to insert tag '${tag}': ${tagError.message || tagError}`
-              };
-            }
+    if (result.rowsAffected && result.rowsAffected[0] === 1) {
+      if (Array.isArray(tags) && tags.length > 0) {
+        for (const tag of tags) {
+          try {
+            // Insert tag into tags table if it doesn't exist, then insert into post_tags
+            const tagId = require('crypto').createHash('sha256').update(tag).digest('hex');
+            // Insert tag if not exists
+            await executeQuery(
+              `
+              IF NOT EXISTS (SELECT 1 FROM tags WHERE name = @param0)
+              BEGIN
+                INSERT INTO tags (id, name) VALUES (@param1, @param0)
+              END
+              `,
+              [tag, tagId]
+            );
+
+            await executeQuery(
+              `
+                IF NOT EXISTS (
+                  SELECT 1 FROM post_tags WHERE postId = @param0 AND tagId = @param1
+                )
+                BEGIN
+                  INSERT INTO post_tags (postId, tagId)
+                  VALUES (@param0, @param1)
+                END
+              `,
+              [uniquePostId, tagId]
+            );
+          } catch (tagError: any) {
+            // If a tag insert fails, log and return error
+            return res.status(500).json({
+              success: false,
+              error: `Failed to insert tag '${tag}': ${tagError.message || tagError}`
+            });
           }
         }
-        return { success: true, postId: uniquePostId };
-      } else {
-        throw new Error('Failed to insert post into database.');
       }
-    } catch (err: any) {
-      // Catch any error in the block above
-      return {
-        success: false,
-        error: err.message || 'Unknown error occurred while adding post and tags.'
-      };
+      return res.status(201).json({ success: true, postId: uniquePostId });
+    } else {
+      return res.status(500).json({ success: false, error: 'Failed to insert post into database.' });
     }
-
   } catch (error: any) {
     // Return a meaningful error object
-    return {
+    return res.status(500).json({
       success: false,
       error: error.message || 'Unknown error occurred while adding post.'
-    };
+    });
   }
-}
-
-export async function addEvent(eventInfo: EventInfo, tags?: []){
-    try {
-        // Validate required fields
-        if (!eventInfo) {
-          throw new Error('Missing postInfo object.');
-        }
-        if (!eventInfo.userId) {
-          throw new Error('Missing required field: authorId.');
-        }
-        if (!eventInfo.title) {
-          throw new Error('Missing required field: title.');
-        }
-        if (!eventInfo.description) {
-          throw new Error('Missing required field: description.');
-        }
-        if (
-          typeof eventInfo.latitude !== 'number' ||
-          typeof eventInfo.longitude !== 'number' ||
-          typeof eventInfo.latitudeDelta !== 'number' ||
-          typeof eventInfo.longitudeDelta !== 'number'
-        ) {
-          throw new Error('Missing or invalid location fields.');
-        }
-    
-        const uniquePostId = uuidv4();
-        const query = `
-          INSERT INTO posts (id, userId, title, description, latitude, longitude, latitudeDelta, longitudeDelta, createdAt, updatedAt)
-          VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7, @param8, @param9)
-        `;
-        const params = [
-          uniquePostId,
-          eventInfo.userId,
-          eventInfo.title,
-          eventInfo.description,
-          eventInfo.latitude,
-          eventInfo.longitude,
-          eventInfo.latitudeDelta,
-          eventInfo.longitudeDelta,
-          new Date(),
-          new Date()
-        ];
-
-        // Insert the event into the events table after creating the post
-        const eventQuery = `
-          INSERT INTO events (postId, eventStart, eventEnd)
-          VALUES (@param0, @param1, @param2)
-        `;
-        const eventParams = [
-          uniquePostId,
-          eventInfo.event_start ? new Date(eventInfo.event_start) : null,
-          eventInfo.event_end ? new Date(eventInfo.event_end) : null
-        ];
-
-        const result = await executeQuery(query, params);
-
-        const eventResult = await executeQuery(eventQuery, eventParams);
-        try {
-          if (result.rowsAffected && result.rowsAffected[0] === 1 && eventResult.rowsAffected && eventResult.rowsAffected[0] === 1) {
-            if (Array.isArray(tags) && tags.length > 0) {
-              for (const tag of tags) {
-                try {
-                  // Insert tag into tags table if it doesn't exist, then insert into post_tags
-                  const tagId = require('crypto').createHash('sha256').update(tag).digest('hex');
-                  // Insert tag if not exists
-                  await executeQuery(
-                    `
-                    IF NOT EXISTS (SELECT 1 FROM tags WHERE name = @param0)
-                    BEGIN
-                      INSERT INTO tags (id, name) VALUES (@param1, @param0)
-                    END
-                    `,
-                    [tag, tagId]
-                  );
-    
-                  await executeQuery(
-                    `
-                      IF NOT EXISTS (
-                        SELECT 1 FROM post_tags WHERE postId = @param0 AND tagId = @param1
-                      )
-                      BEGIN
-                        INSERT INTO post_tags (postId, tagId)
-                        VALUES (@param0, @param1)
-                      END
-                    `,
-                    [uniquePostId, tagId]
-                  );
-                } catch (tagError: any) {
-                  // If a tag insert fails, log and return error
-                  return {
-                    success: false,
-                    error: `Failed to insert tag '${tag}': ${tagError.message || tagError}`
-                  };
-                }
-              }
-            }
-            return { success: true, postId: uniquePostId };
-          } else {
-            throw new Error('Failed to insert post into database.');
-          }
-        } catch (err: any) {
-          // Catch any error in the block above
-          return {
-            success: false,
-            error: err.message || 'Unknown error occurred while adding post and tags.'
-          };
-        }
-    
-      } catch (error: any) {
-        // Return a meaningful error object
-        return {
-          success: false,
-          error: error.message || 'Unknown error occurred while adding post.'
-        };
-      }
-}
-
-
-// export async function editPost(oldPostInfo: PostDBInfo, newPostInfo: PostDBInfo, newImages: string[]) {
-//     // Find the Firestore document with the correct postId field (not doc id)
-//     if (oldPostInfo == newPostInfo) return; 
-//     if (!oldPostInfo || !oldPostInfo.postId) {
-//         console.error("No post or postId provided to editPost");
-//         return;
-//     }
-//     // Check for things that should not change while editing a post
-//     if (
-//         oldPostInfo.postId !== newPostInfo.postId ||
-//         oldPostInfo.authorId !== newPostInfo.authorId ||
-//         oldPostInfo.author !== newPostInfo.author ||
-//         oldPostInfo.date !== newPostInfo.date
-//     ) {
-//         console.error("Attempted to change immutable post fields (postId, authorId, author, or date) during editPost");
-//         return;
-//     }
-//     if (oldPostInfo.images_url_blob !== newPostInfo.images_url_blob){
-//         console.error("Incorrect format for changing images");
-//         return;
-//     }
-//     try {
-//         const postsRef = collection(db, 'posts');
-//         const q = query(postsRef, where('postId', '==', oldPostInfo.postId));
-//         const querySnapshot = await getDocs(q);
-
-//         if (querySnapshot.empty) {
-//             console.warn(`No Firestore post found with postId: ${oldPostInfo.postId}`);
-//             return;
-//         }
-
-//         // Update all matching docs (should only be one, but just in case)
-//         for (const docSnap of querySnapshot.docs) {
-//             await updateDoc(docSnap.ref, {
-//                 title: newPostInfo.title,
-//                 description: newPostInfo.description,
-//                 location: newPostInfo.location,
-//                 tags: newPostInfo.tags,
-//                 // images: newPostInfo.images, // Don't worry about new images, handled elsewhere
-//             });
-//             console.log(`Edited Firestore post with doc id: ${docSnap.id}`);
-//         }
-//     } catch (error) {
-//         console.error("Error editing post: ", error);
-//         throw error;
-//     }
-//     if (Array.isArray(newImages) && newImages.length > 0) {
-//         // Add new images to the post using addPicturesToPost
-//         await addPicturesToPost(newPostInfo, newImages);
-//     }
-// }
+});
 
 /**
- * Adds a picture URL to the images array of a post in Firestore.
- * @param postInfo PostDBInfo - The post object (must contain postId).
- * @param imageUrl string - The image URL to add.
- * @returns Promise<void>
+ * Route: POST /events
+ * Adds a new event (and its post).
  */
-export async function addPicturesToPost(postInfo: PostInfo, imageUrls: string[]) {
-    if (!postInfo || !postInfo.postId) {
-        console.error("No post or postId provided to addPictureToPost");
-        return;
-    }
-    try {
+router.post('/events', async (req: Request, res: Response) => {
+  try {
+    const eventInfo: EventInfo = req.body.eventInfo;
+    const tags: string[] = req.body.tags || [];
 
-        // Add image to Blob
-        let imagesBlobUrls = imageUrls
-        try {
-            imagesBlobUrls = await uploadImagesAndGetUrls(imageUrls, postInfo.authorId);
-        }
-        catch (error){
-            console.error("Error uploading picture to blob storage: ", error);
-            throw error;
-        }
-        // Update all matching docs (should only be one, but just in case)
-        for (const docSnap of querySnapshot.docs) {
-            const data = docSnap.data();
-            const currentImages: string[] = Array.isArray(data.images) ? data.images : [];
-            const updatedImages = [...currentImages, ...imagesBlobUrls];
-            await updateDoc(docSnap.ref, { images: updatedImages });
-            console.log(`Added image to Firestore post with doc id: ${docSnap.id}`);
-        }
-    } catch (error) {
-        console.error("Error adding picture to post: ", error);
-        throw error;
+    // Validate required fields
+    if (!eventInfo) {
+      return res.status(400).json({ success: false, error: 'Missing eventInfo object.' });
     }
+    if (!eventInfo.userId) {
+      return res.status(400).json({ success: false, error: 'Missing required field: userId.' });
+    }
+    if (!eventInfo.title) {
+      return res.status(400).json({ success: false, error: 'Missing required field: title.' });
+    }
+    if (!eventInfo.description) {
+      return res.status(400).json({ success: false, error: 'Missing required field: description.' });
+    }
+    if (
+      typeof eventInfo.latitude !== 'number' ||
+      typeof eventInfo.longitude !== 'number' ||
+      typeof eventInfo.latitudeDelta !== 'number' ||
+      typeof eventInfo.longitudeDelta !== 'number'
+    ) {
+      return res.status(400).json({ success: false, error: 'Missing or invalid location fields.' });
+    }
+
+    const uniquePostId = uuidv4();
+    const postQuery = `
+      INSERT INTO posts (id, userId, title, description, latitude, longitude, latitudeDelta, longitudeDelta, createdAt, updatedAt)
+      VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7, @param8, @param9)
+    `;
+    const postParams = [
+      uniquePostId,
+      eventInfo.userId,
+      eventInfo.title,
+      eventInfo.description,
+      eventInfo.latitude,
+      eventInfo.longitude,
+      eventInfo.latitudeDelta,
+      eventInfo.longitudeDelta,
+      new Date(),
+      new Date()
+    ];
+
+    // Insert the event into the events table after creating the post
+    const eventQuery = `
+      INSERT INTO events (postId, eventStart, eventEnd)
+      VALUES (@param0, @param1, @param2)
+    `;
+    const eventParams = [
+      uniquePostId,
+      eventInfo.event_start ? new Date(eventInfo.event_start) : null,
+      eventInfo.event_end ? new Date(eventInfo.event_end) : null
+    ];
+
+    const postResult = await executeQuery(postQuery, postParams);
+    const eventResult = await executeQuery(eventQuery, eventParams);
+
+    if (
+      postResult.rowsAffected && postResult.rowsAffected[0] === 1 &&
+      eventResult.rowsAffected && eventResult.rowsAffected[0] === 1
+    ) {
+      // Handle tags if provided
+      if (Array.isArray(tags) && tags.length > 0) {
+        for (const tag of tags) {
+          try {
+            // Insert tag into tags table if it doesn't exist, then insert into post_tags
+            const tagId = require('crypto').createHash('sha256').update(tag).digest('hex');
+            // Insert tag if not exists
+            await executeQuery(
+              `
+              IF NOT EXISTS (SELECT 1 FROM tags WHERE name = @param0)
+              BEGIN
+                INSERT INTO tags (id, name) VALUES (@param1, @param0)
+              END
+              `,
+              [tag, tagId]
+            );
+
+            await executeQuery(
+              `
+                IF NOT EXISTS (
+                  SELECT 1 FROM post_tags WHERE postId = @param0 AND tagId = @param1
+                )
+                BEGIN
+                  INSERT INTO post_tags (postId, tagId)
+                  VALUES (@param0, @param1)
+                END
+              `,
+              [uniquePostId, tagId]
+            );
+          } catch (tagError: any) {
+            // If a tag insert fails, log and return error
+            return res.status(500).json({
+              success: false,
+              error: `Failed to insert tag '${tag}': ${tagError.message || tagError}`
+            });
+          }
+        }
+      }
+      return res.status(201).json({ success: true, postId: uniquePostId });
+    } else {
+      return res.status(500).json({ success: false, error: 'Failed to insert event into database.' });
+    }
+  } catch (error: any) {
+    // Return a meaningful error object
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Unknown error occurred while adding event.'
+    });
+  }
+});
+
+/**
+ * Route: POST /posts/images
+ * Adds pictures to a post.
+ */
+router.post('/posts/images', async (req: Request, res: Response) => {
+  const { postId, userId, imageUrls } = req.body;
+
+  if (!postId || !userId || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Missing required fields: postId, userId, or imageUrls."
+    });
+  }
+
+  try {
+    // Upload images to Blob Storage and get their URLs
+    let imagesBlobUrls: string[];
+    try {
+      imagesBlobUrls = await uploadImagesAndGetUrls(imageUrls, userId);
+    } catch (error) {
+      console.error("Error uploading picture to blob storage: ", error);
+      return res.status(500).json({
+        success: false,
+        error: "Error uploading images to blob storage."
+      });
+    }
+
+    // Insert each image URL into the images table
+    const insertedImages: string[] = [];
+    for (const imageUrl of imagesBlobUrls) {
+      const image_id = uuidv4();
+      const query = `
+        INSERT INTO images (id, postId, imageUrl)
+        VALUES (@param0, @param1, @param2)
+      `;
+      const params = [
+        image_id,
+        postId,
+        imageUrl,
+      ];
+      try {
+        await executeQuery(query, params);
+        insertedImages.push(imageUrl);
+        console.log(`Added image URL to post ${postId}: ${imageUrl}`);
+      } catch (err) {
+        console.error(`Failed to add image URL to post ${postId}: ${imageUrl}`, err);
+        // Optionally, continue to next image or return error
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      postId,
+      images: insertedImages
+    });
+  } catch (error) {
+    console.error("Error adding pictures to post: ", error);
+    return res.status(500).json({
+      success: false,
+      error: "Error adding pictures to post."
+    });
+  }
+});
+
+/**
+ * Helper function for uploading images and getting their URLs.
+ */
+async function uploadImagesAndGetUrls(localUris: string[], userId: string): Promise<string[]> {
+  console.log('Uploading images:', localUris);
+  const uploadPromises = localUris.map(async (uri, idx) => {
+    const ext = uri.split('.').pop() || 'jpg';
+    const blobName = `${userId}_${Date.now()}_${idx}.${ext}`;
+    try {
+      console.log(`Uploading image ${uri} as ${blobName}`);
+      const url = await uploadToAzureBlob(uri, blobName, 'post-images');
+      console.log(`Successfully uploaded ${uri} to ${url}`);
+      return url;
+    } catch (err) {
+      console.error(`Error uploading image ${uri}:`, err);
+      throw err;
+    }
+  });
+  return await Promise.all(uploadPromises);
 }
 
-// /**
-//  * Deletes a post from the "posts" collection by its postId.
-//  * @param post PostDBInfo - The post object to delete.
-//  * @returns Promise<void>
-//  */
+/**
+ * Route: GET /posts/by-author
+ * Gets all posts by a specific authorId.
+ * Query param: authorId
+ */
+router.get('/posts/by-author', async (req: Request, res: Response) => {
+  const authorId = req.query.authorId as string;
+  if (!authorId) {
+    return res.status(400).json({ success: false, error: "Missing required query parameter: authorId" });
+  }
 
-// export async function deletePost(post: PostDBInfo) {
-//   if (!post || !post.postId) {
-//     console.error("No post or postId provided to deletePost");
-//     return;
-//   }
+  const query = `
+      SELECT 
+          id as postId,
+          userId,
+          title,
+          description,
+          date,
+          latitude,
+          latitudeDelta,
+          longitude,
+          longitudeDelta
+      FROM posts
+      WHERE userId = @param0
+  `;
+  const params = [authorId];
 
-//   try {
-//     // Find the Firestore document with the correct postId field (not doc id)
-//     const postsRef = collection(db, 'posts');
-//     const q = query(postsRef, where('postId', '==', post.postId));
-//     const querySnapshot = await getDocs(q);
+  try {
+    const result = await executeQuery(query, params);
 
-//     if (querySnapshot.empty) {
-//       console.warn(`No Firestore post found with postId: ${post.postId}`);
-//     }
+    const posts = (result.recordset || []).map((row: any) => ({
+      postId: row.postId,
+      userId: row.userId,
+      type: 'post',
+      title: row.title,
+      description: row.description,
+      descrtiption: row.description, // typo kept for compatibility with type
+      date: row.date,
+      latitude: row.latitude,
+      latitudeDelta: row.latitudeDelta,
+      longitude: row.longitude,
+      longitudeDelta: row.longitudeDelta,
+    }));
 
-//     // Delete all matching docs (should only be one, but just in case)
-//     for (const docSnap of querySnapshot.docs) {
-//       await deleteDoc(docSnap.ref);
-//       console.log(`Deleted Firestore post with doc id: ${docSnap.id}`);
-//     }
+    return res.status(200).json({ success: true, posts });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Unknown error occurred while fetching posts by authorId."
+    });
+  }
+});
 
-//     // Delete all images associated with the post from Azure Blob Storage
-//     const tmp_images = post.images_url_blob || [];
-//     if (Array.isArray(tmp_images) && tmp_images.length > 0) {
-//       for (const imageUrl of tmp_images) {
-//         try {
-//           await deleteFromAzureBlob(imageUrl);
-//           console.log(`Deleted image from Azure: ${imageUrl}`);
-//         } catch (err) {
-//           console.error(`Failed to delete image from Azure: ${imageUrl}`, err);
-//         }
-//       }
-//     }
-//   } catch (error) {
-//     console.error("Error deleting post: ", error);
-//     throw error;
-//   }
-// }
+/**
+ * Route: GET /posts/by-tag
+ * Gets all posts that contain a specific tag.
+ * Query param: tag
+ */
+router.get('/posts/by-tag', async (req: Request, res: Response) => {
+  const tag = req.query.tag as string;
+  if (!tag) {
+    return res.status(400).json({ success: false, error: "Missing required query parameter: tag" });
+  }
+
+  try {
+    // First, get the tagId for the given tag name
+    const tagIdQuery = `
+        SELECT id FROM tags WHERE name = @param0
+    `;
+    const tagIdResult = await executeQuery(tagIdQuery, [tag]);
+    if (!tagIdResult.recordset || tagIdResult.recordset.length === 0) {
+      return res.status(200).json({ success: true, posts: [] });
+    }
+    const tagId = tagIdResult.recordset[0].id;
+
+    // Get all postIds that have the tagId in the post_tags join table
+    const postTagQuery = `
+        SELECT pt.postId
+        FROM post_tags pt
+        WHERE pt.tagId = @param0
+    `;
+    const postTagResult = await executeQuery(postTagQuery, [tagId]);
+    const postIds = (postTagResult.recordset || []).map((row: any) => row.postId);
+
+    if (postIds.length === 0) {
+      return res.status(200).json({ success: true, posts: [] });
+    }
+
+    // Now, fetch all posts with those postIds
+    const placeholders = postIds.map((_: string, idx: number) => `@param${idx}`).join(', ');
+    const postQuery = `
+        SELECT 
+            id as postId,
+            userId,
+            title,
+            description,
+            date,
+            latitude,
+            latitudeDelta,
+            longitude,
+            longitudeDelta
+        FROM posts
+        WHERE id IN (${placeholders})
+    `;
+    const postResult = await executeQuery(postQuery, postIds);
+
+    const posts = (postResult.recordset || []).map((row: any) => ({
+      postId: row.postId,
+      userId: row.userId,
+      type: 'post',
+      title: row.title,
+      description: row.description,
+      descrtiption: row.description, // typo kept for compatibility with type
+      date: row.date,
+      latitude: row.latitude,
+      latitudeDelta: row.latitudeDelta,
+      longitude: row.longitude,
+      longitudeDelta: row.longitudeDelta,
+    }));
+
+    return res.status(200).json({ success: true, posts });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Unknown error occurred while fetching posts by tag."
+    });
+  }
+});
 
 
+router.delete('/post', async (req: Request, res: Response) => {
+  const postId = req.query.id as string;
+  if ( !postId) {
+    return res.status(400).json({ success: false, error: "Missing required query parameter: id" });
+  }
+  try {
+    // Delete the post from the posts table
+    const postImagesQuery = `SELECT imageUrl FROM images WHERE postId = @param0`;
+    const postImagesResult = await executeQuery(postImagesQuery, [postId]);
+    const deletePostQuery = `DELETE FROM posts WHERE id = @param0`;
+    await executeQuery(deletePostQuery, [postId] );
 
+    // Delete images from Azure Blob Storage if any exist for this post
+    if (postImagesResult && postImagesResult.recordset && postImagesResult.recordset.length > 0) {
+      for (const imageRow of postImagesResult.recordset) {
+        if (imageRow.imageUrl) {
+          try {
+            await deleteFromAzureBlob(imageRow.imageUrl);
+          } catch (err) {
+            // Log error but continue deleting other images
+            console.error(`Failed to delete image from Azure Blob: ${imageRow.imageUrl}`, err);
+          }
+        }
+      }
+    }
 
-// /**
-//  * Uploads local image URIs to Azure Blob Storage and returns their URLs.
-//  * @param localUris Array of local image URIs
-//  * @param userId User ID to use in blob naming
-//  * @returns Promise<string[]> Array of uploaded image URLs
-//  */
-// async function uploadImagesAndGetUrls(localUris: string[], userId: string): Promise<string[]> {
-//     console.log('Uploading images:', localUris);
-//     const uploadPromises = localUris.map(async (uri, idx) => {
-//         const ext = uri.split('.').pop() || 'jpg';
-//         const blobName = `${userId}_${Date.now()}_${idx}.${ext}`;
-//         try {
-//             console.log(`Uploading image ${uri} as ${blobName}`);
-//             const url = await uploadToAzureBlob(uri, blobName, 'post-images');
-//             console.log(`Successfully uploaded ${uri} to ${url}`);
-//             return url;
-//         } catch (err) {
-//             console.error(`Error uploading image ${uri}:`, err);
-//             throw err;
-//         }
-//     });
-//     return await Promise.all(uploadPromises);
-// }
+    return res.status(200).json({ success: true, message: "Post deleted successfully" });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || "Failed to delete post" });
+  }
 
-
-// /**
-//  * Gets all posts from the "posts" collection.
-//  * @returns Array of post objects
-//  *
-//  * Post JSON structure:
-//  * {
-//  *   author: string,
-//  *   authorId: string,
-//  *   date: number | string,
-//  *   description: string,
-//  *   title: string,
-//  *   images: string[],
-//  *   postId: string,
-//  *   location: { latitude, longitude, latitudeDelta, longitudeDelta }
-//  * }
-//  */
-
-
-// /**
-//  * Gets all posts from the "posts" collection.
-//  * @returns Promise<PostDBInfo[]>
-//  */
-// export async function getAllPosts(): Promise<PostDBInfo[]> {
-//     const postsRef = collection(db, "posts");
-//     const postsSnap = await getDocs(postsRef);
-//     return postsSnap.docs.map((doc) => {
-//         const data = doc.data();
-//         return {
-//             author: data.author,
-//             authorId: data.authorId,
-//             date: data.date,
-//             description: data.description,
-//             title: data.title,
-//             images_url_blob: data.images || [],
-//             postId: data.postId,
-//             location: data.location,
-//             tags: data.tags || [],
-//         } as PostDBInfo;
-//     });
-// }
-
-// /**
-//  * Gets a single post by postId.
-//  * @param postId string
-//  * @returns Post object or undefined
-//  *
-//  * Post JSON structure: see above
-//  */
-// export async function getPost(postId: string): Promise<PostDBInfo | undefined> {
-//     const postRef = doc(db, "posts", postId);
-//     const postSnap = await getDoc(postRef);
-//     const data = postSnap.data();
-//     if (!data) return undefined;
-//     return {
-//         author: data.author,
-//         authorId: data.authorId,
-//         date: data.date,
-//         description: data.description,
-//         title: data.title,
-//         images_url_blob: data.images || [],
-//         postId: data.postId,
-//         location: data.location,
-//         tags: data.tags || [],
-//     } as PostDBInfo;
-// }
-
-// /**
-//  * Fetches an image from a given URL and returns it as a Blob.
-//  * Useful for downloading images stored in Azure Blob Storage or any public URL.
-//  * @param imageURL The URL of the image to fetch.
-//  * @returns A Blob representing the image data.
-//  */
-// export async function getImagesbyUrl(imageURL: string): Promise<Blob> {
-//     try {
-//         const response = await fetch(imageURL);
-//         if (!response.ok) {
-//             throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-//         }
-//         const blob = await response.blob();
-//         return blob;
-//     } catch (error) {
-//         console.error("Error fetching image by URL:", error);
-//         throw error;
-//     }
-// }
-
-// /**
-//  * Gets all posts by a specific authorId.
-//  * @param authorId string
-//  * @returns Array of post objects
-//  *
-//  * Post JSON structure: see above
-//  */
-// export async function getPostbyAuthorID(authorId: string): Promise<PostDBInfo[]> { 
-//     const querySnapshot = await getDocs(query(collection(db, "posts"), where("authorId", "==", authorId)));
-//     return querySnapshot.docs.map((doc) => {
-//         const data = doc.data();
-//         return {            
-//             author: data.author,
-//             authorId: data.authorId,
-//             date: data.date,
-//             description: data.description,
-//             title: data.title,
-//             images_url_blob: data.images || [],
-//             postId: data.postId,
-//             location: data.location,
-//             tags: data.tags || [],
-//         } as PostDBInfo;
-//     });
-// }
-
-// export async function getPostbyTag(tag: string): Promise<PostDBInfo[]> {
-//     const querySnapshot = await getDocs(
-//         query(collection(db, "posts"), where("tags", "array-contains", tag))
-//     );
-//     return querySnapshot.docs.map((doc) => {
-//         const data = doc.data();
-//         return {
-//             author: data.author,
-//             authorId: data.authorId,
-//             date: data.date,
-//             description: data.description,
-//             title: data.title,
-//             images_url_blob: data.images || [],
-//             postId: data.postId,
-//             location: data.location,
-//             tags: data.tags || [],
-//         } as PostDBInfo;
-//     });
-// }
+})
+export default router;

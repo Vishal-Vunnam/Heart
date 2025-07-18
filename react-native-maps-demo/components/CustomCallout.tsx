@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { ThemedText } from './ThemedText';
-import { getImageUrlWithSAS} from '@/backend/blob-storage';
-import { deletePost } from '@/backend/firestore';
-import { PolisType, PostDBInfo } from '@/types/types';
+import { getImageUrlWithSAS} from '@/api/image';
+import { deletePostById } from '@/api/posts';
+import { PolisType, PostInfo} from '@/types/types';
 import PostActionSheet from './PostActionSheet';
 
 interface CustomCalloutProps {
   isUserLoggedIn: boolean; 
-  post: PostDBInfo;
+  post: PostInfo;
   onLike?: () => void;
   onComment?: () => void;
   onShare?: () => void;
@@ -49,7 +49,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
     console.log("deleting post");
     if (!isUserLoggedIn || !post.postId) return;
     try {
-      await deletePost(post);
+      await deletePostById(post.postId);
       // Close the modal and reset the map after deleting the post
       if (typeof onViewDetails === 'function') {
         onViewDetails(); // This will close the callout/modal in parent

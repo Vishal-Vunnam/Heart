@@ -1,4 +1,4 @@
-import { PHOTOS_AZURE_CONFIG } from "@/azure-config";
+import { PHOTOS_AZURE_CONFIG } from "../config/azure-config";
 
 export async function uploadToAzureBlob(
   fileUri: string,
@@ -62,9 +62,15 @@ export async function deleteFromAzureBlob(blobUrl: string): Promise<string> {
     throw error;
   }
 }
+
 export function getImageUrlWithSAS(blobUrl: string): string {
   const { SAS_TOKEN } = PHOTOS_AZURE_CONFIG;
-  return blobUrl.includes('?') ? blobUrl : `${blobUrl}${SAS_TOKEN.startsWith('?') ? SAS_TOKEN : '?' + SAS_TOKEN}`;
+  if (SAS_TOKEN) {
+    return blobUrl.includes('?')
+      ? blobUrl
+      : `${blobUrl}${SAS_TOKEN.startsWith('?') ? SAS_TOKEN : '?' + SAS_TOKEN}`;
+  }
+  return blobUrl;
 }
 
 /**

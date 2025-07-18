@@ -12,7 +12,7 @@ export type PolisType =
   | { isUser: false; tag: string };
   
 export type PostInfo = {
-    postId?: number | null; 
+    postId?: string | null; 
     userId: string;
     type: 'post';
     title: string;

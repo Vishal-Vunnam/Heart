@@ -72,11 +72,13 @@ export async function createTables() {
       imageUrl NVARCHAR(1000) NOT NULL,     -- URL of the image (could be a blob or external link)
       FOREIGN KEY (postId) REFERENCES posts(id) ON DELETE CASCADE -- Cascade delete if post is removed
     )`,
+
     `IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='tags' AND xtype='U')
     CREATE TABLE tags (
       id NVARCHAR(450) PRIMARY KEY,
       name NVARCHAR(100) UNIQUE NOT NULL
     )`,
+    
     // Create the post_tags table to associate posts with tags (many-to-many relationship)
     `IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='post_tags' AND xtype='U')
     CREATE TABLE post_tags (

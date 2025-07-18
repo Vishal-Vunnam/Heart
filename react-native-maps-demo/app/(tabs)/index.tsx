@@ -21,8 +21,6 @@ import { router } from 'expo-router';
 
 // Firebase
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { app } from '@/backend/firebaseConfig';
-
 // Map & Map Clustering
 import MapView from 'react-native-map-clustering';
 import { Callout, MapMarker, Marker } from 'react-native-maps';
@@ -39,11 +37,13 @@ import CustomCallout from '@/components/CustomCallout';
 import EditPostModal from '@/components/EditPostModal';
 
 // Firebase Firestore & Storage
-import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/backend/firestore';
-import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/backend/blob-storage';
+// import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/backend/firestore';
+// import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/backend/blob-storage';
+import { getAllPosts, createPost, getPostsByAuthorId, getPostsByTag } from '@/api/posts';
+import { getImageUrlWithSAS } from '@/api/image';
 
 // Types
-import { PolisType, PostDBInfo, PostRequestInfo, UserInfo } from '@/types/types';
+import { PolisType, PostInfo, UserInfo } from '@/types/types';
 
 // Styles
 import { indexStyles as styles } from '../styles/indexstyles';
@@ -95,19 +95,19 @@ export default function HomeScreen() {
   const [isPostModalVisible, setIsPostModalVisible] = useState(false);
   const [isDiscoverModalVisible, setIsDiscoverModalVisible] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
-  const [posts, setPosts] = useState<PostDBInfo[]>([]);
+  const [posts, setPosts] = useState<PostInfo[]>([]);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const markerRefs = useRef<{ [key: string]: MapMarker | null }>({});
   const mapRef = useRef<MapView>(null);
   const textInputRef = useRef<TextInput>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const [selectedPost, setSelectedPost] = useState<PostDBInfo | null>(null);
+  const [selectedPost, setSelectedPost] = useState<PostInfo | null>(null);
   const [zoomingToMarker, setZoomingToMarker] = useState(false);
   const isProgrammaticMove = useRef(false);
   const [discoverUserId, setDiscoverUserId] = useState<string | null>(null);
   const [showedPostsChanges, setShowedPostsChanges] = useState<boolean> (false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [postToEdit, setPostToEdit] = useState<PostDBInfo | null>(null);
+  const [postToEdit, setPostToEdit] = useState<PostInfo | null>(null);
 
   // Handler to trigger posts refresh after deletion
   const handlePostsChange = () => {
@@ -116,12 +116,12 @@ export default function HomeScreen() {
   };
 
   // Handler for edit
-  const handleEdit = (post: PostDBInfo) => {
+  const handleEdit = (post: PostInfo) => {
     setPostToEdit(post);
     setEditModalVisible(true);
   };
   // Handler for submit
-  const handleEditSubmit = (editedPost: PostDBInfo) => {
+  const handleEditSubmit = (editedPost: PostInfo) => {
     // Update the post in posts state (replace by postId)
     setPosts(prevPosts => prevPosts.map(p => p.postId === editedPost.postId ? editedPost : p));
     setEditModalVisible(false);
@@ -131,31 +131,25 @@ export default function HomeScreen() {
 
   // 2. Effects
   useEffect(() => {
-    const auth = getAuth(app);
-    // loadPosts();
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        setUser({
-          displayName: firebaseUser.displayName ?? "",
-          email: firebaseUser.email ?? "",
-          uid: firebaseUser.uid,
-          photoURL: firebaseUser.photoURL
+    async function checkAuth() {
+      // Example: fetch current user from backend using stored JWT
+      const token = await getTokenFromStorage();
+      if (token) {
+        const res = await fetch('http://localhost:4000/api/auth/current-user', {
+          headers: { Authorization: `Bearer ${token}` }
         });
-        setSelectedPolis({
-          isUser: true,
-          userInfo: {
-            displayName: firebaseUser.displayName ?? "",
-            email: firebaseUser.email ?? "",
-            uid: firebaseUser.uid,
-            photoURL: firebaseUser.photoURL
-          }
-        });
-      }
-      else{
+        if (res.ok) {
+          const user = await res.json();
+          setUser(user);
+          setSelectedPolis({ isUser: true, userInfo: user });
+        } else {
+          setUser(null);
+        }
+      } else {
         setUser(null);
       }
-    });
-    return unsubscribe;
+    }
+    checkAuth();
   }, []);
 
   useEffect(() => {

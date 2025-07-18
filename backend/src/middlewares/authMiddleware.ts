@@ -1,70 +1,80 @@
+import express, { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import { 
-    getAuth, 
-    signInWithEmailAndPassword, 
-    createUserWithEmailAndPassword, 
-    signOut, 
-    updateProfile
-  } from 'firebase/auth';
-  import app from '../config/firebaseConfig';
-  
-  const auth = getAuth(app);
-  
-  // Sign In
-  export function signIn(email: string, password: string) {
-    console.log("Signing in with email:", email);
-    return signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        console.log("Signed in user:", user);
-        return user;
-      })
-      .catch((error) => {
-        console.error("Sign-in error:", error);
-        throw error;
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  updateProfile 
+} from 'firebase/auth';
+import app from '../config/firebaseConfig';
+
+const router = express.Router();
+const auth = getAuth(app);
+
+const JWT_SECRET = process.env.JWT_SECRET
+
+// POST /api/auth/signin
+router.post('/signin', async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, error: "Email and password are required." });
+  }
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    // You may want to return a custom token or user info here
+    res.status(200).json({ success: true, user });
+  } catch (error: any) {
+    res.status(401).json({ success: false, error: error.message || "Sign-in failed." });
+  }
+});
+
+// POST /api/auth/signup
+router.post('/signup', async (req: Request, res: Response) => {
+  const { email, password, displayName, photoURL } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, error: "Email and password are required." });
+  }
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Update display name and photoURL if provided
+    if (displayName || photoURL) {
+      await updateProfile(user, { 
+        displayName: displayName || undefined, 
+        photoURL: photoURL || undefined 
       });
+    }
+    res.status(201).json({ success: true, user });
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error.message || "Sign-up failed." });
   }
-  
-  // No, you do not need this. The updateProfile function is already provided by Firebase Auth and should be imported directly where needed.
-  
-  // Sign Up
-  export function signUp(email: string, password: string, displayName: string, photoURL: string) {
-    console.log("Signing up with email:", email);
-    return createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        console.log("Signed up user:", user);
-  
-        // Update display name and photoURL if provided
-        if (displayName || photoURL) {
-          return updateProfile(user, { 
-            displayName: displayName || undefined, 
-            photoURL: photoURL || undefined 
-          })
-          .then(() => {
-            console.log("Display name and/or photoURL updated:", displayName, photoURL);
-            return user;
-          });
-        }
-        console.log("final account info", user);
-        return user;
-      })
-      .catch((error) => {
-        console.error("Sign-up error:", error);
-        throw error;
-      });
+});
+
+// POST /api/auth/logout
+router.post('/logout', async (req: Request, res: Response) => {
+  try {
+    await signOut(auth);
+    res.status(200).json({ success: true, message: "Signed out successfully." });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message || "Sign-out failed." });
   }
-  
-  // Sign Out
-  export function logOut() {
-    return signOut(auth);
-  }
-  
-  export function getCurrentUser() {
-    return new Promise((resolve, reject) => {
-      const unsubscribe = auth.onAuthStateChanged((user) => {
-        unsubscribe();
-        resolve(user);
-      }, reject);
-    });
-  }
-  
+});
+
+// GET /api/auth/current-user
+router.get('/current-user', (req: Request, res: Response) => {
+  const unsubscribe = auth.onAuthStateChanged(
+    (user) => {
+      unsubscribe();
+      res.status(200).json({ success: true, user });
+    },
+    (error) => {
+      unsubscribe();
+      res.status(500).json({ success: false, error: error.message || "Failed to get current user." });
+    }
+  );
+});
+
+export default router;

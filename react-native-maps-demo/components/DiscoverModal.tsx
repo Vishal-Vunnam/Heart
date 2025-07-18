@@ -16,7 +16,7 @@ import {
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Internal imports
-import { getPostbyAuthorID, getAllUsers } from '@/backend/firestore';
+import { getPostbyAuthorID, getAllUsers } from '@/api/posts';
 import { getImageUrlWithSAS } from '@/backend/blob-storage';
 import { PostView } from './PostView';
 import { ThemedView } from '@/components/ThemedView';
