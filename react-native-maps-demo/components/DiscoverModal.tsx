@@ -23,12 +23,12 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { PolisType, PostInfo, UserInfo } from '@/types/types';
 import { router } from 'expo-router';
-import { useCurrentUser } from '@/app/functions/useCurrentUser';
+import { getCurrentUser } from '@/auth/fireAuth';
 // =====================
 // Constants & Types
 // =====================
 const SEARCH_HISTORY_KEY = 'search_history';
-const user = useCurrentUser(); 
+const user = getCurrentUser(); 
 
 // =====================
 // AsyncStorage Utilities
@@ -76,7 +76,7 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
     setSelectedPolis(setPolis);
     (async () => {
       try {
-        const currentUser = await useCurrentUser();
+        const currentUser = await getCurrentUser();
 
         if (
           currentUser &&

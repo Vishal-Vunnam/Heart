@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { useCurrentUser } from './functions/useCurrentUser';
+import { getCurrentUser } from '@/auth/fireAuth';
 export default function EditProfileScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');

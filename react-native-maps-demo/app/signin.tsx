@@ -3,7 +3,7 @@ import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, Image, Safe
 import { router } from 'expo-router';
 import { updateProfile } from 'firebase/auth';
 import { Keyboard } from 'react-native'
-import {signIn, signUp} from '@/api/auth';
+import {signIn, signUp} from '@/auth/fireAuth';
 import { ThemedView } from '@/components/ThemedView';
 // import { uploadToAzureBlob } from '@/backend/blob-storage';
 import * as ImagePicker from 'expo-image-picker';
