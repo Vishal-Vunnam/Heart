@@ -2,45 +2,43 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Image } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
-import { getCurrentUser } from '@/backend/auth';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { app } from '@/backend/firebaseConfig';
 import type { User as FirebaseUser } from 'firebase/auth';
-
+import { useCurrentUser } from './functions/useCurrentUser';
 export default function EditProfileScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [bio, setBio] = useState('');
   const [profilePic, setProfilePic] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    async function loadUserInfo() {
-      try {
-        const user = await getCurrentUser();
-        if (user && typeof user === 'object' && 'uid' in user) {
-          const firebaseUser = user as FirebaseUser;
-          setEmail(firebaseUser.email || '');
-          setUsername(firebaseUser.displayName || '');
-          setProfilePic(firebaseUser.photoURL || null);
-          // Fetch Firestore user doc for bio
-          const db = getFirestore(app);
-          const usersRef = collection(db, 'users');
-          const q = query(usersRef, where('uid', '==', firebaseUser.uid));
-          const querySnapshot = await getDocs(q);
-          if (!querySnapshot.empty) {
-            const data = querySnapshot.docs[0].data();
-            setUsername(data.displayName || '');
-            setEmail(data.email || '');
-            setBio(data.bio || '');
-            setProfilePic(data.photoURL || firebaseUser.photoURL || null);
-          }
-        }
-      } catch (err) {
-        // Optionally handle error
-      }
-    }
-    loadUserInfo();
-  }, []);
+  // React.useEffect(() => {
+  //   async function loadUserInfo() {
+  //     try {
+  //       const user = useCurrentUser();
+  //       if (user && typeof user === 'object' && 'uid' in user) {
+  //         const firebaseUser = user as FirebaseUser;
+  //         setEmail(firebaseUser.email || '');
+  //         setUsername(firebaseUser.displayName || '');
+  //         setProfilePic(firebaseUser.photoURL || null);
+  //         // Fetch Firestore user doc for bio
+  //         const db = getFirestore(app);
+  //         const usersRef = collection(db, 'users');
+  //         const q = query(usersRef, where('uid', '==', firebaseUser.uid));
+  //         const querySnapshot = await getDocs(q);
+  //         if (!querySnapshot.empty) {
+  //           const data = querySnapshot.docs[0].data();
+  //           setUsername(data.displayName || '');
+  //           setEmail(data.email || '');
+  //           setBio(data.bio || '');
+  //           setProfilePic(data.photoURL || firebaseUser.photoURL || null);
+  //         }
+  //       }
+  //     } catch (err) {
+  //       // Optionally handle error
+  //     }
+  //   }
+  //   loadUserInfo();
+  // }, []);
 
   const handleSave = () => {
     // Placeholder for save logic

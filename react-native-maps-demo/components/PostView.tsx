@@ -1,29 +1,14 @@
-// =====================
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-} from 'react-native';
-import EvilIcons from '@expo/vector-icons/EvilIcons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-// Internal imports
-import { getPostbyAuthorID, getAllUsers } from '@/backend/firestore';
-import { getImageUrlWithSAS } from '@/backend/blob-storage';
-import { ThemedView } from '@/components/ThemedView';
+import React from 'react';
+import { StyleSheet, ScrollView, View } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
-import { PolisType, PostData } from '@/types/types';
-type Post = {
+import { ProtectedImage } from './ProtectedImage';
+
+// Define the PostData type to match expected post prop
+export type PostData = {
   title: string;
   description: string;
   date: string;
-  author: string;
+  authorName: string;
   images?: string[];
 };
 
@@ -37,9 +22,9 @@ export const PostView = ({ post }: { post: PostData }) => {
       {post.images && post.images.length > 0 && (
         <ScrollView horizontal style={styles.imageScroll}>
           {post.images.map((img, idx) => (
-            <Image
+            <ProtectedImage
               key={idx}
-              source={{ uri: getImageUrlWithSAS(img) }}
+              url={img}
               style={styles.image}
               resizeMode="cover"
             />

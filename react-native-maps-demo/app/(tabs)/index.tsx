@@ -36,6 +36,9 @@ import DiscoverModal from '@/components/DiscoverModal';
 import CustomCallout from '@/components/CustomCallout';
 import EditPostModal from '@/components/EditPostModal';
 
+// Functions 
+import { ProtectedImage } from '../../components/ProtectedImage';
+
 // Firebase Firestore & Storage
 // import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/backend/firestore';
 // import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/backend/blob-storage';
@@ -81,7 +84,13 @@ function renderPostImages(images?: string[]) {
       }}
     >
       <Image
-        source={{ uri: getImageUrlWithSAS(imageUrl) }}
+        // We cannot use an async function directly in the source prop.
+        // Instead, use a stateful ImageWithSAS component to handle async fetching.
+        {...ProtectedImage({
+          url: imageUrl,
+          style: { width: 100, height: 100, marginVertical: 4, borderRadius: 8 },
+          resizeMode: "cover"
+        })}
         style={{ width: 100, height: 100, marginVertical: 4, borderRadius: 8 }}
         resizeMode="cover"
       />
@@ -129,38 +138,43 @@ export default function HomeScreen() {
     setSelectedPost(editedPost); // Optionally show the updated post
   };
 
-  // 2. Effects
+  // export type UserInfo = {
+  //   displayName: string; 
+  //   email: string;
+  //   uid: string;
+  //   photoURL: string | null; 
+  // };
   useEffect(() => {
-    async function checkAuth() {
-      // Example: fetch current user from backend using stored JWT
-      const token = await getTokenFromStorage();
-      if (token) {
-        const res = await fetch('http://localhost:4000/api/auth/current-user', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const user = await res.json();
-          setUser(user);
-          setSelectedPolis({ isUser: true, userInfo: user });
-        } else {
-          setUser(null);
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // You can access firebaseUser.uid, firebaseUser.email, etc.
+        const currUser = 
+        {
+          displayName: firebaseUser.displayName ?? firebaseUser.email ?? "",
+          email: firebaseUser.email ?? "",
+          uid: firebaseUser.uid,
+          photoURL: firebaseUser.photoURL ?? null
         }
+        setUser(currUser);
+        setSelectedPolis({ isUser: true, userInfo: currUser });
       } else {
         setUser(null);
+        setSelectedPolis(null);
       }
-    }
-    checkAuth();
+    });
+    return unsubscribe; // Clean up the listener on unmount
   }, []);
 
   useEffect(() => {
     if (selectedPolis) {
       if (selectedPolis.isUser) {
-        getPostbyAuthorID(selectedPolis.userInfo.uid).then((userPosts) => {
+        getPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
           setPosts(userPosts);
 
         });
       } else {
-        getPostbyTag(selectedPolis.tag).then((tagPosts) => {
+        getPostsByTag(selectedPolis.tag).then((tagPosts) => {
           setPosts(tagPosts); 
         })
       }
@@ -172,7 +186,7 @@ export default function HomeScreen() {
 
 
   // 3. Event Handlers
-  const handleMarkerPress = async (post: PostDBInfo) => {
+  const handleMarkerPress = async (post: PostInfo) => {
     if (!mapRef.current) return;
   
     isProgrammaticMove.current = true;
@@ -184,8 +198,8 @@ export default function HomeScreen() {
         mapRef.current.animateCamera(
           {
             center: {
-              latitude: post.location.latitude + 0.002, // small vertical offset for callout visibility
-              longitude: post.location.longitude,
+              latitude: post.latitude + 0.002, // small vertical offset for callout visibility
+              longitude: post.longitude,
             },
             zoom: 16,
           },
@@ -196,8 +210,8 @@ export default function HomeScreen() {
         // @ts-ignore - animateToRegion exists on MapView
         mapRef.current.animateToRegion(
           {
-            latitude: post.location.latitude + 0.002,
-            longitude: post.location.longitude,
+            latitude: post.latitude + 0.002,
+            longitude: post.longitude,
             latitudeDelta: 0.01,
             longitudeDelta: 0.01,
           },
@@ -300,13 +314,13 @@ export default function HomeScreen() {
     }
     setIsPostModalVisible(true);
   };
-  const handlePostSubmit = async (postData: PostRequestInfo) => {
+  const handlePostSubmit = async (postData: PostInfo) => {
     if (!user) {
       console.log("No user signed in, cannot submit post.");
       return;
     }
     try {
-      await addPost(postData);
+      await createPost(postData);
       console.log("Post added!", postData);
       // Reload posts to show the new post on the map
       setSelectedPolis({
@@ -403,28 +417,34 @@ export default function HomeScreen() {
               if (!isProgrammaticMove.current && selectedPost) {
                 setSelectedPost(null);
                 // Close the marker callout as well
-                if (selectedPost && markerRefs.current[selectedPost.postId]) {
-                  markerRefs.current[selectedPost.postId]?.hideCallout?.();
+                if (
+                  selectedPost?.postId !== undefined &&
+                  selectedPost?.postId !== null &&
+                  markerRefs.current[String(selectedPost.postId)]
+                ) {
+                  markerRefs.current[String(selectedPost.postId)]?.hideCallout?.();
                 }
               }
             }}
           >
             {posts.map((post, index) => (
-              <Marker
-                ref={ref => { markerRefs.current[post.postId] = ref; }}
-                pinColor="black"
-                key={index}
-                coordinate={{
-                  latitude: post.location.latitude,
-                  longitude: post.location.longitude,
-                }}
-                onPress={async (e) => {
-                  e.stopPropagation();
-                  await handleMarkerPress(post);
-                  // Set selected post after animation starts
-                  setTimeout(() => setSelectedPost(post), 200);
-                }}
-              />
+              post.postId && post.latitude !== undefined && post.longitude !== undefined && (
+                <Marker
+                  ref={ref => { markerRefs.current[post.postId!] = ref; }}
+                  pinColor="black"
+                  key={post.postId}
+                  coordinate={{
+                    latitude: post.latitude,
+                    longitude: post.longitude,
+                  }}
+                  onPress={async (e) => {
+                    e.stopPropagation();
+                    await handleMarkerPress(post);
+                    // Set selected post after animation starts
+                    setTimeout(() => setSelectedPost(post), 200);
+                  }}
+                />
+              )
             ))}
           </MapView>
 
@@ -447,7 +467,7 @@ export default function HomeScreen() {
               <View style={styles.customCalloutOverlay} pointerEvents="box-none">
                 <View style={styles.customCalloutContainer}>
                   <CustomCallout
-                    isUserLoggedIn={selectedPost.authorId == user?.uid}
+                    isUserLoggedIn={selectedPost.userId == user?.uid}
                     post={selectedPost}
                     onLike={() => {
                       console.log("Like post:", selectedPost.postId);

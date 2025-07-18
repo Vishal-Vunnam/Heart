@@ -16,20 +16,19 @@ import {
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Internal imports
-import { getPostbyAuthorID, getAllUsers } from '@/api/posts';
-import { getImageUrlWithSAS } from '@/backend/blob-storage';
+import { getPostsByAuthorId} from '@/api/posts';
+import { ProtectedImage } from '@/components/ProtectedImage';
 import { PostView } from './PostView';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { PolisType, PostDBInfo, UserInfo } from '@/types/types';
-import {getCurrentUser} from '@/backend/auth';
+import { PolisType, PostInfo, UserInfo } from '@/types/types';
 import { router } from 'expo-router';
+import { useCurrentUser } from '@/app/functions/useCurrentUser';
 // =====================
 // Constants & Types
 // =====================
 const SEARCH_HISTORY_KEY = 'search_history';
-
-
+const user = useCurrentUser(); 
 
 // =====================
 // AsyncStorage Utilities
@@ -55,14 +54,14 @@ export async function clearSearchHistory() {
 // DiscoverModal Component
 // =====================
 interface DiscoverModalProps {
-  onPostSelect: (post: PostDBInfo) => void;
+  onPostSelect: (post: PostInfo) => void;
   onPolisSelect?: (polis: PolisType) => void;
   setPolis: PolisType | null;
 }
 
 const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSelect, setPolis }) => {
   // State
-  const [posts, setPosts] = useState<PostDBInfo[]>([]);
+  const [posts, setPosts] = useState<PostInfo[]>([]);
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [isLoggedInUser, setIsLoggedInUser] = useState(false);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
@@ -73,11 +72,12 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
 
   // Fetch users and set initial polis
   useEffect(() => {
-    getAllUsers().then(setUsers);
+    // getAllUsers().then(setUsers);
     setSelectedPolis(setPolis);
     (async () => {
       try {
-        const currentUser = await getCurrentUser();
+        const currentUser = await useCurrentUser();
+
         if (
           currentUser &&
           setPolis &&
@@ -100,25 +100,32 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
   useEffect(() => {
     if (selectedPolis && selectedPolis.isUser) {
       setFilteredUsers([]);
-      getPostbyAuthorID(selectedPolis.userInfo.uid).then((userPosts) => {
+      getPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
         setPosts(userPosts);
       });
-      getCurrentUser()
-        .then((currentUser: any) => {
-          if (
-            currentUser &&
-            selectedPolis &&
-            selectedPolis.isUser &&
-            selectedPolis.userInfo &&
-            selectedPolis.userInfo.uid
-          ) {
-            setIsLoggedInUser(currentUser.uid === selectedPolis.userInfo.uid);
-          } else {
-            setIsLoggedInUser(false);
-          }
-        })
-        .catch(() => setIsLoggedInUser(false));
-    } else {
+      if (
+        user &&
+        selectedPolis &&
+        selectedPolis.isUser &&
+        selectedPolis.userInfo &&
+        selectedPolis.userInfo.uid
+      ) {
+        setIsLoggedInUser(user.uid === selectedPolis.userInfo.uid);
+      } else {
+        setIsLoggedInUser(false);
+      }
+
+      if (
+        user &&
+        selectedPolis &&
+        selectedPolis.isUser &&
+        selectedPolis.userInfo &&
+        selectedPolis.userInfo.uid
+      ) {
+        setIsLoggedInUser(user.uid === selectedPolis.userInfo.uid);
+      } else {
+        setIsLoggedInUser(false);
+      }
       setPosts([]);
       setIsLoggedInUser(false);
     }
@@ -272,17 +279,13 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
                         <ThemedText style={styles.postTitle}>{post.title}</ThemedText>
                         <ThemedText style={styles.postDescription}>{post.description}</ThemedText>
                         <ThemedText style={styles.postDate}>{post.date}</ThemedText>
-                        <ThemedText style={styles.postAuthor}>By: {post.author}</ThemedText>
+                        <ThemedText style={styles.postAuthor}>By: {post.userId}</ThemedText>
                       </View>
-                      {post.images_url_blob && post.images_url_blob.length > 0 && (
+                      {/* {post.images_url_blob && post.images_url_blob.length > 0 && (
                         <ScrollView horizontal style={{ marginLeft: 18 }}>
-                          <Image
-                            source={{ uri: getImageUrlWithSAS(post.images_url_blob[0]) }}
-                            style={{ width: 100, height: 100, borderRadius: 8 }}
-                            resizeMode="cover"
-                          />
+                          {ProtectedImage}
                         </ScrollView>
-                      )}
+                      )} */}
                     </TouchableOpacity>
                   ))
                 ) : (

@@ -1,51 +1,74 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, Text, Modal, Image, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  Modal,
+  Image,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import DropDownPicker from 'react-native-dropdown-picker';
 import * as ImagePicker from 'expo-image-picker';
-import type { PostDBInfo } from '@/types/types';
-import { getImageUrlWithSAS, deleteFromAzureBlob } from '@/backend/blob-storage';
-// import { uploadImage, generateFileName } from '@/firebase/blob-storage';
+import type { PostInfo, EventInfo } from '@/types/types';
+import { FlipInXDown } from 'react-native-reanimated';
+
+// Placeholder for getImageUrlWithSAS and deleteFromAzureBlob
+const getImageUrlWithSAS = (uri: string) => uri;
+const deleteFromAzureBlob = async (uri: string) => {};
 
 interface EditPostModalProps {
   onClose: () => void;
-  oldPostInfo: PostDBInfo;
-  onEdit: (editedPost: PostDBInfo) => void;
+  oldPostInfo: PostInfo;
+  onEdit: (editedPost: PostInfo) => void;
 }
 
-const EditPostModal: React.FC<EditPostModalProps> = ({ onClose, oldPostInfo, onEdit }) => {
+const EditPostModal: React.FC<EditPostModalProps> = ({
+  onClose,
+  oldPostInfo,
+  onEdit,
+}) => {
   const [locationTitle, setLocationTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [open, setOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<'post' | 'event'>('post');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [originalImages, setOriginalImages] = useState<string[]>([]);
+  const [eventStartTime, setEventStartTime] = useState('');
+  const [eventEndTime, setEventEndTime] = useState('');
 
   useEffect(() => {
-    if (oldPostInfo) {
-      setLocationTitle(oldPostInfo.title || '');
-      setDescription(oldPostInfo.description || '');
-      setSelectedImages(oldPostInfo.images_url_blob || []);
-      setTags(oldPostInfo.tags || []);
-      setOriginalImages(oldPostInfo.images_url_blob || []);
-      // Optionally set activeTab based on post type if you have that info
-    }
+    // if (oldPostInfo) {
+    //   setLocationTitle(oldPostInfo.title || '');
+    //   setDescription(oldPostInfo.description || '');
+    //   setSelectedImages(oldPostInfo.images_url_blob || []);
+    //   setTags(oldPostInfo.tags || []);
+    //   setOriginalImages(oldPostInfo.images_url_blob || []);
+    //   if (oldPostInfo.eventStartTime) setEventStartTime(oldPostInfo.eventStartTime);
+    //   if (oldPostInfo.eventEndTime) setEventEndTime(oldPostInfo.eventEndTime);
+    //   if (oldPostInfo.type === 'event') setActiveTab('event');
+    //   else setActiveTab('post');
+    // }
   }, [oldPostInfo]);
 
   const pickImage = async () => {
     try {
-      // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant camera roll permissions to upload images.');
+        Alert.alert(
+          'Permission needed',
+          'Please grant camera roll permissions to upload images.'
+        );
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
@@ -54,8 +77,8 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ onClose, oldPostInfo, onE
       });
 
       if (!result.canceled && result.assets) {
-        const newImages = result.assets.map(asset => asset.uri);
-        setSelectedImages(prev => [...prev, ...newImages]);
+        const newImages = result.assets.map((asset) => asset.uri);
+        setSelectedImages((prev) => [...prev, ...newImages]);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -64,24 +87,22 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ onClose, oldPostInfo, onE
   };
 
   const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Tag input handlers
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
     if (trimmed.length > 0 && !tags.includes(trimmed)) {
-      setTags(prev => [...prev, trimmed]);
+      setTags((prev) => [...prev, trimmed]);
       setTagInput('');
     }
   };
 
   const handleTagInputChange = (text: string) => {
-    // If user types comma or space, add tag
     if (text.endsWith(',') || text.endsWith(' ')) {
       const trimmed = text.trim().replace(/,$/, '');
       if (trimmed.length > 0 && !tags.includes(trimmed)) {
-        setTags(prev => [...prev, trimmed]);
+        setTags((prev) => [...prev, trimmed]);
       }
       setTagInput('');
     } else {
@@ -90,16 +111,26 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ onClose, oldPostInfo, onE
   };
 
   const handleRemoveTag = (index: number) => {
-    setTags(prev => prev.filter((_, i) => i !== index));
+    setTags((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleEditSubmit = async () => {
-    const editedPost: PostDBInfo = {
+    setIsUploading(true);
+
+    // Compose edited post
+    const editedPost: PostInfo = {
       ...oldPostInfo,
       title: locationTitle,
       description,
-      images_url_blob: selectedImages,
-      tags,
+      // images_url_blob: selectedImages,
+      // tags,
+      // type: activeTab,
+      ...(activeTab === 'event'
+        ? {
+            eventStartTime,
+            eventEndTime,
+          }
+        : {}),
     };
 
     // Find removed images
@@ -118,31 +149,50 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ onClose, oldPostInfo, onE
       }
     }
 
+    setIsUploading(false);
     onEdit(editedPost);
   };
 
   return (
-    <Modal
-
-    >
+    <Modal transparent animationType="fade" visible>
       <View style={modalStyles.overlay}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}
+          style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+          }}
         >
-          <View style={[modalStyles.modalContent, { padding: 0, maxHeight: '90%', width: '90%' }]}> 
+          <View
+            style={[
+              modalStyles.modalContent,
+              { padding: 0, maxHeight: '90%', width: '90%' },
+            ]}
+          >
             <ScrollView
               contentContainerStyle={{ padding: 20 }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <Text style={modalStyles.title}>Create Post</Text>
-                <TouchableOpacity onPress={onClose} style={modalStyles.closeButton}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 20,
+                }}
+              >
+                <Text style={modalStyles.title}>Edit Post</Text>
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={modalStyles.closeButton}
+                >
                   <Feather name="x" size={24} color="#000" />
                 </TouchableOpacity>
               </View>
-              {/* Add tab buttons below the header in the modal */}
+              {/* Tab Buttons */}
               <View style={modalStyles.tabContainer}>
                 <TouchableOpacity
                   style={[
@@ -151,10 +201,14 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ onClose, oldPostInfo, onE
                   ]}
                   onPress={() => setActiveTab('post')}
                 >
-                  <Text style={[
-                    modalStyles.tabButtonText,
-                    activeTab === 'post' && modalStyles.tabButtonTextActive,
-                  ]}>Post</Text>
+                  <Text
+                    style={[
+                      modalStyles.tabButtonText,
+                      activeTab === 'post' && modalStyles.tabButtonTextActive,
+                    ]}
+                  >
+                    Post
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -163,10 +217,14 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ onClose, oldPostInfo, onE
                   ]}
                   onPress={() => setActiveTab('event')}
                 >
-                  <Text style={[
-                    modalStyles.tabButtonText,
-                    activeTab === 'event' && modalStyles.tabButtonTextActive,
-                  ]}>Event</Text>
+                  <Text
+                    style={[
+                      modalStyles.tabButtonText,
+                      activeTab === 'event' && modalStyles.tabButtonTextActive,
+                    ]}
+                  >
+                    Event
+                  </Text>
                 </TouchableOpacity>
               </View>
               <TextInput
@@ -220,31 +278,38 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ onClose, oldPostInfo, onE
                   ))}
                 </View>
               </View>
-              {activeTab == 'event' && (
+              {activeTab === 'event' && (
                 <View>
                   <Text style={modalStyles.label}>Event Start Time</Text>
                   <TextInput
                     style={modalStyles.input}
                     placeholder="Start Time (e.g. 2024-07-04 18:00)"
                     placeholderTextColor="#888"
-                    // value={eventStartTime}
-                    // onChangeText={setEventStartTime}
+                    value={eventStartTime}
+                    onChangeText={setEventStartTime}
                   />
                   <Text style={modalStyles.label}>Event End Time</Text>
                   <TextInput
                     style={modalStyles.input}
                     placeholder="End Time (e.g. 2024-07-04 20:00)"
                     placeholderTextColor="#888"
-                    // value={eventEndTime}
-                    // onChangeText={setEventEndTime}
+                    value={eventEndTime}
+                    onChangeText={setEventEndTime}
                   />
                 </View>
               )}
               {/* Image Upload Section */}
               <View style={modalStyles.imageSection}>
                 <Text style={modalStyles.label}>Add Images (Optional)</Text>
-                <TouchableOpacity style={modalStyles.imagePickerButton} onPress={pickImage}>
-                  <MaterialIcons name="add-photo-alternate" size={24} color="#007bff" />
+                <TouchableOpacity
+                  style={modalStyles.imagePickerButton}
+                  onPress={pickImage}
+                >
+                  <MaterialIcons
+                    name="add-photo-alternate"
+                    size={24}
+                    color="#007bff"
+                  />
                   <Text style={modalStyles.imagePickerText}>Add Images</Text>
                 </TouchableOpacity>
                 {/* Image Preview */}
@@ -255,8 +320,11 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ onClose, oldPostInfo, onE
                       const displayUri = isLocal ? uri : getImageUrlWithSAS(uri);
                       return (
                         <View key={index} style={modalStyles.imagePreviewWrapper}>
-                          <Image source={{ uri: displayUri }} style={modalStyles.imagePreview} />
-                          <TouchableOpacity 
+                          <Image
+                            source={{ uri: displayUri }}
+                            style={modalStyles.imagePreview}
+                          />
+                          <TouchableOpacity
                             style={modalStyles.removeImageButton}
                             onPress={() => removeImage(index)}
                           >
@@ -268,8 +336,11 @@ const EditPostModal: React.FC<EditPostModalProps> = ({ onClose, oldPostInfo, onE
                   </View>
                 )}
               </View>
-              <TouchableOpacity 
-                style={[modalStyles.button, isUploading && modalStyles.buttonDisabled]} 
+              <TouchableOpacity
+                style={[
+                  modalStyles.button,
+                  isUploading && modalStyles.buttonDisabled,
+                ]}
                 onPress={handleEditSubmit}
                 disabled={isUploading}
               >
@@ -416,13 +487,12 @@ const modalStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Add styles for the tab bar
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: 16,
     marginTop: 4,
-    color: 'black'
+    color: 'black',
   },
   tabButton: {
     flex: 1,
@@ -446,7 +516,6 @@ const modalStyles = StyleSheet.create({
   tabButtonTextActive: {
     color: '#fff',
   },
-  // Tag input and chips styles
   tagSection: {
     marginBottom: 18,
   },
@@ -500,4 +569,4 @@ const modalStyles = StyleSheet.create({
   },
 });
 
-export default EditPostModal; 
+export default EditPostModal;

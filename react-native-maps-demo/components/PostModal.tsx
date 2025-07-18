@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import DropDownPicker from 'react-native-dropdown-picker';
 import * as ImagePicker from 'expo-image-picker';
-import type { PostRequestInfo } from '@/types/types';
+import type { PostInfo } from '@/types/types';
 // import { uploadImage, generateFileName } from '@/firebase/blob-storage';
 
 // PostModal Component
@@ -89,33 +89,7 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
   };
 
   const handlePostLocation = async () => {
-    // Example: Gather post data from form state or props
-    const postData: PostRequestInfo = {
-      title: locationTitle, // assume you have title in state/props
-      location: currentLocation, // assume you have location in state/props
-      authorId: userId, // assume you have userId in state/props
-      author: userName, // assume you have authorName in state/props
-      images: selectedImages, // assume you have localImageUris: string[]
-      description: description, // assume you have description in state/props
-      tags: tags, // now using tags from state
-    };
-    try {
-      await onPost(postData);
-      // Optionally, handle success (e.g., close modal, show message)
-      // Clear all inputs
-      setLocationTitle('');
-      setDescription('');
-      setSelectedImages([]);
-      setTags([]);
-      setTagInput('');
-      setActiveTab('post');
-      if (typeof onClose === 'function') {
-        onClose();
-      }
-    } catch (error) {
-      // Optionally, handle error (e.g., show error message)
-      console.error('Failed to add post:', error);
-    }
+
   };
 
   return (

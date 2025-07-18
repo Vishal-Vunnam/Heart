@@ -1,5 +1,5 @@
-import express, { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
+import express, { Request, Response, NextFunction } from 'express';
+import admin from '../config/firebaseAdmin';
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -76,5 +76,27 @@ router.get('/current-user', (req: Request, res: Response) => {
     }
   );
 });
+
+// Extend Express Request type to include 'user'
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: admin.auth.DecodedIdToken;
+  }
+}
+
+export async function firebaseAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  const idToken = authHeader.split(' ')[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
 
 export default router;

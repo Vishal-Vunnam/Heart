@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, Image, SafeAreaView } from 'react-native';
-import { signIn, signUp } from '../../backend/auth';
 import { router } from 'expo-router';
 import { updateProfile } from 'firebase/auth';
 import { Keyboard } from 'react-native'
-import { addUser } from '../../backend/firestore';
+import {signIn, signUp} from '@/api/auth';
 import { ThemedView } from '@/components/ThemedView';
-import { uploadToAzureBlob } from '@/backend/blob-storage';
+// import { uploadToAzureBlob } from '@/backend/blob-storage';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function SignInScreen() {
@@ -51,7 +50,7 @@ export default function SignInScreen() {
             // Use filename based on email and timestamp for uniqueness
             const fileName = `profile_${email.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}.jpg`;
             // Dynamically import to avoid circular deps if not needed
-            photoURL = await uploadToAzureBlob(photoUri, fileName, 'profile-pics');
+            // photoURL = await uploadToAzureBlob(photoUri, fileName, 'profile-pics');
           } catch (err) {
             console.error('Failed to upload profile picture:', err);
             Alert.alert('Error', 'Failed to upload profile picture. Please try again.');

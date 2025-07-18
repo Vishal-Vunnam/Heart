@@ -84,11 +84,11 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
             >
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
-                  {post.author?.charAt(0)?.toUpperCase() || 'U'}
+                  {post.userId?.charAt(0)?.toUpperCase() || 'U'}
                 </Text>
               </View>
             </TouchableOpacity>
-            <ThemedText style={styles.authorName}>{post.author}</ThemedText>
+            <ThemedText style={styles.authorName}>{post.userId}</ThemedText>
           </View>
         </View>
       </View>
@@ -97,7 +97,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
       <View style={styles.titleDateRow}>
         <ThemedText style={styles.title}>{post.title}</ThemedText>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Text style={styles.dateNextToTitle}>{formatDate(post.date)}</Text>
+          <Text style={styles.dateNextToTitle}>{formatDate(post.date ?? '')}</Text>
           <TouchableOpacity
             style={styles.moreButton}
             onPress={() => {
@@ -138,7 +138,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
             {post.description}
           </ThemedText>
           {/* Tags under description */}
-          <View style={styles.tagContainer}>
+          {/* <View style={styles.tagContainer}>
             {Array.isArray(post.tags) && post.tags.length > 0 ? (
               post.tags.map((tag: string, idx: number) => (
                 <TouchableOpacity
@@ -157,11 +157,11 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
             ) : (
               <Text style={styles.noTagText}>No tags</Text>
             )}
-          </View>
+          </View> */}
         </View>
 
               {/* Multiple Images with loading placeholders */}
-      {post.images_url_blob && post.images_url_blob.length > 0 && (
+      {/* {post.images_url_blob && post.images_url_blob.length > 0 && (
         <View style={styles.imageContainer}>
           {post.images_url_blob.map((imageUrl, index) => (
             <View key={index} style={styles.singleImageContainer}>
@@ -192,7 +192,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
             </View>
           ))}
         </View>
-      )}
+      )} */}
       </ScrollView>
 
       {/* Action Bar - Fixed at bottom */}
