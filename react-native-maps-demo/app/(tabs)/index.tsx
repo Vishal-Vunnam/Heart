@@ -44,6 +44,7 @@ import { ProtectedImage } from '../../components/ProtectedImage';
 // import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/backend/blob-storage';
 import { getAllPosts, createPost, getPostsByAuthorId, getPostsByTag } from '@/api/posts';
 import { getImageUrlWithSAS } from '@/api/image';
+import { getCurrentUser } from '@/auth/fireAuth';
 
 // Types
 import { PolisType, PostInfo, UserInfo } from '@/types/types';
@@ -144,6 +145,7 @@ export default function HomeScreen() {
   //   uid: string;
   //   photoURL: string | null; 
   // };
+  
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -168,9 +170,10 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (selectedPolis) {
+      console.log("also here");
       if (selectedPolis.isUser) {
         getPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
-          setPosts(userPosts);
+          console.log(userPosts);
 
         });
       } else {
