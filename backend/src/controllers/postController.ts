@@ -5,12 +5,16 @@ import { executeQuery } from '../utils/dbUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
-
+function toSqlDateString(date: Date) {
+  // Returns 'YYYY-MM-DD HH:mm:ss.SSS'
+  return date.toISOString().replace('T', ' ').replace('Z', '');
+}
 /**
  * Route: POST /posts
  * Adds a new post.
  */
 router.post('/posts', async (req: Request, res: Response) => {
+  console.log("Received POST /posts with body:", req.body);
   try {
     const postInfo: PostInfo = req.body.postInfo || req.body;
     const tags: string[] = req.body.tags || [];
@@ -20,7 +24,7 @@ router.post('/posts', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Missing postInfo object.' });
     }
     if (!postInfo.userId) {
-      return res.status(400).json({ success: false, error: 'Missing required field: authorId.' });
+      return res.status(400).json({ success: false, error: 'Missing required field: userId.' });
     }
     if (!postInfo.title) {
       return res.status(400).json({ success: false, error: 'Missing required field: title.' });
@@ -34,10 +38,11 @@ router.post('/posts', async (req: Request, res: Response) => {
       typeof postInfo.latitudeDelta !== 'number' ||
       typeof postInfo.longitudeDelta !== 'number'
     ) {
-      return res.status(400).json({ success: false, error: 'Missing or invalid location fields.' });
+      return res.status(400).json({ success: false, error: 'Missing or invalid location fields. Received: ' + JSON.stringify({ latitude: postInfo.latitude, longitude: postInfo.longitude, latitudeDelta: postInfo.latitudeDelta, longitudeDelta: postInfo.longitudeDelta }) });
     }
 
     const uniquePostId = uuidv4();
+    const now = new Date()
     const query = `
       INSERT INTO posts (id, userId, title, description, latitude, longitude, latitudeDelta, longitudeDelta, createdAt, updatedAt)
       VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7, @param8, @param9)
@@ -47,13 +52,14 @@ router.post('/posts', async (req: Request, res: Response) => {
       postInfo.userId,
       postInfo.title,
       postInfo.description,
-      postInfo.latitude,
-      postInfo.longitude,
-      postInfo.latitudeDelta,
-      postInfo.longitudeDelta,
-      new Date(),
-      new Date()
+      postInfo.latitude.toString(),      // <-- convert to string
+      postInfo.longitude.toString(),     // <-- convert to string
+      postInfo.latitudeDelta.toString(),
+      postInfo.longitudeDelta.toString(),
+      toSqlDateString(now),
+      toSqlDateString(now)
     ];
+    console.log("Params for SQL query:", params);
 
     const result = await executeQuery(query, params);
 

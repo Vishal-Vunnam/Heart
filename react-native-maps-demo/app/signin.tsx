@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, Image, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { updateProfile } from 'firebase/auth';
+import { createUser } from '@/api/user';
 import { Keyboard } from 'react-native'
 import {signIn, signUp} from '@/auth/fireAuth';
 import { ThemedView } from '@/components/ThemedView';
@@ -59,6 +60,17 @@ export default function SignInScreen() {
         }
 
         const user = await signUp(email, password, username, photoURL);
+
+        if (user.success && user.user) {
+          await createUser({
+            uid: user.user.uid,
+            email: user.user.email ?? email,
+            displayName: user.user.displayName ?? username,
+            photoURL: user.user.photoURL ?? (photoURL || undefined),
+          });
+        } else {
+          throw new Error(user.error || "Failed to create user.");
+        }
 
         Alert.alert('Success', 'Account created! You can now sign in.');
         setIsSignUp(false);

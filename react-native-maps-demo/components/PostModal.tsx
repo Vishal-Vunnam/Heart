@@ -5,8 +5,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import DropDownPicker from 'react-native-dropdown-picker';
 import * as ImagePicker from 'expo-image-picker';
 import type { PostInfo } from '@/types/types';
+import { getCurrentUser } from '@/auth/fireAuth';
 // import { uploadImage, generateFileName } from '@/firebase/blob-storage';
-
+import { createPost } from '@/api/posts';
 // PostModal Component
 interface PostModalProps {
   userId: string;
@@ -89,7 +90,56 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
   };
 
   const handlePostLocation = async () => {
+    try {
+      setIsUploading(true);
 
+      // Get the current user object
+      const user = getCurrentUser?.();
+      if (!user || !user.uid) {
+        Alert.alert('Error', 'You must be logged in to post.');
+        setIsUploading(false);
+        return;
+      }
+
+      // Compose the post info object for submission
+      const postInfo: PostInfo = {
+
+              title: locationTitle.trim(),
+              description: description.trim(),
+              latitude: currentLocation?.latitude ?? 0,
+              longitude: currentLocation?.longitude ?? 0,
+              latitudeDelta: currentLocation?.latitudeDelta ?? 0.01,
+              longitudeDelta: currentLocation?.longitudeDelta ?? 0.01,
+              date: new Date().toISOString(),
+              userId: user.uid,
+              type: 'post',
+            }
+      
+
+      // Create the post
+      const createdPost = await createPost(postInfo);
+
+      // // If images are selected, upload them
+      // if (selectedImages.length > 0) {
+      //   await addImagesToPost(createdPost.id, user.uid, selectedImages);
+      // }
+
+      setIsUploading(false);
+      Alert.alert('Success', 'Post created successfully!');
+      onClose();
+      // Optionally, reset form fields here
+      setLocationTitle('');
+      setDescription('');
+      setSelectedImages([]);
+      setTags([]);
+      setTagInput('');
+      // setEventStartTime('');
+      // setEventEndTime('');
+    } catch (error) {
+      setIsUploading(false);
+      console.error('Error posting location:', error);
+      Alert.alert('Error', 'Failed to create post. Please try again.');
+    }
   };
 
   return (

@@ -9,6 +9,7 @@ export async function getAllPosts() {
 
 // Create a new post
 export async function createPost(postData: any) {
+  console.log("adding post", postData)
   const res = await fetch(`${BASE_URL}/posts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
