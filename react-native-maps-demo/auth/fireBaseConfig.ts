@@ -1,6 +1,11 @@
-import { initializeApp, FirebaseApp, getApps } from "firebase/app";
+import { initializeApp, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
-// Firebase configuration (hardcoded for now, can be replaced with env vars if needed)
+
+// Firebase configuration using environme
+// nt variables
 const firebaseConfig = {
   apiKey: "AIzaSyACuvxKzbPv4fJbR9wyJmUOoAMNnQlFZA8",
   authDomain: "polis-ba392.firebaseapp.com",
@@ -8,12 +13,10 @@ const firebaseConfig = {
   appId: "1:582373418945:web:5969561b5f9439d7457140"
 };
 
-// Initialize Firebase only if it hasn't been initialized yet
-let app: FirebaseApp;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApps()[0];
-}
 
+
+// Initialize Firebase
+const app: FirebaseApp = initializeApp(firebaseConfig);
+
+// Export the app instance
 export default app;

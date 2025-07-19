@@ -1,5 +1,4 @@
 const BASE_URL = "http://localhost:4000/api"; // Change to your backend URL
-
 // Get all posts
 export async function getAllPosts() {
   const res = await fetch(`${BASE_URL}/posts`);
@@ -34,7 +33,15 @@ export async function addImagesToPost(postId: string, userId: string, imageUris:
 export async function getPostsByAuthorId(authorId: string) {
   const res = await fetch(`${BASE_URL}/posts/by-author?authorId=${encodeURIComponent(authorId)}`);
   if (!res.ok) throw new Error("Failed to fetch posts by authorId");
-  return res.json();
+  const data = await res.json();
+  // Return only the posts array (post info)
+  // This will throw if posts is empty or postInfo is undefined, so check first
+  if (data.posts && data.posts.length > 0 && data.posts[0].postInfo) {
+    console.log(data.posts[0].postInfo);
+  } else {
+    console.log("No posts or postInfo found in response:", data);
+  }
+  return data;
 }
 
 // Get posts by tag

@@ -4,7 +4,9 @@ import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import DropDownPicker from 'react-native-dropdown-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { getBase64 } from '@/functions/imageToBase64';
 import type { PostInfo } from '@/types/types';
+import { uploadImageToPost } from '@/api/image';
 import { getCurrentUser } from '@/auth/fireAuth';
 // import { uploadImage, generateFileName } from '@/firebase/blob-storage';
 import { createPost } from '@/api/posts';
@@ -40,6 +42,7 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
         Alert.alert('Permission needed', 'Please grant camera roll permissions to upload images.');
         return;
       }
+      console.log("[icking image")
 
       // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -101,6 +104,8 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
         return;
       }
 
+      Alert.alert("test")
+
       // Compose the post info object for submission
       const postInfo: PostInfo = {
 
@@ -117,12 +122,15 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
       
 
       // Create the post
+      console.log("Here")
       const createdPost = await createPost(postInfo);
-
-      // // If images are selected, upload them
-      // if (selectedImages.length > 0) {
-      //   await addImagesToPost(createdPost.id, user.uid, selectedImages);
-      // }
+      console.log("HEHEHEHE", selectedImages)
+      if (selectedImages.length > 0) {
+        for (const imageUri of selectedImages) {
+          const base64Image = await getBase64(imageUri);
+          await uploadImageToPost(base64Image, createdPost.postId);
+        }
+      }
 
       setIsUploading(false);
       Alert.alert('Success', 'Post created successfully!');

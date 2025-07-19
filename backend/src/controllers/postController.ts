@@ -232,134 +232,82 @@ router.post('/events', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Route: POST /posts/images
- * Adds pictures to a post.
- */
-router.post('/posts/images', async (req: Request, res: Response) => {
-  const { postId, userId, imageUrls } = req.body;
-
-  if (!postId || !userId || !Array.isArray(imageUrls) || imageUrls.length === 0) {
-    return res.status(400).json({
-      success: false,
-      error: "Missing required fields: postId, userId, or imageUrls."
-    });
-  }
-
-  try {
-    // Upload images to Blob Storage and get their URLs
-    let imagesBlobUrls: string[];
-    try {
-      imagesBlobUrls = await uploadImagesAndGetUrls(imageUrls, userId);
-    } catch (error) {
-      console.error("Error uploading picture to blob storage: ", error);
-      return res.status(500).json({
-        success: false,
-        error: "Error uploading images to blob storage."
-      });
-    }
-
-    // Insert each image URL into the images table
-    const insertedImages: string[] = [];
-    for (const imageUrl of imagesBlobUrls) {
-      const image_id = uuidv4();
-      const query = `
-        INSERT INTO images (id, postId, imageUrl)
-        VALUES (@param0, @param1, @param2)
-      `;
-      const params = [
-        image_id,
-        postId,
-        imageUrl,
-      ];
-      try {
-        await executeQuery(query, params);
-        insertedImages.push(imageUrl);
-        console.log(`Added image URL to post ${postId}: ${imageUrl}`);
-      } catch (err) {
-        console.error(`Failed to add image URL to post ${postId}: ${imageUrl}`, err);
-        // Optionally, continue to next image or return error
-      }
-    }
-
-    return res.status(201).json({
-      success: true,
-      postId,
-      images: insertedImages
-    });
-  } catch (error) {
-    console.error("Error adding pictures to post: ", error);
-    return res.status(500).json({
-      success: false,
-      error: "Error adding pictures to post."
-    });
-  }
-});
-
-/**
- * Helper function for uploading images and getting their URLs.
- */
-async function uploadImagesAndGetUrls(localUris: string[], userId: string): Promise<string[]> {
-  console.log('Uploading images:', localUris);
-  const uploadPromises = localUris.map(async (uri, idx) => {
-    const ext = uri.split('.').pop() || 'jpg';
-    const blobName = `${userId}_${Date.now()}_${idx}.${ext}`;
-    try {
-      console.log(`Uploading image ${uri} as ${blobName}`);
-      const url = await uploadToAzureBlob(uri, blobName, 'post-images');
-      console.log(`Successfully uploaded ${uri} to ${url}`);
-      return url;
-    } catch (err) {
-      console.error(`Error uploading image ${uri}:`, err);
-      throw err;
-    }
-  });
-  return await Promise.all(uploadPromises);
-}
 
 /**
  * Route: GET /posts/by-author
  * Gets all posts by a specific authorId.
  * Query param: authorId
  */
+/**
+ * Route: GET /posts/by-author
+ * Gets all posts by a specific authorId.
+ * Query param: authorId
+ *
+ * This function should work as intended, assuming:
+ * - The executeQuery utility is correctly implemented and returns a result with a .recordset property.
+ * - The database supports the FOR JSON PATH subquery (SQL Server).
+ * - The images table and posts table are set up as expected.
+ */
 router.get('/posts/by-author', async (req: Request, res: Response) => {
+  console.log('GET /posts/by-author called'); // log here for testing
   const authorId = req.query.authorId as string;
   if (!authorId) {
     return res.status(400).json({ success: false, error: "Missing required query parameter: authorId" });
   }
 
+  // Query to get posts by author, including images as a JSON array
   const query = `
-      SELECT 
-          id as postId,
-          userId,
-          title,
-          description,
-          date,
-          latitude,
-          latitudeDelta,
-          longitude,
-          longitudeDelta
-      FROM posts
-      WHERE userId = @param0
+    SELECT 
+      p.id as postId,
+      p.userId,
+      p.title,
+      p.description,
+      p.latitude,
+      p.latitudeDelta,
+      p.longitude,
+      p.longitudeDelta,
+      p.createdAt,
+      (
+        SELECT 
+          i.imageUrl
+        FROM images i
+        WHERE i.postId = p.id
+        FOR JSON PATH
+      ) as images
+    FROM posts p
+    WHERE p.userId = @param0
   `;
   const params = [authorId];
 
   try {
     const result = await executeQuery(query, params);
 
-    const posts = (result.recordset || []).map((row: any) => ({
-      postId: row.postId,
-      userId: row.userId,
-      type: 'post',
-      title: row.title,
-      description: row.description,
-      descrtiption: row.description, // typo kept for compatibility with type
-      date: row.date,
-      latitude: row.latitude,
-      latitudeDelta: row.latitudeDelta,
-      longitude: row.longitude,
-      longitudeDelta: row.longitudeDelta,
-    }));
+    const posts = (result.recordset || []).map((row: any) => {
+      let images: any[] = [];
+      try {
+        images = row.images ? JSON.parse(row.images) : [];
+      } catch {
+        images = [];
+      }
+
+      const postInfo = {
+        postId: row.postId,
+        userId: row.userId,
+        type: 'post',
+        title: row.title,
+        description: row.description,
+        date: row.date,
+        latitude: row.latitude,
+        latitudeDelta: row.latitudeDelta,
+        longitude: row.longitude,
+        longitudeDelta: row.longitudeDelta,
+      };
+
+      return {
+        postInfo, // use lowercase p
+        images
+      };
+    });
 
     return res.status(200).json({ success: true, posts });
   } catch (error: any) {
@@ -429,7 +377,6 @@ router.get('/posts/by-tag', async (req: Request, res: Response) => {
       type: 'post',
       title: row.title,
       description: row.description,
-      descrtiption: row.description, // typo kept for compatibility with type
       date: row.date,
       latitude: row.latitude,
       latitudeDelta: row.latitudeDelta,

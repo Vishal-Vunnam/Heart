@@ -60,6 +60,10 @@ const INITIAL_MAP_REGION = {
   longitudeDelta: 0.01,
 };
 
+type DisplayPostInfo = {
+  postInfo: PostInfo;
+  images: string[];
+};
 function renderPostImages(images?: string[]) {
   if (!images || images.length === 0) return null;
   return images.map((imageUrl, idx) => (
@@ -105,7 +109,7 @@ export default function HomeScreen() {
   const [isPostModalVisible, setIsPostModalVisible] = useState(false);
   const [isDiscoverModalVisible, setIsDiscoverModalVisible] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
-  const [posts, setPosts] = useState<PostInfo[]>([]);
+  const [posts, setPosts] = useState<DisplayPostInfo[]>([]);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const markerRefs = useRef<{ [key: string]: MapMarker | null }>({});
   const mapRef = useRef<MapView>(null);
@@ -132,8 +136,14 @@ export default function HomeScreen() {
   };
   // Handler for submit
   const handleEditSubmit = (editedPost: PostInfo) => {
-    // Update the post in posts state (replace by postId)
-    setPosts(prevPosts => prevPosts.map(p => p.postId === editedPost.postId ? editedPost : p));
+    // Update the post in posts state (replace by postId), preserving DisplayPostInfo structure
+    setPosts(prevPosts =>
+      prevPosts.map(p =>
+        p.postInfo.postId === editedPost.postId
+          ? { ...p, postInfo: { ...editedPost } }
+          : p
+      )
+    );
     setEditModalVisible(false);
     setPostToEdit(null);
     setSelectedPost(editedPost); // Optionally show the updated post
@@ -172,9 +182,19 @@ export default function HomeScreen() {
     if (selectedPolis) {
       console.log("also here");
       if (selectedPolis.isUser) {
+        console.log("here?")
         getPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
-          console.log(userPosts);
-
+          if (userPosts && userPosts.success && Array.isArray(userPosts.posts)) {
+            // Map to extract PostInfo from each post object
+            setPosts(
+              userPosts.posts.map((p: any) => ({
+                ...p.PostInfo,
+                images: p.images
+              }))
+            );
+          } else {
+            setPosts([]);
+          }
         });
       } else {
         getPostsByTag(selectedPolis.tag).then((tagPosts) => {
@@ -430,25 +450,24 @@ export default function HomeScreen() {
               }
             }}
           >
-            {posts.map((post, index) => (
-              post.postId && post.latitude !== undefined && post.longitude !== undefined && (
+            {posts.map((post, index) => {
+              if (!post || !post.postInfo) return null;
+              const { postId, latitude, longitude } = post.postInfo;
+              if (!postId || latitude === undefined || longitude === undefined) return null;
+              return (
                 <Marker
-                  ref={ref => { markerRefs.current[post.postId!] = ref; }}
+                  ref={ref => { markerRefs.current[postId] = ref; }}
                   pinColor="black"
-                  key={post.postId}
-                  coordinate={{
-                    latitude: post.latitude,
-                    longitude: post.longitude,
-                  }}
+                  key={postId}
+                  coordinate={{ latitude, longitude }}
                   onPress={async (e) => {
                     e.stopPropagation();
-                    await handleMarkerPress(post);
-                    // Set selected post after animation starts
-                    setTimeout(() => setSelectedPost(post), 200);
+                    await handleMarkerPress(post.postInfo);
+                    setTimeout(() => setSelectedPost(post.postInfo), 200);
                   }}
                 />
-              )
-            ))}
+              );
+            })}
           </MapView>
 
           {/* Center dot overlay */}

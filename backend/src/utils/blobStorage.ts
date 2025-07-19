@@ -1,23 +1,40 @@
 import { PHOTOS_AZURE_CONFIG } from "../config/azure-config";
+import { Buffer } from 'buffer';
 
 export async function uploadToAzureBlob(
-  fileUri: string,
+  fileOrBase64: string,
   blobName: string,
   containerName: 'post-images' | 'profile-pics'
 ): Promise<string> {
+  console.log("adding to blob");
   const { STORAGE_ACCOUNT, SAS_TOKEN } = PHOTOS_AZURE_CONFIG;
   const blobUrl = `https://${STORAGE_ACCOUNT}.blob.core.windows.net/${containerName}/${blobName}?${SAS_TOKEN}`;
   console.log('[uploadToAzureBlob] blobUrl:', blobUrl);
   try {
-    // Fetch the file as a blob/binary
-    console.log('[uploadToAzureBlob] Fetching fileUri:', fileUri);
-    const response = await fetch(fileUri);
-    if (!response.ok) {
-      console.error('[uploadToAzureBlob] Failed to fetch fileUri:', fileUri, 'Status:', response.status, response.statusText);
-      throw new Error(`Failed to fetch fileUri: ${response.status} ${response.statusText}`);
+    let buffer: Buffer;
+    let contentType = 'application/octet-stream';
+
+    if (fileOrBase64.startsWith('data:image/')) {
+      // Handle base64 data URL
+      const matches = fileOrBase64.match(/^data:(.+);base64,(.+)$/);
+      if (!matches) throw new Error('Invalid base64 image string');
+      contentType = matches[1];
+      buffer = Buffer.from(matches[2], 'base64');
+    } else if (/^[A-Za-z0-9+/=]+$/.test(fileOrBase64) && fileOrBase64.length > 100) {
+      // Handle raw base64 string (no data URL prefix)
+      buffer = Buffer.from(fileOrBase64, 'base64');
+    } else {
+      // Assume it's a URI, fetch as before
+      console.log('[uploadToAzureBlob] Fetching fileUri:', fileOrBase64);
+      const response = await fetch(fileOrBase64);
+      if (!response.ok) {
+        console.error('[uploadToAzureBlob] Failed to fetch fileUri:', fileOrBase64, 'Status:', response.status, response.statusText);
+        throw new Error(`Failed to fetch fileUri: ${response.status} ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      contentType = response.headers.get('content-type') || 'application/octet-stream';
     }
-    const blob = await response.blob();
-    console.log('[uploadToAzureBlob] Blob created, type:', blob.type, 'size:', blob.size);
 
     // Upload to Azure Blob Storage
     console.log('[uploadToAzureBlob] Uploading to Azure:', blobUrl);
@@ -25,9 +42,9 @@ export async function uploadToAzureBlob(
       method: 'PUT',
       headers: {
         'x-ms-blob-type': 'BlockBlob',
-        'Content-Type': blob.type || 'application/octet-stream',
+        'Content-Type': contentType,
       },
-      body: blob,
+      body: buffer,
     });
     console.log('[uploadToAzureBlob] Azure upload response status:', uploadResponse.status, uploadResponse.statusText);
     if (!uploadResponse.ok) {
