@@ -17,11 +17,11 @@ import EvilIcons from '@expo/vector-icons/EvilIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Internal imports
 import { getPostsByAuthorId} from '@/api/posts';
-import { ProtectedImage } from '@/components/ProtectedImage';
+import ProtectedImage from '@/components/ProtectedImage';
 import { PostView } from './PostView';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { PolisType, PostInfo, UserInfo } from '@/types/types';
+import { PolisType, PostInfo, UserInfo, DisplayPostInfo } from '@/types/types';
 import { router } from 'expo-router';
 import { getCurrentUser } from '@/auth/fireAuth';
 // =====================
@@ -61,7 +61,7 @@ interface DiscoverModalProps {
 
 const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSelect, setPolis }) => {
   // State
-  const [posts, setPosts] = useState<PostInfo[]>([]);
+  const [posts, setPosts] = useState<DisplayPostInfo[]>([]);
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [isLoggedInUser, setIsLoggedInUser] = useState(false);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
@@ -101,7 +101,7 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
     if (selectedPolis && selectedPolis.isUser) {
       setFilteredUsers([]);
       getPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
-        setPosts(userPosts);
+        setPosts(userPosts.posts);
       });
       if (
         user &&
@@ -114,20 +114,6 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
       } else {
         setIsLoggedInUser(false);
       }
-
-      if (
-        user &&
-        selectedPolis &&
-        selectedPolis.isUser &&
-        selectedPolis.userInfo &&
-        selectedPolis.userInfo.uid
-      ) {
-        setIsLoggedInUser(user.uid === selectedPolis.userInfo.uid);
-      } else {
-        setIsLoggedInUser(false);
-      }
-      setPosts([]);
-      setIsLoggedInUser(false);
     }
   }, [selectedPolis]);
 
@@ -272,14 +258,14 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
                       style={styles.postItem}
                       onPress={() => {
                         if (onPolisSelect) onPolisSelect(selectedPolis);
-                        if (onPostSelect) onPostSelect(post);
+                        if (onPostSelect) onPostSelect(post.postInfo);
                       }}
                     >
                       <View style={{ flex: 1 }}>
-                        <ThemedText style={styles.postTitle}>{post.title}</ThemedText>
-                        <ThemedText style={styles.postDescription}>{post.description}</ThemedText>
-                        <ThemedText style={styles.postDate}>{post.date}</ThemedText>
-                        <ThemedText style={styles.postAuthor}>By: {post.userId}</ThemedText>
+                        <ThemedText style={styles.postTitle}>{post.postInfo.title}</ThemedText>
+                        <ThemedText style={styles.postDescription}>{post.postInfo.description}</ThemedText>
+                        <ThemedText style={styles.postDate}>{post.postInfo.date}</ThemedText>
+                        <ThemedText style={styles.postAuthor}>By: {post.postInfo.userId}</ThemedText>
                       </View>
                       {/* {post.images_url_blob && post.images_url_blob.length > 0 && (
                         <ScrollView horizontal style={{ marginLeft: 18 }}>

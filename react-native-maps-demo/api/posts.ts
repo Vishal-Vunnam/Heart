@@ -8,7 +8,6 @@ export async function getAllPosts() {
 
 // Create a new post
 export async function createPost(postData: any) {
-  console.log("adding post", postData)
   const res = await fetch(`${BASE_URL}/posts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -36,11 +35,6 @@ export async function getPostsByAuthorId(authorId: string) {
   const data = await res.json();
   // Return only the posts array (post info)
   // This will throw if posts is empty or postInfo is undefined, so check first
-  if (data.posts && data.posts.length > 0 && data.posts[0].postInfo) {
-    console.log(data.posts[0].postInfo);
-  } else {
-    console.log("No posts or postInfo found in response:", data);
-  }
   return data;
 }
 

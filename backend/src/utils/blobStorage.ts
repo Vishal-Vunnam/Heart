@@ -1,3 +1,4 @@
+import { blob } from "stream/consumers";
 import { PHOTOS_AZURE_CONFIG } from "../config/azure-config";
 import { Buffer } from 'buffer';
 
@@ -83,6 +84,7 @@ export async function deleteFromAzureBlob(blobUrl: string): Promise<string> {
 export function getImageUrlWithSAS(blobUrl: string): string {
   const { SAS_TOKEN } = PHOTOS_AZURE_CONFIG;
   if (SAS_TOKEN) {
+    console.log(blobUrl + '?' + SAS_TOKEN);
     return blobUrl.includes('?')
       ? blobUrl
       : `${blobUrl}${SAS_TOKEN.startsWith('?') ? SAS_TOKEN : '?' + SAS_TOKEN}`;

@@ -13,7 +13,6 @@ export async function getImageUrlWithSAS(url: string) {
  * @returns The backend response (uploaded image URL, etc.)
  */
 export async function uploadImageToPost(image: string, postId: string) {
-    console.log(image, postId);
     const res = await fetch(`${BASE_URL}/image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -37,3 +37,8 @@ export type EventInfo = {
   event_start?: string | null;
   event_end?: string | null;
 }
+
+export type DisplayPostInfo = {
+  postInfo: PostInfo;
+  images: string[];
+};

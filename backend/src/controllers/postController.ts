@@ -282,10 +282,16 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
   try {
     const result = await executeQuery(query, params);
 
+    // images is returned as a stringified JSON array per post (e.g. '[{"imageUrl":"url1"},{"imageUrl":"url2"}]')
+    // We parse it and extract the imageUrl values into a string array
     const posts = (result.recordset || []).map((row: any) => {
-      let images: any[] = [];
+      let images: string[] = [];
       try {
-        images = row.images ? JSON.parse(row.images) : [];
+        // row.images is a string (JSON array of objects), or possibly null/empty
+        const parsed = row.images ? JSON.parse(row.images) : [];
+        if (Array.isArray(parsed)) {
+          images = parsed.map((imgObj: any) => imgObj.imageUrl).filter(Boolean);
+        }
       } catch {
         images = [];
       }
@@ -304,7 +310,7 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
       };
 
       return {
-        postInfo, // use lowercase p
+        postInfo,
         images
       };
     });
@@ -389,6 +395,69 @@ router.get('/posts/by-tag', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       error: error.message || "Unknown error occurred while fetching posts by tag."
+    });
+  }
+});
+
+router.put('/edit-post', async (req: Request, res: Response) => {
+  // Accept postInfo in the request body (not query)
+  const postInfo = req.body.postInfo;
+  if (!postInfo) {
+    return res.status(400).json({ success: false, error: "Missing post information" });
+  }
+
+  try {
+    // Parse postInfo if it's a string (in case client sends as JSON string)
+    const parsedPostInfo = typeof postInfo === "string" ? JSON.parse(postInfo) : postInfo;
+
+    const {
+      postId,
+      title,
+      description,
+      latitude,
+      longitude,
+      latitudeDelta,
+      longitudeDelta,
+      date,
+      // Optionally handle tags, images, etc.
+    } = parsedPostInfo;
+
+    if (!postId) {
+      return res.status(400).json({ success: false, error: "Missing postId in postInfo" });
+    }
+
+    // Update the post in the database
+    const updateQuery = `
+      UPDATE posts
+      SET
+        title = @param0,
+        description = @param1,
+        latitude = @param2,
+        longitude = @param3,
+        latitudeDelta = @param4,
+        longitudeDelta = @param5,
+        date = @param6
+      WHERE id = @param7
+    `;
+
+    await executeQuery(updateQuery, [
+      title,
+      description,
+      latitude,
+      longitude,
+      latitudeDelta,
+      longitudeDelta,
+      date,
+      postId
+    ]);
+
+    // Optionally, update tags or images here if needed
+
+    return res.status(200).json({ success: true, message: "Post updated successfully" });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Failed to update post"
     });
   }
 });

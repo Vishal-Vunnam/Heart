@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, ScrollView, View } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
-import { ProtectedImage } from './ProtectedImage';
+import ProtectedImage from './ProtectedImage';
 
 // Define the PostData type to match expected post prop
 export type PostData = {

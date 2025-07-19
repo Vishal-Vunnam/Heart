@@ -47,7 +47,7 @@ import { getImageUrlWithSAS } from '@/api/image';
 import { getCurrentUser } from '@/auth/fireAuth';
 
 // Types
-import { PolisType, PostInfo, UserInfo } from '@/types/types';
+import { PolisType, PostInfo, UserInfo, DisplayPostInfo } from '@/types/types';
 
 // Styles
 import { indexStyles as styles } from '../styles/indexstyles';
@@ -60,10 +60,6 @@ const INITIAL_MAP_REGION = {
   longitudeDelta: 0.01,
 };
 
-type DisplayPostInfo = {
-  postInfo: PostInfo;
-  images: string[];
-};
 function renderPostImages(images?: string[]) {
   if (!images || images.length === 0) return null;
   return images.map((imageUrl, idx) => (
@@ -115,8 +111,7 @@ export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
   const textInputRef = useRef<TextInput>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const [selectedPost, setSelectedPost] = useState<PostInfo | null>(null);
-  const [zoomingToMarker, setZoomingToMarker] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<DisplayPostInfo | null>(null);
   const isProgrammaticMove = useRef(false);
   const [discoverUserId, setDiscoverUserId] = useState<string | null>(null);
   const [showedPostsChanges, setShowedPostsChanges] = useState<boolean> (false);
@@ -135,12 +130,12 @@ export default function HomeScreen() {
     setEditModalVisible(true);
   };
   // Handler for submit
-  const handleEditSubmit = (editedPost: PostInfo) => {
+  const handleEditSubmit = (editedPost: DisplayPostInfo) => {
     // Update the post in posts state (replace by postId), preserving DisplayPostInfo structure
     setPosts(prevPosts =>
       prevPosts.map(p =>
-        p.postInfo.postId === editedPost.postId
-          ? { ...p, postInfo: { ...editedPost } }
+        p.postInfo.postId === editedPost.postInfo.postId
+          ? { ...p, postInfo: { ...p.postInfo, ...editedPost } }
           : p
       )
     );
@@ -180,18 +175,10 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (selectedPolis) {
-      console.log("also here");
       if (selectedPolis.isUser) {
-        console.log("here?")
         getPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
           if (userPosts && userPosts.success && Array.isArray(userPosts.posts)) {
-            // Map to extract PostInfo from each post object
-            setPosts(
-              userPosts.posts.map((p: any) => ({
-                ...p.PostInfo,
-                images: p.images
-              }))
-            );
+            setPosts(userPosts.posts); // set directly
           } else {
             setPosts([]);
           }
@@ -203,7 +190,6 @@ export default function HomeScreen() {
       }
     }
     setShowedPostsChanges(false);
-    console.log("i am here")
   }, [selectedPolis, showedPostsChanges]);
 
 
@@ -343,12 +329,18 @@ export default function HomeScreen() {
       return;
     }
     try {
-      await createPost(postData);
+      const data = await createPost(postData);
       console.log("Post added!", postData);
       // Reload posts to show the new post on the map
+      if (selectedPolis?.isUser && userInfo !== user){
       setSelectedPolis({
         isUser: true,
         userInfo: user})
+      }
+      else {
+        handlePostsChange();
+      }
+      
     } catch (error) {
       console.error("Failed to add post:", error);
     }
@@ -441,29 +433,28 @@ export default function HomeScreen() {
                 setSelectedPost(null);
                 // Close the marker callout as well
                 if (
-                  selectedPost?.postId !== undefined &&
-                  selectedPost?.postId !== null &&
-                  markerRefs.current[String(selectedPost.postId)]
+                  selectedPost?.postInfo.postId !== undefined &&
+                  selectedPost?.postInfo.postId !== null &&
+                  markerRefs.current[String(selectedPost.postInfo.postId)]
                 ) {
-                  markerRefs.current[String(selectedPost.postId)]?.hideCallout?.();
+                  markerRefs.current[String(selectedPost.postInfo.postId)]?.hideCallout?.();
                 }
               }
             }}
           >
             {posts.map((post, index) => {
-              if (!post || !post.postInfo) return null;
+              if (!post.postInfo?.postId) return null;
               const { postId, latitude, longitude } = post.postInfo;
-              if (!postId || latitude === undefined || longitude === undefined) return null;
               return (
                 <Marker
-                  ref={ref => { markerRefs.current[postId] = ref; }}
+                  ref={ref => { markerRefs.current[String(postId)] = ref; }}
                   pinColor="black"
-                  key={postId}
+                  key={String(postId)}
                   coordinate={{ latitude, longitude }}
                   onPress={async (e) => {
                     e.stopPropagation();
                     await handleMarkerPress(post.postInfo);
-                    setTimeout(() => setSelectedPost(post.postInfo), 200);
+                    setTimeout(() => setSelectedPost(post), 200);
                   }}
                 />
               );
@@ -489,22 +480,22 @@ export default function HomeScreen() {
               <View style={styles.customCalloutOverlay} pointerEvents="box-none">
                 <View style={styles.customCalloutContainer}>
                   <CustomCallout
-                    isUserLoggedIn={selectedPost.userId == user?.uid}
+                    isUserLoggedIn={selectedPost.postInfo.userId == user?.uid}
                     post={selectedPost}
                     onLike={() => {
-                      console.log("Like post:", selectedPost.postId);
+                      console.log("Like post:", selectedPost.postInfo.postId);
                       // TODO: Implement like functionality
                     }}
                     onComment={() => {
-                      console.log("Comment on post:", selectedPost.postId);
+                      console.log("Comment on post:", selectedPost.postInfo.postId);
                       // TODO: Implement comment functionality
                     }}
                     onShare={() => {
-                      console.log("Share post:", selectedPost.postId);
+                      console.log("Share post:", selectedPost.postInfo.postId);
                       // TODO: Implement share functionality
                     }}
                     onViewDetails={() => {
-                      handleMarkerPress(selectedPost);
+                      handleMarkerPress(selectedPost.postInfo);
                       setSelectedPost(null);
                     }}
                     onSelectNewPolis={(polis) => {
@@ -516,7 +507,7 @@ export default function HomeScreen() {
                       setSelectedPost(null); // This will close the callout and remove the marker
                       setShowedPostsChanges(true); // Refresh posts
                     }}
-                    onEdit={() => handleEdit(selectedPost)}
+                    onEdit={() => handleEdit(selectedPost.postInfo)}
                   />
                   <TouchableOpacity 
                     style={styles.closeCalloutButton}

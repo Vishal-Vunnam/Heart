@@ -7,7 +7,7 @@ import { getImageUrlWithSAS } from "@/api/image";
  * Returns a React Native <Image> component with a protected SAS URL as the source.
  * Usage: <ProtectedImage url={...} style={...} />
  */
-export function ProtectedImage({
+export default function ProtectedImage({
   url,
   style,
   ...props
@@ -29,8 +29,16 @@ export function ProtectedImage({
     getImageUrlWithSAS(url)
       .then((data) => {
         if (isMounted) {
-          // Prefer data.url, fallback to data.sasUrl, fallback to original url
-          setSasUrl(data?.url || data?.sasUrl || url);
+          // If the backend returns a string, use it directly
+          if (typeof data === 'string') {
+            setSasUrl(data);
+          } else if (data?.url) {
+            setSasUrl(data.url);
+          } else if (data?.sasUrl) {
+            setSasUrl(data.sasUrl);
+          } else {
+            setSasUrl(url);
+          }
         }
       })
       .catch(() => {

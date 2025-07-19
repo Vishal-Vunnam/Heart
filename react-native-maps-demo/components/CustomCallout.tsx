@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { getImageUrlWithSAS} from '@/api/image';
 import { deletePostById } from '@/api/posts';
-import { PolisType, PostInfo} from '@/types/types';
+import { PolisType, PostInfo, DisplayPostInfo} from '@/types/types';
 import PostActionSheet from './PostActionSheet';
+import ProtectedImage from './ProtectedImage';
 
 interface CustomCalloutProps {
   isUserLoggedIn: boolean; 
-  post: PostInfo;
+  post: DisplayPostInfo;
   onLike?: () => void;
   onComment?: () => void;
   onShare?: () => void;
@@ -18,6 +19,9 @@ interface CustomCalloutProps {
   onPostDeleted?: () => void;
   onEdit?: () => void;
 }
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const imageWidth = Math.min(screenWidth * 0.8, 300); // 80% of screen or max 300px
 
 const CustomCallout: React.FC<CustomCalloutProps> = ({
   isUserLoggedIn,
@@ -47,9 +51,9 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
   // Handles deleting a post (if user is logged in and postId exists)
   const handleDeletePost = async () => {
     console.log("deleting post");
-    if (!isUserLoggedIn || !post.postId) return;
+    if (!isUserLoggedIn || !post.postInfo.postId) return;
     try {
-      await deletePostById(post.postId);
+      await deletePostById(post.postInfo.postId);
       // Close the modal and reset the map after deleting the post
       if (typeof onViewDetails === 'function') {
         onViewDetails(); // This will close the callout/modal in parent
@@ -84,20 +88,24 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
             >
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
-                  {post.userId?.charAt(0)?.toUpperCase() || 'U'}
+                  {post.postInfo.userId?.charAt(0)?.toUpperCase() || 'U'}
                 </Text>
               </View>
             </TouchableOpacity>
-            <ThemedText style={styles.authorName}>{post.userId}</ThemedText>
+            <ThemedText style={styles.authorName} numberOfLines={1} ellipsizeMode="tail">
+              {post.postInfo.userId}
+            </ThemedText>
           </View>
         </View>
       </View>
 
       {/* Title and Date Row */}
       <View style={styles.titleDateRow}>
-        <ThemedText style={styles.title}>{post.title}</ThemedText>
+        <ThemedText style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+          {post.postInfo.title}
+        </ThemedText>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Text style={styles.dateNextToTitle}>{formatDate(post.date ?? '')}</Text>
+          <Text style={styles.dateNextToTitle}>{formatDate(post.postInfo.date ?? '')}</Text>
           <TouchableOpacity
             style={styles.moreButton}
             onPress={() => {
@@ -135,7 +143,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
         {/* Content */}
         <View style={styles.content}>
           <ThemedText style={styles.description}>
-            {post.description}
+            {post.postInfo.description}
           </ThemedText>
           {/* Tags under description */}
           {/* <View style={styles.tagContainer}>
@@ -161,38 +169,54 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
         </View>
 
               {/* Multiple Images with loading placeholders */}
-      {/* {post.images_url_blob && post.images_url_blob.length > 0 && (
+      {post.images && post.images.length > 0 && (
         <View style={styles.imageContainer}>
-          {post.images_url_blob.map((imageUrl, index) => (
-            <View key={index} style={styles.singleImageContainer}>
-              {imageLoadingStates[index] && (
-                <View style={[styles.image, styles.loadingContainer]}>
-                  <ActivityIndicator size="small" color="#007AFF" />
-                </View>
-              )}
-              <Image
-                source={{ uri: getImageUrlWithSAS(imageUrl) }}
-                style={[styles.image, imageLoadingStates[index] && styles.hidden]}
-                onLoadStart={() => {
-                  setImageLoadingStates(prev => ({ ...prev, [index]: true }));
-                }}
-                onLoadEnd={() => {
-                  setImageLoadingStates(prev => ({ ...prev, [index]: false }));
-                }}
-                onError={() => {
-                  setImageLoadingStates(prev => ({ ...prev, [index]: false }));
-                  setImageErrorStates(prev => ({ ...prev, [index]: true }));
-                }}
-              />
-              {imageErrorStates[index] && (
-                <View style={[styles.image, styles.errorContainer]}>
-                  <Text style={styles.errorText}>Failed to load image</Text>
-                </View>
-              )}
-            </View>
-          ))}
+          {post.images.slice(0, 2).map((image: string | { url: string }, index: number) => {
+            // Always get the string URL
+            const imageUrl = typeof image === 'string' ? image : (image && typeof image === 'object' && 'url' in image ? image.url : '');
+
+            // Reset loading state when imageUrl changes
+            useEffect(() => {
+              setImageLoadingStates(prev => ({ ...prev, [index]: true }));
+              setImageErrorStates(prev => ({ ...prev, [index]: false }));
+            }, [imageUrl]);
+
+            return (
+              <View key={index} style={styles.singleImageContainer}>
+                {imageLoadingStates[index] && (
+                  <View style={[styles.image, styles.loadingContainer]}>
+                    <ActivityIndicator size="small" color="#007AFF" />
+                  </View>
+                )}
+                <ProtectedImage
+                  url={imageUrl}
+                  style={styles.image}
+                  onLoadStart={() => {
+                    console.log('Image loading start', index);
+                    setImageLoadingStates(prev => ({ ...prev, [index]: true }));
+                  }}
+                  onLoadEnd={() => {
+                    console.log('Image loading end', index);
+                    setImageLoadingStates(prev => ({ ...prev, [index]: false }));
+                  }}
+                  onError={() => {
+                    setImageLoadingStates(prev => ({ ...prev, [index]: false }));
+                    setImageErrorStates(prev => ({ ...prev, [index]: true }));
+                  }}
+                />
+                {imageErrorStates[index] && (
+                  <View style={[styles.image, styles.errorContainer]}>
+                    <Text style={styles.errorText}>Failed to load image</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+          {post.images.length > 2 && (
+            <Text style={styles.moreImagesText}>+{post.images.length - 2} more images</Text>
+          )}
         </View>
-      )} */}
+      )}
       </ScrollView>
 
       {/* Action Bar - Fixed at bottom */}
@@ -228,17 +252,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.97)',
     borderRadius: 16,
     padding: 20,
-    minWidth: 380,
-    maxWidth: 450,
-    maxHeight: 400,
+    width: Math.min(screenWidth * 0.85, 400),
+    maxHeight: screenHeight * 0.4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 8,
   },
   scrollContent: {
-    flex: 1,
+    flexGrow: 1, // NEW
     marginBottom: 8,
   },
   scrollContentContainer: {
@@ -275,6 +298,7 @@ const styles = StyleSheet.create({
     color: '#222', // Dark text for white background
     fontSize: 20,
     fontWeight: '600',
+    flex: 1,
   },
   postDate: {
     color: '#888', // Muted gray for date
@@ -295,17 +319,18 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   title: {
-    color: '#1E293B', // Very dark blue/gray for title
+    color: '#1E293B',
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 6,
     letterSpacing: 0.2,
-    textShadowColor: 'rgba(30,58,95,0.10)', // Lighter shadow
+    textShadowColor: 'rgba(30,58,95,0.10)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
     paddingBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(30,58,95,0.10)', // Subtle blue/gray border
+    borderBottomColor: 'rgba(30,58,95,0.10)',
+    overflow: 'hidden',
   },
   description: {
     color: '#374151', // Slate gray for description
@@ -318,26 +343,24 @@ const styles = StyleSheet.create({
     paddingRight: 2,
   },
   imageContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
-    overflow: 'hidden',
   },
   singleImageContainer: {
+    width: '100%',
     marginBottom: 8,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   image: {
-    width: '100%',
+    width: '80%', // 80% of the container's width
+    maxHeight: 180, // increase maxHeight for a larger image if desired
     aspectRatio: 1.6,
-    height: undefined,
-    resizeMode: 'cover',
     borderRadius: 5,
-    borderWidth: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 2,
-    backgroundColor: '#F3F4F6', // Light gray for loading/empty state
+    resizeMode: 'cover',
+    backgroundColor: '#F3F4F6',
   },
   actionBar: {
     flexDirection: 'row',
@@ -442,6 +465,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+    width: '100%',
   },
   avatarTouchable: {
     marginRight: 10,
@@ -483,6 +507,12 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontWeight: '400',
     marginTop: 2,
+  },
+  moreImagesText: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
 
