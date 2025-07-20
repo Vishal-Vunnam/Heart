@@ -44,7 +44,7 @@ router.post('/posts', async (req: Request, res: Response) => {
     const uniquePostId = uuidv4();
     const now = new Date()
     const query = `
-      INSERT INTO posts (id, userId, title, description, latitude, longitude, latitudeDelta, longitudeDelta, createdAt, updatedAt)
+      INSERT INTO posts (id, userId, title, description, latitude, longitude, latitudeDelta, longitudeDelta, createdAt, updatedAt, private)
       VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7, @param8, @param9)
     `;
     const params = [
@@ -57,7 +57,8 @@ router.post('/posts', async (req: Request, res: Response) => {
       postInfo.latitudeDelta.toString(),
       postInfo.longitudeDelta.toString(),
       toSqlDateString(now),
-      toSqlDateString(now)
+      toSqlDateString(now),
+      postInfo.private ?? false,
     ];
     console.log("Params for SQL query:", params);
 
@@ -232,12 +233,42 @@ router.post('/events', async (req: Request, res: Response) => {
   }
 });
 
+// `IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='post_viewer' AND xtype='U')
+// CREATE TABLE post_viewer (
+//   post_id NVARCHAR(255) NOT NULL,         -- ID of the post being viewed
+//   user_id NVARCHAR(255) NOT NULL,         -- ID of the user who viewed the post
+//   created_by NVARCHAR(255) NOT NULL,      -- Who created the view record (usually same as user_id)
+//   PRIMARY KEY (post_id, user_id),
+//   FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+//   FOREIGN KEY (user_id) REFERENCES users(id)  -- No cascade to avoid multiple cascade paths
+// )`,
 
 /**
- * Route: GET /posts/by-author
- * Gets all posts by a specific authorId.
- * Query param: authorId
+ * Adds users to a private post (stub function).
+ * @param invitees Array of user IDs to invite to the private post.
+ * @returns Promise<void>
  */
+async function addUsersToPrivatePost(invitees: string[], postId: string, userId: string): Promise<void> {
+  if (!(invitees.length > 0 ) ||  !postId) {
+    return Promise.reject();
+  }
+  // Insert all invitees into post_viewer in a single query
+  if (invitees.length > 0) {
+    // Build a VALUES list for bulk insert
+    const param_count = invitees.length +1; 
+    const values = invitees.map((userId, idx) => `(@param0, @param${idx + 1}, @param${param_count})`).join(', ');
+    const params = [postId, ...invitees, userId];
+    await executeQuery(
+      `
+      INSERT INTO post_viewer (post_id, user_id, created_by)
+      VALUES ${values}
+      `,
+      params
+    );
+  }
+  return Promise.resolve();
+}
+
 /**
  * Route: GET /posts/by-author
  * Gets all posts by a specific authorId.
@@ -249,24 +280,31 @@ router.post('/events', async (req: Request, res: Response) => {
  * - The images table and posts table are set up as expected.
  */
 router.get('/posts/by-author', async (req: Request, res: Response) => {
-  console.log('GET /posts/by-author called'); // log here for testing
+  console.log('GET /posts/by-author called');
   const authorId = req.query.authorId as string;
+  const invitees = req.query.invitees as string[]; 
   if (!authorId) {
     return res.status(400).json({ success: false, error: "Missing required query parameter: authorId" });
   }
 
-  // Query to get posts by author, including images as a JSON array
+  // Assume req.user.uid is set by auth middleware
+  const currentUserId = req.user?.uid;
+
+  // Query to get posts by author, including images as a JSON array and the private field
+
+
   const query = `
     SELECT 
       p.id as postId,
       p.userId,
       p.title,
       p.description,
+      p.date,
       p.latitude,
       p.latitudeDelta,
       p.longitude,
       p.longitudeDelta,
-      p.createdAt,
+      p.private,
       (
         SELECT 
           i.imageUrl
@@ -282,16 +320,14 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
   try {
     const result = await executeQuery(query, params);
 
-    // images is returned as a stringified JSON array per post (e.g. '[{"imageUrl":"url1"},{"imageUrl":"url2"}]')
-    // We parse it and extract the imageUrl values into a string array
-    const posts = (result.recordset || []).map((row: any) => {
-      let images: string[] = [];
+    // Only return private posts if the current user is the author
+    const posts = (result.recordset || []).filter((row: any) => {
+      if (!row.private) return true; // public
+      return currentUserId && row.userId === currentUserId; // private, only if owner
+    }).map((row: any) => {
+      let images: any[] = [];
       try {
-        // row.images is a string (JSON array of objects), or possibly null/empty
-        const parsed = row.images ? JSON.parse(row.images) : [];
-        if (Array.isArray(parsed)) {
-          images = parsed.map((imgObj: any) => imgObj.imageUrl).filter(Boolean);
-        }
+        images = row.images ? JSON.parse(row.images) : [];
       } catch {
         images = [];
       }
@@ -307,6 +343,7 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
         latitudeDelta: row.latitudeDelta,
         longitude: row.longitude,
         longitudeDelta: row.longitudeDelta,
+        private: !!row.private,
       };
 
       return {

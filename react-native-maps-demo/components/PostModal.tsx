@@ -118,6 +118,7 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
               date: new Date().toISOString(),
               userId: user.uid,
               type: 'post',
+              private: (postVisibility === 'Private'),
             }
       
 

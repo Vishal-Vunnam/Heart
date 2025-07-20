@@ -7,6 +7,7 @@ import {
   User 
 } from 'firebase/auth';
 import app from '@/auth/fireBaseConfig';
+import { createUser } from '@/api/user';
 
 const auth = getAuth(app);
 
@@ -17,6 +18,17 @@ export async function signIn(email: string, password: string) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    // Call backend to ensure user exists in DB (ignore errors for sign-in)
+    try {
+      await createUser({
+        uid: user.uid,
+        email: user.email || "",
+        displayName: user.displayName || undefined,
+        photoURL: user.photoURL || undefined,
+      });
+    } catch (e) {
+      // It's okay if user already exists or backend fails here
+    }
     return { success: true, user };
   } catch (error: any) {
     return { success: false, error: error.message || "Sign-in failed." };

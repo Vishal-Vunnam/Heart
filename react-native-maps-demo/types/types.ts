@@ -20,6 +20,7 @@ export type PostInfo = {
     latitudeDelta: number; 
     longitude: number; 
     longitudeDelta: number; 
+    private?: boolean | false; 
 }
 
 export type EventInfo = {
@@ -36,6 +37,7 @@ export type EventInfo = {
   longitudeDelta: number; 
   event_start?: string | null;
   event_end?: string | null;
+  private?: boolean | 0;
 }
 
 export type DisplayPostInfo = {

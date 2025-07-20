@@ -37,7 +37,7 @@ import CustomCallout from '@/components/CustomCallout';
 import EditPostModal from '@/components/EditPostModal';
 
 // Functions 
-import { ProtectedImage } from '../../components/ProtectedImage';
+import ProtectedImage from '../../components/ProtectedImage';
 
 // Firebase Firestore & Storage
 // import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/backend/firestore';
@@ -332,7 +332,7 @@ export default function HomeScreen() {
       const data = await createPost(postData);
       console.log("Post added!", postData);
       // Reload posts to show the new post on the map
-      if (selectedPolis?.isUser && userInfo !== user){
+      if (selectedPolis?.isUser && selectedPolis.userInfo !== user){
       setSelectedPolis({
         isUser: true,
         userInfo: user})

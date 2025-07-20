@@ -22,6 +22,7 @@ export type PostInfo = {
     latitudeDelta: number; 
     longitude: number; 
     longitudeDelta: number; 
+    private?: boolean; 
 }
 
 export type EventInfo = {
