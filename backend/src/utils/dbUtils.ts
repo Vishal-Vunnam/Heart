@@ -28,7 +28,7 @@ export async function createTables() {
     // Create the users table if it doesn't exist
     `IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='users' AND xtype='U')
     CREATE TABLE users (
-      id NVARCHAR(255) PRIMARY KEY,                -- Unique user ID (matches Firebase UID)
+      id NVARCHAR(50) PRIMARY KEY,                -- Unique user ID (matches Firebase UID)
       email NVARCHAR(255) UNIQUE NOT NULL,         -- User's email address (must be unique)
       displayName NVARCHAR(255),                   -- User's display name
       photoURL NVARCHAR(500),                      -- URL to user's profile photo
@@ -41,7 +41,7 @@ export async function createTables() {
     `IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='posts' AND xtype='U')
     CREATE TABLE posts (
       id NVARCHAR(255) PRIMARY KEY,                -- Unique post ID
-      userId NVARCHAR(255) NOT NULL,               -- ID of the user who created the post
+      userId NVARCHAR(50) NOT NULL,               -- ID of the user who created the post
       type NVARCHAR(10) DEFAULT 'Post',            -- Type of post (e.g., 'Post', 'Event')
       title NVARCHAR(45),                          -- Title of the post
       description NVARCHAR(MAX),                   -- Description/content of the post
@@ -91,8 +91,8 @@ export async function createTables() {
     `IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='post_viewer' AND xtype='U')
     CREATE TABLE post_viewer (
       post_id NVARCHAR(255) NOT NULL,         -- ID of the post being viewed
-      user_id NVARCHAR(255) NOT NULL,         -- ID of the user who viewed the post
-      created_by NVARCHAR(255) NOT NULL,      -- Who created the view record (usually same as user_id)
+      user_id NVARCHAR(50) NOT NULL,         -- ID of the user who viewed the post
+      created_by NVARCHAR(50) NOT NULL,      -- Who created the view record (usually same as user_id)
       PRIMARY KEY (post_id, user_id),
       FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id)  -- No cascade to avoid multiple cascade paths
@@ -110,8 +110,8 @@ export async function createTables() {
     `IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_posts_createdAt')
     CREATE INDEX idx_posts_createdAt ON posts(createdAt)`,
 
-    `IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_users_email')
-    CREATE INDEX idx_users_email ON users(email)`,
+    `IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_users_id')
+    CREATE INDEX idx_users_id ON users(id)`,
 
     `IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_images_postId')
     CREATE INDEX idx_images_postId ON images(postId)`,

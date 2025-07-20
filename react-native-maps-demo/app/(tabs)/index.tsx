@@ -174,6 +174,7 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
+    console.log("please");
     if (selectedPolis) {
       if (selectedPolis.isUser) {
         getPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
@@ -323,14 +324,12 @@ export default function HomeScreen() {
     }
     setIsPostModalVisible(true);
   };
-  const handlePostSubmit = async (postData: PostInfo) => {
+  const handlePostSubmit = async () => {
     if (!user) {
       console.log("No user signed in, cannot submit post.");
       return;
     }
     try {
-      const data = await createPost(postData);
-      console.log("Post added!", postData);
       // Reload posts to show the new post on the map
       if (selectedPolis?.isUser && selectedPolis.userInfo !== user){
       setSelectedPolis({
@@ -588,7 +587,6 @@ export default function HomeScreen() {
           <EditPostModal
             onClose={() => { setEditModalVisible(false); setPostToEdit(null); }}
             oldPostInfo={postToEdit}
-            onEdit={handleEditSubmit}
           />
         )}
       </ThemedView>

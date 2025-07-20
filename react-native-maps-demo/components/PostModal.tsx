@@ -17,7 +17,7 @@ interface PostModalProps {
   visible: boolean;
   onClose: () => void;
   currentLocation: any;
-  onPost: (postData: any) => void;
+  onPost: () => void;
 }
 
 const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost }: PostModalProps) => {
@@ -134,7 +134,8 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
       }
 
       setIsUploading(false);
-      Alert.alert('Success', 'Post created successfully!');
+      onPost(); 
+
       onClose();
       // Optionally, reset form fields here
       setLocationTitle('');

@@ -45,7 +45,7 @@ router.post('/posts', async (req: Request, res: Response) => {
     const now = new Date()
     const query = `
       INSERT INTO posts (id, userId, title, description, latitude, longitude, latitudeDelta, longitudeDelta, createdAt, updatedAt, private)
-      VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7, @param8, @param9)
+      VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7, @param8, @param9, @param10)
     `;
     const params = [
       uniquePostId,
@@ -58,7 +58,7 @@ router.post('/posts', async (req: Request, res: Response) => {
       postInfo.longitudeDelta.toString(),
       toSqlDateString(now),
       toSqlDateString(now),
-      postInfo.private ?? false,
+      (postInfo.private ?? false) ? '1' : '0'
     ];
     console.log("Params for SQL query:", params);
 
@@ -299,7 +299,7 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
       p.userId,
       p.title,
       p.description,
-      p.date,
+      p.createdAt,
       p.latitude,
       p.latitudeDelta,
       p.longitude,
