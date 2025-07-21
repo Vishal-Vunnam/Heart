@@ -51,6 +51,7 @@ export async function createTables() {
       longitudeDelta DECIMAL(20,17),               -- Longitude delta for map region
       createdAt DATETIME2 DEFAULT GETDATE(),       -- Timestamp when post was created
       updatedAt DATETIME2 DEFAULT GETDATE(),       -- Timestamp when post was last updated
+      private BIT DEFAULT 0,                        -- Boolean flag for private posts, default is false
       FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE -- Link to users table, cascade on delete
     )`,
 

@@ -9,6 +9,33 @@ function toSqlDateString(date: Date) {
   // Returns 'YYYY-MM-DD HH:mm:ss.SSS'
   return date.toISOString().replace('T', ' ').replace('Z', '');
 }
+
+/**
+ * Adds users to a private post (stub function).
+ * @param invitees Array of user IDs to invite to the private post.
+ * @returns Promise<void>
+ */
+async function addUsersToPrivatePost(invitees: string[], postId: string, userId: string): Promise<void> {
+  if (!(invitees.length > 0 ) ||  !postId) {
+    return Promise.reject();
+  }
+  // Insert all invitees into post_viewer in a single query
+  if (invitees.length > 0) {
+    // Build a VALUES list for bulk insert
+    const param_count = invitees.length +1; 
+    const values = invitees.map((userId, idx) => `(@param0, @param${idx + 1}, @param${param_count})`).join(', ');
+    const params = [postId, ...invitees, userId];
+    await executeQuery(
+      `
+      INSERT INTO post_viewer (post_id, user_id, created_by)
+      VALUES ${values}
+      `,
+      params
+    );
+  }
+  return Promise.resolve();
+}
+
 /**
  * Route: POST /posts
  * Adds a new post.
@@ -18,6 +45,7 @@ router.post('/posts', async (req: Request, res: Response) => {
   try {
     const postInfo: PostInfo = req.body.postInfo || req.body;
     const tags: string[] = req.body.tags || [];
+    const allowedMembers: string[] = req.body.allowedMembers
 
     // Validate required fields
     if (!postInfo) {
@@ -102,6 +130,11 @@ router.post('/posts', async (req: Request, res: Response) => {
           }
         }
       }
+
+      if (postInfo.private && Array.isArray(allowedMembers) && allowedMembers.length > 0) { 
+        await addUsersToPrivatePost(allowedMembers, uniquePostId, postInfo.userId);
+      }
+
       return res.status(201).json({ success: true, postId: uniquePostId });
     } else {
       return res.status(500).json({ success: false, error: 'Failed to insert post into database.' });
@@ -243,31 +276,6 @@ router.post('/events', async (req: Request, res: Response) => {
 //   FOREIGN KEY (user_id) REFERENCES users(id)  -- No cascade to avoid multiple cascade paths
 // )`,
 
-/**
- * Adds users to a private post (stub function).
- * @param invitees Array of user IDs to invite to the private post.
- * @returns Promise<void>
- */
-async function addUsersToPrivatePost(invitees: string[], postId: string, userId: string): Promise<void> {
-  if (!(invitees.length > 0 ) ||  !postId) {
-    return Promise.reject();
-  }
-  // Insert all invitees into post_viewer in a single query
-  if (invitees.length > 0) {
-    // Build a VALUES list for bulk insert
-    const param_count = invitees.length +1; 
-    const values = invitees.map((userId, idx) => `(@param0, @param${idx + 1}, @param${param_count})`).join(', ');
-    const params = [postId, ...invitees, userId];
-    await executeQuery(
-      `
-      INSERT INTO post_viewer (post_id, user_id, created_by)
-      VALUES ${values}
-      `,
-      params
-    );
-  }
-  return Promise.resolve();
-}
 
 /**
  * Route: GET /posts/by-author
@@ -282,17 +290,17 @@ async function addUsersToPrivatePost(invitees: string[], postId: string, userId:
 router.get('/posts/by-author', async (req: Request, res: Response) => {
   console.log('GET /posts/by-author called');
   const authorId = req.query.authorId as string;
-  const invitees = req.query.invitees as string[]; 
+  
   if (!authorId) {
     return res.status(400).json({ success: false, error: "Missing required query parameter: authorId" });
   }
 
   // Assume req.user.uid is set by auth middleware
-  const currentUserId = req.user?.uid;
+  const currentUserId = req.query.currentUserId;
 
   // Query to get posts by author, including images as a JSON array and the private field
 
-
+  console.log("THIS IS THE ID" , currentUserId);
   const query = `
     SELECT 
       p.id as postId,
@@ -313,18 +321,35 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
         FOR JSON PATH
       ) as images
     FROM posts p
+    LEFT JOIN post_viewer pv 
+      ON p.id = pv.post_id AND pv.user_id = @param1
     WHERE p.userId = @param0
+      AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
   `;
-  const params = [authorId];
+  /*SELECT 
+    p.*,
+    (
+      SELECT 
+        i.imageUrl
+      FROM images i
+      WHERE i.postId = p.id
+      FOR JSON PATH
+    ) as images
+  FROM posts p
+  LEFT JOIN post_viewer pv 
+    ON p.id = pv.post_id AND pv.user_id = @param1
+  WHERE p.userId = @param0
+    AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
+  */
+  const params = [authorId, currentUserId];
+
+
 
   try {
     const result = await executeQuery(query, params);
 
-    // Only return private posts if the current user is the author
-    const posts = (result.recordset || []).filter((row: any) => {
-      if (!row.private) return true; // public
-      return currentUserId && row.userId === currentUserId; // private, only if owner
-    }).map((row: any) => {
+    // Do not filter based on private; return all posts as-is
+    const posts = (result.recordset || []).map((row: any) => {
       let images: any[] = [];
       try {
         images = row.images ? JSON.parse(row.images) : [];

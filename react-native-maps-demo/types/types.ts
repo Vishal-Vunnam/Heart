@@ -21,6 +21,7 @@ export type PostInfo = {
     longitude: number; 
     longitudeDelta: number; 
     private?: boolean | false; 
+    allowedMembers?: string[]; // Add this line for private posts
 }
 
 export type EventInfo = {
@@ -44,3 +45,14 @@ export type DisplayPostInfo = {
   postInfo: PostInfo;
   images: string[];
 };
+
+export type UserSearchReturn = {
+  displayName: string;
+  id: string;
+};
+
+export type PolisSearchReturn = {
+    name: string;
+    id: string;
+    is_tag: boolean;
+}

@@ -39,6 +39,20 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
   const [imageErrorStates, setImageErrorStates] = useState<{ [key: number]: boolean }>({});
   const [showActionSheet, setShowActionSheet] = useState<boolean>(false);
 
+  // Reset all image loading/error states when images change
+  useEffect(() => {
+    if (post.images && post.images.length > 0) {
+      const loading: { [key: number]: boolean } = {};
+      const error: { [key: number]: boolean } = {};
+      post.images.forEach((_, idx) => {
+        loading[idx] = true;
+        error[idx] = false;
+      });
+      setImageLoadingStates(loading);
+      setImageErrorStates(error);
+    }
+  }, [post.images]);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -175,12 +189,6 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
             // Always get the string URL
             const imageUrl = typeof image === 'string' ? image : (image && typeof image === 'object' && 'url' in image ? image.url : '');
 
-            // Reset loading state when imageUrl changes
-            useEffect(() => {
-              setImageLoadingStates(prev => ({ ...prev, [index]: true }));
-              setImageErrorStates(prev => ({ ...prev, [index]: false }));
-            }, [imageUrl]);
-
             return (
               <View key={index} style={styles.singleImageContainer}>
                 {imageLoadingStates[index] && (
@@ -192,11 +200,9 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
                   url={imageUrl}
                   style={styles.image}
                   onLoadStart={() => {
-                    console.log('Image loading start', index);
                     setImageLoadingStates(prev => ({ ...prev, [index]: true }));
                   }}
                   onLoadEnd={() => {
-                    console.log('Image loading end', index);
                     setImageLoadingStates(prev => ({ ...prev, [index]: false }));
                   }}
                   onError={() => {

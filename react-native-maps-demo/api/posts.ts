@@ -7,11 +7,16 @@ export async function getAllPosts() {
 }
 
 // Create a new post
-export async function createPost(postData: any) {
+export async function createPost(postData: any, tags?: string[], allowedMembers?: string[]) {
+  const body = {
+    ...postData,
+    tags: tags || [],
+    invitees: allowedMembers || [],
+  };
   const res = await fetch(`${BASE_URL}/posts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(postData),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error("Failed to create post");
   return res.json();
@@ -29,12 +34,23 @@ export async function addImagesToPost(postId: string, userId: string, imageUris:
 }
 
 // Get posts by authorId
+import { getCurrentUser } from '@/auth/fireAuth';
+
 export async function getPostsByAuthorId(authorId: string) {
-  const res = await fetch(`${BASE_URL}/posts/by-author?authorId=${encodeURIComponent(authorId)}`);
+  // Get current user info (assume getCurrentUser returns a user object with uid)
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.uid;
+
+  // Send current user as a query param (if available)
+  const url = new URL(`${BASE_URL}/posts/by-author`);
+  url.searchParams.append('authorId', authorId);
+  if (currentUserId) {
+    url.searchParams.append('currentUserId', currentUserId);
+  }
+
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error("Failed to fetch posts by authorId");
   const data = await res.json();
-  // Return only the posts array (post info)
-  // This will throw if posts is empty or postInfo is undefined, so check first
   return data;
 }
 

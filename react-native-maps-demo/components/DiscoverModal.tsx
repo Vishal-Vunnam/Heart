@@ -21,7 +21,8 @@ import ProtectedImage from '@/components/ProtectedImage';
 import { PostView } from './PostView';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { PolisType, PostInfo, UserInfo, DisplayPostInfo } from '@/types/types';
+import { PolisType, PostInfo, UserInfo, DisplayPostInfo, PolisSearchReturn } from '@/types/types';
+import { searchPolis } from '@/api/search';
 import { router } from 'expo-router';
 import { getCurrentUser } from '@/auth/fireAuth';
 // =====================
@@ -62,28 +63,28 @@ interface DiscoverModalProps {
 const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSelect, setPolis }) => {
   // State
   const [posts, setPosts] = useState<DisplayPostInfo[]>([]);
-  const [users, setUsers] = useState<UserInfo[]>([]);
   const [isLoggedInUser, setIsLoggedInUser] = useState(false);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const textInputRef = useRef<TextInput>(null);
   const [searchText, setSearchText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [filteredUsers, setFilteredUsers] = useState<UserInfo[]>([]);
+  const [polisSuggestions, setPolisSuggestions] = useState<PolisSearchReturn[]>([]);
+  const [isSearchingPolis, setIsSearchingPolis] = useState(false);
+  const [filteredUsers, setFilteredUsers] = useState<UserInfo[]>([]); // for search history fallback
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch users and set initial polis
   useEffect(() => {
-    // getAllUsers().then(setUsers);
     setSelectedPolis(setPolis);
     (async () => {
       try {
         const currentUser = await getCurrentUser();
-
         if (
           currentUser &&
           setPolis &&
           (setPolis as any).isUser &&
           (setPolis as any).userInfo &&
-          (setPolis as any).userInfo.uid
+          (setPolis as any).userInfo.uid &&
           (setPolis as any).userInfo.photoURL
         ) {
           setIsLoggedInUser((currentUser as any).uid === (setPolis as any).userInfo.uid);
@@ -117,21 +118,36 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
     }
   }, [selectedPolis]);
 
+  // Debounced polis search
+  useEffect(() => {
+    if (!isTyping) return;
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    if (searchText.trim().length === 0) {
+      // Show search history if no text
+      getSearchHistory().then((searchHistory) => {
+        setFilteredUsers(searchHistory);
+        setPolisSuggestions([]);
+      });
+      setIsSearchingPolis(false);
+      return;
+    }
+    setIsSearchingPolis(true);
+    debounceTimeout.current = setTimeout(async () => {
+      try {
+        const results = await searchPolis(searchText.trim());
+        setPolisSuggestions(results);
+      } catch {
+        setPolisSuggestions([]);
+      }
+      setIsSearchingPolis(false);
+    }, 600);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText, isTyping]);
+
   // Search input handler
   const handleSearchInputChange = (text: string) => {
     setSearchText(text);
-    if (text.length > 0) {
-      const matches = users.filter(
-        (user) =>
-          user.email.toLowerCase().includes(text.toLowerCase()) ||
-          (user.displayName && user.displayName.toLowerCase().includes(text.toLowerCase()))
-      );
-      setFilteredUsers(matches);
-    } else {
-      getSearchHistory().then((searchHistory) => {
-        setFilteredUsers(searchHistory);
-      });
-    }
+    setIsTyping(true);
   };
 
   // Render
@@ -159,9 +175,11 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
                 onChangeText={handleSearchInputChange}
                 value={searchText}
                 onFocus={async () => {
-                  const history = await getSearchHistory();
-                  setFilteredUsers(history && history.length > 0 ? history : users);
                   setIsTyping(true);
+                  if (searchText.trim().length === 0) {
+                    const history = await getSearchHistory();
+                    setFilteredUsers(history);
+                  }
                 }}
                 onBlur={() => setIsTyping(false)}
               />
@@ -170,40 +188,85 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
           {/* Suggestion Dropdown */}
           {isTyping ? (
             <View style={styles.suggestionBox}>
-              {filteredUsers.map((user, index) => (
-                <TouchableOpacity
-                  key={user.uid || index}
-                  style={styles.suggestionItem}
-                  onPress={() => {
-                    setSelectedPolis({
-                      isUser: true,
-                      userInfo: {
-                        displayName: user.displayName ?? '',
-                        email: user.email,
-                        uid: user.uid,
-                        photoURL: user.photoURL
-                      },
-                    });
-                    saveSearch(user);
-                    setSearchText(user.email);
-                    setIsTyping(false);
-                    textInputRef.current?.blur();
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    {user.photoURL ? (
-                      <Image
-                        source={{ uri: user.photoURL }}
-                        style={styles.profilePicSmall}
-                      />
-                    ) : null}
-                    <View>
-                      <Text style={styles.userName}>{user.displayName || 'No name'}</Text>
-                      <Text style={styles.userEmail}>{user.email}</Text>
+              {isSearchingPolis && (
+                <View style={{ padding: 16, alignItems: 'center' }}>
+                  <Text style={{ color: '#888' }}>Searching...</Text>
+                </View>
+              )}
+              {/* Show polis suggestions if searchText, else show search history */}
+              {searchText.trim().length > 0 && polisSuggestions.length > 0 ? (
+                polisSuggestions.map((suggestion, index) => (
+                  <TouchableOpacity
+                    key={suggestion.id || index}
+                    style={styles.suggestionItem}
+                    onPress={() => {
+                      if (suggestion.is_tag) {
+                        setSelectedPolis({ isUser: false, tag: suggestion.name });
+                        setSearchText(`#${suggestion.name}`);
+                      } else {
+                        // For user, we only have id and name; fake email/photoURL for now
+                        setSelectedPolis({
+                          isUser: true,
+                          userInfo: {
+                            displayName: suggestion.name,
+                            email: '',
+                            uid: suggestion.id,
+                            photoURL: null,
+                          },
+                        });
+                        setSearchText(suggestion.name);
+                      }
+                      setIsTyping(false);
+                      setPolisSuggestions([]);
+                      textInputRef.current?.blur();
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {suggestion.is_tag ? (
+                        <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 16, marginRight: 8 }}>#</Text>
+                      ) : (
+                        <EvilIcons name="user" size={24} color="#888" style={{ marginRight: 8 }} />
+                      )}
+                      <Text style={styles.userName}>{suggestion.name}</Text>
                     </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                ))
+              ) : !isSearchingPolis && filteredUsers.length > 0 && searchText.trim().length === 0 ? (
+                filteredUsers.map((user, index) => (
+                  <TouchableOpacity
+                    key={user.uid || index}
+                    style={styles.suggestionItem}
+                    onPress={() => {
+                      setSelectedPolis({
+                        isUser: true,
+                        userInfo: {
+                          displayName: user.displayName ?? '',
+                          email: user.email,
+                          uid: user.uid,
+                          photoURL: user.photoURL,
+                        },
+                      });
+                      saveSearch(user);
+                      setSearchText(user.email);
+                      setIsTyping(false);
+                      textInputRef.current?.blur();
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {user.photoURL ? (
+                        <Image
+                          source={{ uri: user.photoURL }}
+                          style={styles.profilePicSmall}
+                        />
+                      ) : null}
+                      <View>
+                        <Text style={styles.userName}>{user.displayName || 'No name'}</Text>
+                        <Text style={styles.userEmail}>{user.email}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : null}
             </View>
           ) : selectedPolis ? (
             <>
