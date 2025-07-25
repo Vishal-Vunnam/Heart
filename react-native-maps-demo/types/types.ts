@@ -12,6 +12,8 @@ export type PolisType =
 export type PostInfo = {
     postId?: string | null; 
     userId: string;
+    userDisplayName?: string;
+    userPhotoURL?: string | null;
     type: 'post';
     title: string;
     description: string; 
@@ -47,12 +49,14 @@ export type DisplayPostInfo = {
 };
 
 export type UserSearchReturn = {
+  photoUrl?: string | null;
   displayName: string;
   id: string;
 };
 
 export type PolisSearchReturn = {
     name: string;
+    photoUrl?: string | null;
     id: string;
     is_tag: boolean;
 }

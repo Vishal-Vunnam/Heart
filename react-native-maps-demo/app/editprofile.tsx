@@ -1,52 +1,105 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Image } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  SafeAreaView,
+  Image,
+  ScrollView,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { getCurrentUser } from '@/auth/fireAuth';
+import { getCurrentUser, logout, updateUserProfile } from '@/services/auth/fireAuth';
+import { updateUser } from '@/services/api/user';
+import { getBase64 } from '@/functions/imageToBase64';
+import { uploadImageForUser } from '@/services/api/image';
+import { UserInfo } from '@/types/types';
+
 export default function EditProfileScreen() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [bio, setBio] = useState('');
-  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const user = getCurrentUser(); 
+  const [username, setUsername] = useState(user && user.displayName ? user.displayName : '');
+  const [email, setEmail] = useState(user && user.email ? user.email : '');
+  const [profilePic, setProfilePic] = useState<string | null>(user && user.photoURL ? user.photoURL : null);
 
-  // React.useEffect(() => {
-  //   async function loadUserInfo() {
-  //     try {
-  //       const user = useCurrentUser();
-  //       if (user && typeof user === 'object' && 'uid' in user) {
-  //         const firebaseUser = user as FirebaseUser;
-  //         setEmail(firebaseUser.email || '');
-  //         setUsername(firebaseUser.displayName || '');
-  //         setProfilePic(firebaseUser.photoURL || null);
-  //         // Fetch Firestore user doc for bio
-  //         const db = getFirestore(app);
-  //         const usersRef = collection(db, 'users');
-  //         const q = query(usersRef, where('uid', '==', firebaseUser.uid));
-  //         const querySnapshot = await getDocs(q);
-  //         if (!querySnapshot.empty) {
-  //           const data = querySnapshot.docs[0].data();
-  //           setUsername(data.displayName || '');
-  //           setEmail(data.email || '');
-  //           setBio(data.bio || '');
-  //           setProfilePic(data.photoURL || firebaseUser.photoURL || null);
-  //         }
-  //       }
-  //     } catch (err) {
-  //       // Optionally handle error
-  //     }
-  //   }
-  //   loadUserInfo();
-  // }, []);
+  const handleImagePicker = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert("Permission required", "You need to allow access to your photos to update your profile picture.");
+      return;
+    }
 
-  const handleSave = () => {
-    // Placeholder for save logic
-    Alert.alert('Profile Updated', `Username: ${username}\nEmail: ${email}\nBio: ${bio}`);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setProfilePic(result.assets[0].uri);
+      // You can now upload this URI in your backend logic
+    }
+  };
+
+  const handleSave = async () => {
+    console.log("am i here");
+    let newImageURl = '';
+    if(profilePic !== null && profilePic !== '') {
+      const base64Image : string = await getBase64(profilePic); 
+      newImageURl = await uploadImageForUser(base64Image, username);
+    }
+    try {
+      if (!user || !user.email || !user.displayName) {
+        Alert.alert('Error', 'You must be logged in to edit your profile.');
+        return;
+      }
+      console.log(user.uid);
+      const updatedData : UserInfo= {
+        uid: user.uid, 
+        displayName: username || user.displayName,
+        email: email || user.email,
+        photoURL: newImageURl !== '' && newImageURl ? newImageURl : user.photoURL,
+      };
+      // Update Firestore
+      await updateUserProfile({
+        displayName: updatedData.displayName,
+        photoURL: updatedData.photoURL,
+      });
+
+      await updateUser(updatedData);
+
+      // Update local state
+      setUsername(updatedData.displayName);
+      setEmail(updatedData.email);
+      setProfilePic(updatedData.photoURL);
+
+      Alert.alert('Success', 'Profile updated successfully!');
+      router.back(); 
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again later.');
+    }
+
+
   };
 
   const handleBack = () => {
     router.back();
+  };
+
+  const handleLogout = async () => {
+    const result = await logout();
+    if (result.success) {
+      router.back();
+    } else {
+      Alert.alert('Logout Failed', result.error || 'An error occurred during logout.');
+    }
   };
 
   return (
@@ -58,80 +111,90 @@ export default function EditProfileScreen() {
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Image 
-              source={require('../assets/images/polis_logo.png')} 
-              style={styles.logo} 
-            />
+            <Image source={require('../assets/images/polis_logo.png')} style={styles.logo} />
             <Text style={styles.appTitle}>Polis</Text>
           </View>
           <View style={styles.placeholder} />
         </View>
 
-        {/* Form Container */}
-        <View style={styles.formContainer}>
-          {profilePic && (
-            <View style={{ alignItems: 'center', marginBottom: 18 }}>
-              <Image
-                source={{ uri: profilePic }}
-                style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: '#fff', backgroundColor: '#222' }}
+        {/* Scrollable Content */}
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.formContainer}>
+            {profilePic && (
+              <TouchableOpacity onPress={handleImagePicker} style={{ alignItems: 'center', marginBottom: 18 }}>
+                <Image
+                  source={{ uri: profilePic }}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    backgroundColor: '#222',
+                  }}
+                />
+                <Text style={{ marginTop: 8, color: '#3f68df', fontWeight: '600' }}>Change Profile Picture</Text>
+              </TouchableOpacity>
+            )}
+
+            {!profilePic && (
+              <TouchableOpacity onPress={handleImagePicker} style={{ alignItems: 'center', marginBottom: 18 }}>
+                <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 32, color: '#666' }}>+</Text>
+                </View>
+                <Text style={{ marginTop: 8, color: '#3f68df', fontWeight: '600' }}>Add Profile Picture</Text>
+              </TouchableOpacity>
+            )}
+
+            <Text style={styles.title}>Edit Profile</Text>
+            <Text style={styles.subtitle}>Update your account information</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Username</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={username}
+                placeholderTextColor="#888"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
               />
             </View>
-          )}
-          <Text style={styles.title}>Edit Profile</Text>
-          <Text style={styles.subtitle}>Update your account information</Text>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Username</Text>
-            <TextInput
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <TextInput
               style={styles.input}
-              placeholder="Enter your username"
-              placeholderTextColor="#888"
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
+              placeholder={email}
               placeholderTextColor="#888"
               value={email}
-              onChangeText={setEmail}
+              editable={false}
+              selectTextOnFocus={false}
               autoCapitalize="none"
               keyboardType="email-address"
-            />
+              />
+            </View>
+
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutButtonText}>Log Out</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Bio</Text>
-            <TextInput
-              style={[styles.input, styles.bioInput]}
-              placeholder="Tell us about yourself..."
-              placeholderTextColor="#888"
-              value={bio}
-              onChangeText={setBio}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Your profile information is secure</Text>
           </View>
-
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Save Changes</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Your profile information is secure</Text>
-        </View>
+        </ScrollView>
       </ThemedView>
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -232,6 +295,31 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#fff',
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  logoutButton: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    marginTop: 18,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3f68df',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: 40,
+  },
+  logoutButtonText: {
+    color: '#3f68df',
+    fontSize: 16,
     fontWeight: 'bold',
   },
   footer: {

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
+// Remove all image loading state logic and ActivityIndicator
+
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { ThemedText } from './ThemedText';
-import { getImageUrlWithSAS} from '@/api/image';
-import { deletePostById } from '@/api/posts';
-import { PolisType, PostInfo, DisplayPostInfo} from '@/types/types';
+import { deletePostById } from '@/services/api/posts';
+import { PolisType, DisplayPostInfo } from '@/types/types';
 import PostActionSheet from './PostActionSheet';
 import ProtectedImage from './ProtectedImage';
 
@@ -21,7 +22,6 @@ interface CustomCalloutProps {
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-const imageWidth = Math.min(screenWidth * 0.8, 300); // 80% of screen or max 300px
 
 const CustomCallout: React.FC<CustomCalloutProps> = ({
   isUserLoggedIn,
@@ -35,79 +35,49 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
   onPostDeleted,
   onEdit
 }) => {
-  const [imageLoadingStates, setImageLoadingStates] = useState<{ [key: number]: boolean }>({});
-  const [imageErrorStates, setImageErrorStates] = useState<{ [key: number]: boolean }>({});
   const [showActionSheet, setShowActionSheet] = useState<boolean>(false);
+  const [userLiked, setUserLiked] = useState<boolean>(false); 
 
-  // Reset all image loading/error states when images change
-  useEffect(() => {
-    if (post.images && post.images.length > 0) {
-      const loading: { [key: number]: boolean } = {};
-      const error: { [key: number]: boolean } = {};
-      post.images.forEach((_, idx) => {
-        loading[idx] = true;
-        error[idx] = false;
-      });
-      setImageLoadingStates(loading);
-      setImageErrorStates(error);
-    }
-  }, [post.images]);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  // Handles deleting a post (if user is logged in and postId exists)
   const handleDeletePost = async () => {
-    console.log("deleting post");
     if (!isUserLoggedIn || !post.postInfo.postId) return;
     try {
       await deletePostById(post.postInfo.postId);
-      // Close the modal and reset the map after deleting the post
-      if (typeof onViewDetails === 'function') {
-        onViewDetails(); // This will close the callout/modal in parent
-      }
+      if (typeof onViewDetails === 'function') onViewDetails();
       if (typeof onPostDeleted === 'function') onPostDeleted();
       if (typeof onPostsChange === 'function') onPostsChange();
       setShowActionSheet(false);
-      // Optionally, you can trigger a map reset here if you have a callback for that
-      // For example: if (typeof onResetMap === 'function') { onResetMap(); }
     } catch (error) {
       console.error('Failed to delete post:', error);
-      // Optionally: show an error message to the user
     }
   };
+  const handeLike = () => {
+    setUserLiked(!userLiked); 
+  }
 
   return (
     <View style={styles.container} >
-      {/* Header - Fixed at top */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <View style={styles.authorRow}>
-            <TouchableOpacity
-              // onPress={() => {
-              //   if (typeof onViewDetails === 'function') {
-              //     onViewDetails();
-              //   }
-              //   if (typeof onAvatarPress === 'function') {
-              //     onAvatarPress(post.authorId);
-              //   }
-              // }}
-              style={styles.avatarTouchable}
-            >
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {post.postInfo.userId?.charAt(0)?.toUpperCase() || 'U'}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            {post.postInfo.userPhotoURL ? (
+              <TouchableOpacity style={styles.avatarTouchable}>
+                <ProtectedImage
+                  url={post.postInfo.userPhotoURL}
+                  style={styles.avatar}
+                />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.avatarTouchable}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {post.postInfo.userDisplayName?.charAt(0)?.toUpperCase() || 'U'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
             <ThemedText style={styles.authorName} numberOfLines={1} ellipsizeMode="tail">
-              {post.postInfo.userId}
+              {post.postInfo.userDisplayName}
             </ThemedText>
           </View>
         </View>
@@ -119,12 +89,10 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
           {post.postInfo.title}
         </ThemedText>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Text style={styles.dateNextToTitle}>{formatDate(post.postInfo.date ?? '')}</Text>
+          <Text style={styles.dateNextToTitle}>{new Date(post.postInfo.date).toLocaleDateString()}</Text>
           <TouchableOpacity
             style={styles.moreButton}
-            onPress={() => {
-              setShowActionSheet(!showActionSheet)
-            }}
+            onPress={() => setShowActionSheet(!showActionSheet)}
           >
             <Text style={styles.moreButtonText}>⋯</Text>
           </TouchableOpacity>
@@ -133,117 +101,62 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
           <PostActionSheet
             isUserLoggedIn={isUserLoggedIn}
             visible={showActionSheet}
-            onDelete={async () => {
-              handleDeletePost()
-            }}
-            
+            onDelete={async () => handleDeletePost()}
             onClose={() => setShowActionSheet(false)}
             onEdit={() => {
               setShowActionSheet(false);
               if (onEdit) onEdit();
             }}
-            // You can add onEdit, onDelete, onReport handlers here if needed
           />
         )}
       </View>
       
-
       {/* Scrollable Content */}
       <ScrollView 
         style={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContentContainer}
       >
-        {/* Content */}
         <View style={styles.content}>
           <ThemedText style={styles.description}>
             {post.postInfo.description}
           </ThemedText>
-          {/* Tags under description */}
-          {/* <View style={styles.tagContainer}>
-            {Array.isArray(post.tags) && post.tags.length > 0 ? (
-              post.tags.map((tag: string, idx: number) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={styles.tagButton}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    if (typeof onSelectNewPolis === 'function') {
-                      onSelectNewPolis({ isUser: false, tag });
-                    }
-                  }}
-                >
-                  <Text style={styles.tagText}>#{tag}</Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <Text style={styles.noTagText}>No tags</Text>
+        </View>
+
+        {/* Multiple Images */}
+        {post.images && post.images.length > 0 && (
+          <View style={styles.imageContainer}>
+            {post.images.slice(0, 2).map((image, index) => {
+              const imageUrl = typeof image === 'string'
+                ? image
+                : (image && typeof image === 'object' && 'imageUrl' in image
+                    ? image.imageUrl
+                    : '');
+              return (
+                <View key={index} style={styles.singleImageContainer}>
+                  <ProtectedImage
+                    url={imageUrl}
+                    style={styles.image}
+                  />
+                </View>
+              );
+            })}
+            {post.images.length > 2 && (
+              <Text style={styles.moreImagesText}>+{post.images.length - 2} more images</Text>
             )}
-          </View> */}
-        </View>
-
-              {/* Multiple Images with loading placeholders */}
-      {post.images && post.images.length > 0 && (
-        <View style={styles.imageContainer}>
-          {post.images.slice(0, 2).map((image: string | { url: string }, index: number) => {
-            // Always get the string URL
-            const imageUrl = typeof image === 'string' ? image : (image && typeof image === 'object' && 'url' in image ? image.url : '');
-
-            return (
-              <View key={index} style={styles.singleImageContainer}>
-                {imageLoadingStates[index] && (
-                  <View style={[styles.image, styles.loadingContainer]}>
-                    <ActivityIndicator size="small" color="#007AFF" />
-                  </View>
-                )}
-                <ProtectedImage
-                  url={imageUrl}
-                  style={styles.image}
-                  onLoadStart={() => {
-                    setImageLoadingStates(prev => ({ ...prev, [index]: true }));
-                  }}
-                  onLoadEnd={() => {
-                    setImageLoadingStates(prev => ({ ...prev, [index]: false }));
-                  }}
-                  onError={() => {
-                    setImageLoadingStates(prev => ({ ...prev, [index]: false }));
-                    setImageErrorStates(prev => ({ ...prev, [index]: true }));
-                  }}
-                />
-                {imageErrorStates[index] && (
-                  <View style={[styles.image, styles.errorContainer]}>
-                    <Text style={styles.errorText}>Failed to load image</Text>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-          {post.images.length > 2 && (
-            <Text style={styles.moreImagesText}>+{post.images.length - 2} more images</Text>
-          )}
-        </View>
-      )}
+          </View>
+        )}
       </ScrollView>
 
-      {/* Action Bar - Fixed at bottom */}
+      {/* Action Bar */}
       <View style={styles.actionBar}>
-        <TouchableOpacity style={styles.actionButton} onPress={onLike}>
-          <Text style={styles.actionIcon}>❤️</Text>
-          {/* <Text style={styles.actionText}>{post.likes || 0}</Text> */}
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.actionButton} onPress={onComment}>
-          <Text style={styles.actionIcon}>💬</Text>
-          {/* <Text style={styles.actionText}>{post.comments || 0}</Text> */}
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.actionButton} onPress={onShare}>
-          <Text style={styles.actionIcon}>📤</Text>
-          <Text style={styles.actionText}>Share</Text>
-        </TouchableOpacity>
-        
         <TouchableOpacity style={styles.viewDetailsButton} onPress={onViewDetails}>
           <Text style={styles.viewDetailsText}>View Details</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={handeLike}>
+          <Text style={styles.actionIcon}>
+            {userLiked ? '❤️' : '🩶'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -254,21 +167,20 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
 };
 
 const styles = StyleSheet.create({
+  // ...styles unchanged...
   container: {
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: '#1F2937',
+    borderRadius: 24,
+    padding: 24,
     width: Math.min(screenWidth * 0.85, 400),
     maxHeight: screenHeight * 0.4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: '#374151',
   },
   scrollContent: {
-    flexGrow: 1, // NEW
-    marginBottom: 8,
+    flexGrow: 1,
+    marginBottom: 12,
   },
   scrollContentContainer: {
     paddingBottom: 8,
@@ -277,249 +189,283 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   authorInfo: {
     flexDirection: 'row',
     flex: 1,
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#007AFF',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 12,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   avatarText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   authorDetails: {
     flex: 1,
   },
   authorName: {
-    color: '#222', // Dark text for white background
-    fontSize: 20,
-    fontWeight: '600',
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '700',
     flex: 1,
+    letterSpacing: 0.3,
   },
   postDate: {
-    color: '#888', // Muted gray for date
+    color: '#9CA3AF',
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 0,
   },
   moreButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 12,
+    minWidth: 36,
+    bottom: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   moreButtonText: {
-    color: '#888', // Muted gray for more button
-    fontSize: 18,
+    color: '#E5E7EB',
+    fontSize: 16,
     fontWeight: 'bold',
+    transform: [{ rotate: '90deg' }],
   },
   content: {
-    marginBottom: 12,
-    paddingHorizontal: 2,
-    paddingTop: 2,
+    marginBottom: 16,
+    paddingHorizontal: 4,
+    paddingTop: 4,
   },
   title: {
-    color: '#1E293B',
+    color: 'white',
     fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 6,
-    letterSpacing: 0.2,
-    textShadowColor: 'rgba(30,58,95,0.10)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(30,58,95,0.10)',
+    fontWeight: '800',
+    marginBottom: 8,
+    letterSpacing: 0.4,
+    lineHeight: 26,
+    textShadowColor: 'rgba(59, 130, 246, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
     overflow: 'hidden',
   },
   description: {
-    color: '#374151', // Slate gray for description
-    fontSize: 16,
+    color: '#E5E7EB',
+    fontSize: 15,
     lineHeight: 22,
     marginTop: 8,
     fontWeight: '400',
-    letterSpacing: 0.1,
-    paddingLeft: 2,
-    paddingRight: 2,
+    letterSpacing: 0.2,
+    paddingLeft: 4,
+    paddingRight: 4,
+    opacity: 0.95,
+    borderBottomColor: '#374151',
+    borderBottomWidth: 1, 
   },
   imageContainer: {
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   singleImageContainer: {
     width: '100%',
-    marginBottom: 8,
+    marginBottom: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   image: {
-    width: '80%', // 80% of the container's width
-    maxHeight: 180, // increase maxHeight for a larger image if desired
+    width: '95%',
     aspectRatio: 1.6,
-    borderRadius: 5,
-    resizeMode: 'cover',
-    backgroundColor: '#F3F4F6',
+    maxHeight: 200,
+    resizeMode: 'contain',
   },
   actionBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 8,
+    paddingTop: 5,
+    paddingHorizontal: 4,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(30,58,95,0.08)', // Subtle blue/gray border
+    borderTopColor: '#374151',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 1,
     paddingHorizontal: 8,
   },
   actionIcon: {
     fontSize: 16,
-    marginRight: 4,
+    marginRight: 1,
   },
   actionText: {
-    color: '#555', // Medium gray for action text
+    color: '#555',
     fontSize: 12,
     fontWeight: '500',
   },
   viewDetailsButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    elevation: 4,
   },
   viewDetailsText: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textDecorationLine: 'underline' 
   },
   arrow: {
     position: 'absolute',
-    bottom: -8,
+    bottom: -10,
     left: '50%',
-    marginLeft: -8,
+    marginLeft: -10,
     width: 0,
     height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 8,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderTopWidth: 10,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: 'rgba(255,255,255,0.97)', // Match container background
+    borderTopColor: '#1F2937',
   },
   loadingContainer: {
-    backgroundColor: 'rgba(30,58,95,0.05)', // Very light blue/gray
+    backgroundColor: '#374151',
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 16,
   },
   hidden: {
     opacity: 0,
   },
   errorContainer: {
-    backgroundColor: 'rgba(255, 0, 0, 0.08)', // Softer red
+    backgroundColor: '#4B5563',
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#EF4444',
   },
   errorText: {
-    color: '#B91C1C', // Dark red
+    color: '#EF4444',
     fontSize: 12,
     textAlign: 'center',
+    fontWeight: '600',
   },
   tagContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 4,
+    marginTop: 8,
+    gap: 8,
   },
   tagButton: {
-    backgroundColor: 'transparent', // Light blue/gray for tag
-    borderColor: '#1e293b', // lighter polis blue
-    borderWidth: 1,
+    backgroundColor: '#374151',
+    borderColor: '#1E40AF',
+    borderWidth: 1.5,
     borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginRight: 8,
-    marginBottom: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 26,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 1,
+    minHeight: 32,
+    shadowColor: '#1E40AF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tagText: {
     fontSize: 13,
-    color: '#1E293B', // Dark blue/gray for tag text
-    fontFamily: 'Averia',
-    fontWeight: 'bold',
+    color: '#3B82F6',
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
   noTagText: {
     fontSize: 12,
-    color: '#AAA', // Lighter gray for no tag
+    color: '#6B7280',
+    fontStyle: 'italic',
   },
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
     width: '100%',
   },
   avatarTouchable: {
-    marginRight: 10,
+    marginRight: 12,
   },
   postInfoRow: {
     flexDirection: 'column',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   closeCalloutButton: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(30, 58, 95, 0.10)', // Very light blue/gray
+    top: 16,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#374151',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#4B5563',
   },
   closeCalloutText: {
-    color: '#1E293B', // Dark blue/gray for close icon
+    color: '#9CA3AF',
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   titleDateRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 2,
-    gap: 8,
+    alignItems: 'flex-start',
+    marginBottom: 4,
+    gap: 12,
+    flexWrap: 'wrap',
   },
   dateNextToTitle: {
-    color: '#888', // Muted gray for date
-    fontSize: 13,
-    marginLeft: 10,
-    fontWeight: '400',
-    marginTop: 2,
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    bottom: 7,
+    backgroundColor: '#374151',
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   moreImagesText: {
-    color: '#888',
+    color: '#9CA3AF',
     fontSize: 12,
-    marginTop: 8,
+    marginTop: 12,
     textAlign: 'center',
+    fontWeight: '600',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#374151',
+    borderRadius: 12,
+    letterSpacing: 0.3,
   },
 });
 
-export default CustomCallout; 
+export default CustomCallout;

@@ -14,6 +14,8 @@ export type PolisType =
 export type PostInfo = {
     postId?: string | null; 
     userId: string;
+    userDisplayName?: string;
+    userPhotoURL?: string | null;
     type: 'post';
     title: string;
     description: string; 
@@ -24,6 +26,15 @@ export type PostInfo = {
     longitudeDelta: number; 
     private?: boolean; 
 }
+
+export type MarkerPostInfo = { 
+  postId: string; 
+  latitude: number;
+  latitudeDelta: number;
+  longitude: number;
+  longitudeDelta: number;
+  private?: boolean;
+}   
 
 export type EventInfo = {
   postId?: number | null; 

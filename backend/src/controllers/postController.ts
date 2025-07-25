@@ -57,9 +57,6 @@ router.post('/posts', async (req: Request, res: Response) => {
     if (!postInfo.title) {
       return res.status(400).json({ success: false, error: 'Missing required field: title.' });
     }
-    if (!postInfo.description) {
-      return res.status(400).json({ success: false, error: 'Missing required field: description.' });
-    }
     if (
       typeof postInfo.latitude !== 'number' ||
       typeof postInfo.longitude !== 'number' ||
@@ -305,6 +302,8 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
     SELECT 
       p.id as postId,
       p.userId,
+      u.displayName as userDisplayName,
+      u.photoURL as userPhotoURL,
       p.title,
       p.description,
       p.createdAt,
@@ -320,6 +319,96 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
         WHERE i.postId = p.id
         FOR JSON PATH
       ) as images
+    FROM posts p
+    LEFT JOIN post_viewer pv 
+      ON p.id = pv.post_id AND pv.user_id = @param1
+    LEFT JOIN users u ON p.userId = u.id
+    WHERE p.userId = @param0
+      AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
+  `;
+  /*SELECT 
+    p.*,
+    (
+      SELECT 
+        i.imageUrl
+      FROM images i
+      WHERE i.postId = p.id
+      FOR JSON PATH
+    ) as images
+  FROM posts p
+  LEFT JOIN post_viewer pv 
+    ON p.id = pv.post_id AND pv.user_id = @param1
+  WHERE p.userId = @param0
+    AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
+  */
+  const params = [authorId, currentUserId];
+
+
+
+  try {
+    const result = await executeQuery(query, params);
+
+    // Do not filter based on private; return all posts as-is
+    const posts = (result.recordset || []).map((row: any) => {
+      let images: any[] = [];
+      try {
+        images = row.images ? JSON.parse(row.images) : [];
+      } catch {
+        images = [];
+      }
+
+      const postInfo = {
+        postId: row.postId,
+        userId: row.userId,
+        userDisplayName: row.userDisplayName, 
+        userPhotoURL: row.userPhotoURL,
+        type: 'post',
+        title: row.title,
+        description: row.description,
+        date: row.createdAt,
+        latitude: row.latitude,
+        latitudeDelta: row.latitudeDelta,
+        longitude: row.longitude,
+        longitudeDelta: row.longitudeDelta,
+        private: !!row.private,
+      };
+
+      return {
+        postInfo,
+        images
+      };
+    });
+    return res.status(200).json({ success: true, posts });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Unknown error occurred while fetching posts by authorId."
+    });
+  }
+});
+
+router.get('/markerposts/by-author', async (req: Request, res: Response) =>  { 
+  console.log('GET /posts/by-author called');
+  const authorId = req.query.authorId as string;
+  
+  if (!authorId) {
+    return res.status(400).json({ success: false, error: "Missing required query parameter: authorId" });
+  }
+
+  // Assume req.user.uid is set by auth middleware
+  const currentUserId = req.query.currentUserId;
+
+  // Query to get posts by author, including images as a JSON array and the private field
+
+  console.log("THIS IS THE ID" , currentUserId);
+  const query = `
+    SELECT 
+      p.id as postId,
+      p.latitude,
+      p.latitudeDelta,
+      p.longitude,
+      p.longitudeDelta,
+      p.private,
     FROM posts p
     LEFT JOIN post_viewer pv 
       ON p.id = pv.post_id AND pv.user_id = @param1
@@ -359,11 +448,6 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
 
       const postInfo = {
         postId: row.postId,
-        userId: row.userId,
-        type: 'post',
-        title: row.title,
-        description: row.description,
-        date: row.date,
         latitude: row.latitude,
         latitudeDelta: row.latitudeDelta,
         longitude: row.longitude,
@@ -372,8 +456,7 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
       };
 
       return {
-        postInfo,
-        images
+        postInfo
       };
     });
 
@@ -384,7 +467,7 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
       error: error.message || "Unknown error occurred while fetching posts by authorId."
     });
   }
-});
+})
 
 /**
  * Route: GET /posts/by-tag
@@ -460,6 +543,78 @@ router.get('/posts/by-tag', async (req: Request, res: Response) => {
     });
   }
 });
+
+router.get('/post/by-id', async (req: Request, res: Response) =>  { 
+  const postId = req.query.id as string; 
+  const currentUserId = req.query.currentUserId as string;
+  if (!postId) {
+    return res.status(400).json({ success: false, error: "Missing required query parameter: id" });
+  }
+
+  const query = `
+    SELECT 
+      p.id as postId,
+      p.userId,
+      p.title,
+      p.description,
+      p.createdAt,
+      p.latitude,
+      p.latitudeDelta,
+      p.longitude,
+      p.longitudeDelta,
+      p.private,
+      (
+        SELECT 
+          i.imageUrl
+        FROM images i
+        WHERE i.postId = p.id
+        FOR JSON PATH
+      ) as images
+    FROM posts p
+    LEFT JOIN post_viewer pv 
+      ON p.id = pv.post_id AND pv.user_id = @param1
+    WHERE p.id = @param0
+      AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
+  `;
+  const params = [postId, currentUserId];
+  try {
+    const result = await executeQuery(query, params);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ success: false, error: "Post not found or you do not have permission to view it." });
+    }
+
+    const row = result.recordset[0];
+    let images: any[] = [];
+    try {
+      images = row.images ? JSON.parse(row.images) : [];
+    } catch {
+      images = [];
+    }
+
+    const postInfo = {
+      postId: row.postId,
+      userId: row.userId,
+      type: 'post',
+      title: row.title,
+      description: row.description,
+      date: row.createdAt,
+      latitude: row.latitude,
+      latitudeDelta: row.latitudeDelta,
+      longitude: row.longitude,
+      longitudeDelta: row.longitudeDelta,
+      private: !!row.private,
+    };
+
+    return res.status(200).json({ success: true, postInfo, images });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Unknown error occurred while fetching post by id."
+    });
+  }
+
+})
 
 router.put('/edit-post', async (req: Request, res: Response) => {
   // Accept postInfo in the request body (not query)

@@ -6,8 +6,8 @@ import {
   updateProfile, 
   User 
 } from 'firebase/auth';
-import app from '@/auth/fireBaseConfig';
-import { createUser } from '@/api/user';
+import app from '@/services/auth/fireBaseConfig';
+import { createUser } from '@/services/api/user';
 
 const auth = getAuth(app);
 
@@ -42,17 +42,41 @@ export async function signUp(email: string, password: string, displayName?: stri
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-
-    // Update display name and photoURL if provided
+    await user.reload();
+    // Always wait for updateProfile to complete before returning, even if no update is needed
     if (displayName || photoURL) {
       await updateProfile(user, { 
         displayName: displayName || undefined, 
         photoURL: photoURL || undefined 
       });
+      await user.reload();
+    } else {
+      // If no update needed, still wait for the user to be fully initialized
+      // This is a no-op, but ensures consistent async flow
+      await Promise.resolve();
     }
+
+    // At this point, updateProfile (if needed) has completed
     return { success: true, user };
   } catch (error: any) {
     return { success: false, error: error.message || "Sign-up failed." };
+  }
+}
+
+export async function updateUserProfile(userInfo: { displayName: string | null; photoURL: string | null }): Promise<{ success: boolean; user?: User; error?: string }> {
+  const user = auth.currentUser;
+  if (!user) {
+    return { success: false, error: "No user is currently signed in." };
+  }
+  try {
+    await updateProfile(user, {
+      displayName: userInfo.displayName || undefined,
+      photoURL: userInfo.photoURL || undefined,
+    });
+    await user.reload();
+    return { success: true, user };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Profile update failed." };
   }
 }
 

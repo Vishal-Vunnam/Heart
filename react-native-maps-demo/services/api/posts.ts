@@ -34,7 +34,7 @@ export async function addImagesToPost(postId: string, userId: string, imageUris:
 }
 
 // Get posts by authorId
-import { getCurrentUser } from '@/auth/fireAuth';
+import { getCurrentUser } from '@/services/auth/fireAuth';
 
 export async function getPostsByAuthorId(authorId: string) {
   // Get current user info (assume getCurrentUser returns a user object with uid)

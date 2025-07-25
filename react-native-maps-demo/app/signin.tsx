@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, Image, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { updateProfile } from 'firebase/auth';
-import { createUser } from '@/api/user';
+import { createUser } from '@/services/api/user';
+import { uploadImageForUser } from '@/services/api/image';
 import { Keyboard } from 'react-native'
-import {signIn, signUp} from '@/auth/fireAuth';
+import {signIn, signUp, updateUserProfile} from '@/services/auth/fireAuth';
 import { ThemedView } from '@/components/ThemedView';
 // import { uploadToAzureBlob } from '@/backend/blob-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { uploadImageToPost } from '@/services/api/image';
+import { getBase64 } from '@/functions/imageToBase64';
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
@@ -44,38 +47,51 @@ export default function SignInScreen() {
         // setPassword("test123")
         console.log("Signing up with email: " + email + " and password: " + password);
 
-        // If a photo is selected, upload it to Azure Blob Storage and get the URL
-        let photoURL = '';
+
+
+        const user = await signUp(email, password);
+
+
+      if (user.success && user.user) {
+
+
+          let base64PhotoUri = '';
         if (photoUri) {
           try {
             // Use filename based on email and timestamp for uniqueness
-            const fileName = `profile_${email.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}.jpg`;
-            // Dynamically import to avoid circular deps if not needed
-            // photoURL = await uploadToAzureBlob(photoUri, fileName, 'profile-pics');
+            base64PhotoUri = await getBase64(photoUri);
           } catch (err) {
             console.error('Failed to upload profile picture:', err);
             Alert.alert('Error', 'Failed to upload profile picture. Please try again.');
             return;
           }
         }
+        let imageURL: { url: string } | null = null;
 
-        const user = await signUp(email, password, username, photoURL);
-
-        if (user.success && user.user) {
+        if (base64PhotoUri !== '') {
+          imageURL = await uploadImageForUser(base64PhotoUri, user.user.uid);
+        }
+          await updateUserProfile({
+            displayName: username || user.user.displayName,
+            photoURL: imageURL?.url || user.user.photoURL,
+          });
+          console.log("Image URL:", imageURL);
           await createUser({
             uid: user.user.uid,
             email: user.user.email ?? email,
             displayName: user.user.displayName ?? username,
-            photoURL: user.user.photoURL ?? (photoURL || undefined),
+            photoURL: imageURL?.url ??(undefined),
           });
         } else {
           throw new Error(user.error || "Failed to create user.");
         }
-
+      // Wait a little for the `onAuthStateChanged` + reload to run
+      setTimeout(() => {
         Alert.alert('Success', 'Account created! You can now sign in.');
         setIsSignUp(false);
         setPhotoUri(null);
-        router.back();
+        router.back(); // 🟢 After slight delay, user state will be correct
+      }, 500);
       } else {
         await signIn(email, password);
         Alert.alert('Success', 'Signed in!');

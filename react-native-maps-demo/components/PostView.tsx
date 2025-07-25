@@ -1,20 +1,12 @@
 import React from 'react';
 import { StyleSheet, ScrollView, View, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
+import { PostInfo } from '@/types/types';
 import ProtectedImage from './ProtectedImage';
 
 const { width } = Dimensions.get('window');
 
-// Define the PostData type to match expected post prop
-export type PostData = {
-  title: string;
-  description: string;
-  date: string;
-  authorName: string;
-  images?: string[];
-};
-
-export const PostView = ({ post }: { post: PostData }) => {
+export const PostView = ({ post }: { post: PostInfo}, {images} : {images: string[]}) => {
   return (
     <View style={styles.container}>
       {/* Header Section with Gradient-like Effect */}
@@ -29,10 +21,10 @@ export const PostView = ({ post }: { post: PostData }) => {
           <View style={styles.authorBadge}>
             <View style={styles.authorAvatar}>
               <ThemedText style={styles.authorInitial}>
-                {post.authorName.charAt(0).toUpperCase()}
+                {post.userDisplayName.charAt(0).toUpperCase()}
               </ThemedText>
             </View>
-            <ThemedText style={styles.authorName}>{post.authorName}</ThemedText>
+            <ThemedText style={styles.authorName}>{post.userDisplayName}</ThemedText>
           </View>
           
           <View style={styles.dateBadge}>
@@ -47,13 +39,13 @@ export const PostView = ({ post }: { post: PostData }) => {
       </View>
 
       {/* Images Section with Enhanced Design */}
-      {post.images && post.images.length > 0 && (
+      {images && images.length > 0 && (
         <View style={styles.imagesSection}>
           <View style={styles.imagesSectionHeader}>
             <View style={styles.imagesDot} />
             <ThemedText style={styles.imagesLabel}>Gallery</ThemedText>
             <View style={styles.imagesCount}>
-              <ThemedText style={styles.imagesCountText}>{post.images.length}</ThemedText>
+              <ThemedText style={styles.imagesCountText}>{images.length}</ThemedText>
             </View>
           </View>
           
@@ -63,7 +55,7 @@ export const PostView = ({ post }: { post: PostData }) => {
             style={styles.imageScroll}
             contentContainerStyle={styles.imageScrollContent}
           >
-            {post.images.map((img, idx) => (
+            {images.map((img, idx) => (
               <View key={idx} style={styles.imageContainer}>
                 <ProtectedImage 
 

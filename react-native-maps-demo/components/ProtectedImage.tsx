@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Image } from "react-native";
-import { getImageUrlWithSAS } from "@/api/image";
+import { getImageUrlWithSAS } from "@/services/api/image";
 
 /**
  * Returns a React Native <Image> component with a protected SAS URL as the source.
@@ -25,7 +25,6 @@ export default function ProtectedImage({
     setError(null);
 
     if (!url) return;
-
     getImageUrlWithSAS(url)
       .then((data) => {
         if (isMounted) {

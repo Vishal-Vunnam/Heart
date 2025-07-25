@@ -1,5 +1,7 @@
 // Styles
 import { StyleSheet } from 'react-native';
+
+
 export const indexStyles = StyleSheet.create({
   postButton: {
     position: 'absolute',
@@ -32,7 +34,7 @@ export const indexStyles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 10,
-    backgroundColor: '#000',
+    backgroundColor: '#1F2937',
     borderBottomWidth: 2,
     borderBottomColor: '#111',
   },
@@ -47,9 +49,12 @@ export const indexStyles = StyleSheet.create({
     fontWeight: 'bold',
     marginRight: 4,
     fontFamily: 'Avenir', // Use Avenir for a modern, geometric sans-serif look
+    // textShadowColor: '#000',
+    // textShadowOffset: { width: 4, height: 4 },
+    // textShadowRadius: 3,
   },
   polisDisplay: {
-    backgroundColor: '#000',
+    backgroundColor: '#1F2937',
     paddingVertical: 8,
     paddingHorizontal: 16,
     flexDirection: 'row', // Add row layout
@@ -78,6 +83,7 @@ export const indexStyles = StyleSheet.create({
     textShadowColor: '#000',
     textShadowOffset: { width: 3, height: 3 },
     textShadowRadius: 3,
+    
   },
   signInText: {
     color: '#fff',
@@ -85,6 +91,9 @@ export const indexStyles = StyleSheet.create({
     fontWeight: 'bold',
     marginRight: 4,
     fontFamily: 'Avenir',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 3, height: 3 },
+    textShadowRadius: 3,
   },
 
   accountIcon: {

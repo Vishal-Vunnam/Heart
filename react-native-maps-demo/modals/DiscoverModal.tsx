@@ -16,15 +16,15 @@ import {
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Internal imports
-import { getPostsByAuthorId} from '@/api/posts';
+import { getPostsByAuthorId} from '@/services/api/posts';
 import ProtectedImage from '@/components/ProtectedImage';
-import { PostView } from './PostView';
+import { PostView } from '../components/PostView';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { PolisType, PostInfo, UserInfo, DisplayPostInfo, PolisSearchReturn } from '@/types/types';
-import { searchPolis } from '@/api/search';
+import { searchPolis } from '@/services/api/search';
 import { router } from 'expo-router';
-import { getCurrentUser } from '@/auth/fireAuth';
+import { getCurrentUser } from '@/services/auth/fireAuth';
 // =====================
 // Constants & Types
 // =====================
@@ -328,7 +328,7 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
                         <ThemedText style={styles.postTitle}>{post.postInfo.title}</ThemedText>
                         <ThemedText style={styles.postDescription}>{post.postInfo.description}</ThemedText>
                         <ThemedText style={styles.postDate}>{post.postInfo.date}</ThemedText>
-                        <ThemedText style={styles.postAuthor}>By: {post.postInfo.userId}</ThemedText>
+                        <ThemedText style={styles.postAuthor}>By: {post.postInfo.userDisplayName}</ThemedText>
                       </View>
                       {/* {post.images_url_blob && post.images_url_blob.length > 0 && (
                         <ScrollView horizontal style={{ marginLeft: 18 }}>

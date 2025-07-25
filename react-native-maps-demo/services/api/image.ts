@@ -24,3 +24,24 @@ export async function uploadImageToPost(image: string, postId: string) {
     }
     return res.json();
 }
+
+
+/**
+ * Upload an image to the backend, meant for user creation.
+ * @param image The image data (uri or base64 string)
+ * @returns The backend response (uploaded image URL, etc.)
+ */
+export async function uploadImageForUser(image: string, uid: string) {
+    console.log("Uploading image for user:",uid);
+    const res = await fetch(`${BASE_URL}/image-user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image, uid }),
+    });
+    if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to upload image: ${errorText}`);
+    }
+    return res.json();
+}
+

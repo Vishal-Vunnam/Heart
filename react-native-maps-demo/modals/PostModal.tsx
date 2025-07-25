@@ -6,10 +6,10 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { getBase64 } from '@/functions/imageToBase64';
 import type { PostInfo, UserSearchReturn, PolisSearchReturn } from '@/types/types';
-import { uploadImageToPost } from '@/api/image';
-import { getCurrentUser } from '@/auth/fireAuth';
-import { createPost } from '@/api/posts';
-import { searchUsers} from '@/api/search';
+import { uploadImageToPost } from '@/services/api/image';
+import { getCurrentUser } from '@/services/auth/fireAuth';
+import { createPost } from '@/services/api/posts';
+import { searchUsers} from '@/services/api/search';
 
 interface PostModalProps {
   userId: string;

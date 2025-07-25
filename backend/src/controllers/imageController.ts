@@ -56,4 +56,22 @@ router.post('/image', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/image-user', async (req: Request, res: Response) => {
+  try {
+    const image = req.body.image as string; 
+    const username = req.body.uid as string; 
+    // Pass the buffer to your Azure upload function      
+    if (!image) {
+      return res.status(400).json({ error: 'Missing image or postId in request body' });
+    }
+    const blobName = `${username}_${Date.now()}`;
+    console.log(blobName);
+    const imageUrl = await uploadToAzureBlob(image, blobName, 'profile-pics');
+    console.log("Image URL:", imageUrl);
+    return res.status(201).json({ message: 'Image uploaded successfully', url: imageUrl });
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    return res.status(500).json({ error: 'Failed to upload image' });
+  }
+})
 export default router;

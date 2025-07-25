@@ -37,6 +37,16 @@ export async function createTables() {
       postCount INT DEFAULT 0                      -- Number of posts by the user
     )`,
 
+
+    // Create the posts followers if it doesn't exist
+    `IF NOT EXISTS (SELECT * FROM sysobject WHERE name = 'followers' AND xtype = 'U')
+    CREATE TABLE followers (
+    follower_id VARCHAR(50) NOT NULL,
+    followee_id VARCHAR(50) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (follower_id, followee_id),
+    )`,
+
     // Create the posts table if it doesn't exist
     `IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='posts' AND xtype='U')
     CREATE TABLE posts (

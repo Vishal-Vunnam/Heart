@@ -1,5 +1,6 @@
 // React & React Native core
 import React, { useState, useRef, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   SafeAreaView,
   View,
@@ -31,10 +32,10 @@ import Feather from '@expo/vector-icons/Feather';
 
 // Components
 import { ThemedView } from '@/components/ThemedView';
-import PostModal from '@/components/PostModal';
-import DiscoverModal from '@/components/DiscoverModal';
+import PostModal from '@/modals/PostModal';
+import DiscoverModal from '@/modals/DiscoverModal';
 import CustomCallout from '@/components/CustomCallout';
-import EditPostModal from '@/components/EditPostModal';
+import EditPostModal from '@/modals/EditPostModal';
 
 // Functions 
 import ProtectedImage from '../../components/ProtectedImage';
@@ -42,9 +43,9 @@ import ProtectedImage from '../../components/ProtectedImage';
 // Firebase Firestore & Storage
 // import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/backend/firestore';
 // import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/backend/blob-storage';
-import { getAllPosts, createPost, getPostsByAuthorId, getPostsByTag } from '@/api/posts';
-import { getImageUrlWithSAS } from '@/api/image';
-import { getCurrentUser } from '@/auth/fireAuth';
+import { getAllPosts, createPost, getPostsByAuthorId, getPostsByTag } from '@/services/api/posts';
+import { getImageUrlWithSAS } from '@/services/api/image';
+import { getCurrentUser } from '@/services/auth/fireAuth';
 
 // Types
 import { PolisType, PostInfo, UserInfo, DisplayPostInfo } from '@/types/types';
@@ -77,7 +78,6 @@ function renderPostImages(images?: string[]) {
               onPress: () => {
                 // You can implement a modal or navigation to show full screen image
                 // For now, we'll just show an alert with the image URL
-                console.log('Full screen image URL:', getImageUrlWithSAS(imageUrl));
               }
             }
           ]
@@ -115,8 +115,10 @@ export default function HomeScreen() {
   const isProgrammaticMove = useRef(false);
   const [discoverUserId, setDiscoverUserId] = useState<string | null>(null);
   const [showedPostsChanges, setShowedPostsChanges] = useState<boolean> (false);
+  const [userInfoChange, setUserInfoChange] = useState<boolean> (false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [postToEdit, setPostToEdit] = useState<PostInfo | null>(null);
+  
 
   // Handler to trigger posts refresh after deletion
   const handlePostsChange = () => {
@@ -151,27 +153,45 @@ export default function HomeScreen() {
   //   photoURL: string | null; 
   // };
   
-  useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        // You can access firebaseUser.uid, firebaseUser.email, etc.
-        const currUser = 
-        {
-          displayName: firebaseUser.displayName ?? firebaseUser.email ?? "",
-          email: firebaseUser.email ?? "",
-          uid: firebaseUser.uid,
-          photoURL: firebaseUser.photoURL ?? null
+  useFocusEffect(
+    React.useCallback(() => {
+      const auth = getAuth();
+
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          await firebaseUser.reload();
+          const refreshedUser = auth.currentUser;
+          if (!refreshedUser) return;
+
+          let displayName = "";
+          if (refreshedUser.displayName && refreshedUser.displayName.trim() !== "") {
+            displayName = refreshedUser.displayName;
+          } else if (refreshedUser.email) {
+            // Take the part before @
+            displayName = refreshedUser.email.split("@")[0];
+          } else {
+            displayName = "";
+          }
+
+          const currUser = {
+            displayName,
+            email: refreshedUser.email ?? "",
+            uid: refreshedUser.uid,
+            photoURL: refreshedUser.photoURL ?? null
+          };
+
+          setUser(currUser);
+          setSelectedPolis({ isUser: true, userInfo: currUser });
+        } else {
+          setUser(null);
+          setSelectedPolis(null);
         }
-        setUser(currUser);
-        setSelectedPolis({ isUser: true, userInfo: currUser });
-      } else {
-        setUser(null);
-        setSelectedPolis(null);
-      }
-    });
-    return unsubscribe; // Clean up the listener on unmount
-  }, []);
+      });
+
+      return unsubscribe;
+    }, [])
+  );
+
 
   useEffect(() => {
     console.log("please");
@@ -366,7 +386,7 @@ export default function HomeScreen() {
             />
           ) : null}
           <Text style={styles.polisDisplayText}>
-            Viewing {displayName ? displayName : email}'s City
+            Viewing {displayName ? displayName : email}'s City-State
           </Text>
         </View>
       );
@@ -510,7 +530,7 @@ export default function HomeScreen() {
                   />
                   <TouchableOpacity 
                     style={styles.closeCalloutButton}
-                    onPress={() => {console.log(selectedPost); setSelectedPost(null)}}
+                    onPress={() => {setSelectedPost(null)}}
                   >
                     <Text style={styles.closeCalloutText}>✕</Text>
                   </TouchableOpacity>
@@ -583,12 +603,12 @@ export default function HomeScreen() {
         )}
 
         {/* Edit Post Modal */}
-        {editModalVisible && postToEdit && (
+        {/* {editModalVisible && postToEdit && (
           <EditPostModal
             onClose={() => { setEditModalVisible(false); setPostToEdit(null); }}
             oldPostInfo={postToEdit}
           />
-        )}
+        )}  */}
       </ThemedView>
     </SafeAreaView>
   );

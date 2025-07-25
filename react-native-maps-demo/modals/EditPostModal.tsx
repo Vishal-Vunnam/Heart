@@ -116,6 +116,7 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
 
   const handleEditSubmit = async () => {
     setIsUploading(true);
+    
 
     // Compose edited post
     const editedPost: PostInfo = {

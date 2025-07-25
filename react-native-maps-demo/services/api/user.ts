@@ -1,5 +1,6 @@
 const BASE_URL = "http://localhost:4000/api/user"; // Change to your backend URL if needed
 
+import { UserInfo } from "@/types/types";
 /**
  * Create a user in the backend database.
  * @param userInfo The user info object (should include id, email, displayName, photoURL)
@@ -11,11 +12,23 @@ export async function createUser(userInfo: {
   displayName?: string;
   photoURL?: string;
 }) {
+  console.log("HEYEHEYEHYE", userInfo.photoURL);
   const res = await fetch(BASE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(userInfo),
   });
   if (!res.ok) throw new Error("Failed to create user");
+  return res.json();
+}
+
+export async function updateUser(userInfo: UserInfo
+) {
+  const res = await fetch(BASE_URL, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(userInfo),
+  });
+  if (!res.ok) throw new Error("Failed to update user");
   return res.json();
 }

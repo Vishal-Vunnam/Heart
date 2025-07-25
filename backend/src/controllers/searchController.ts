@@ -14,7 +14,7 @@ router.get('/user-search', async (req: Request, res: Response) => {
   
       // Use CONTAINS with prefix search: "search*"
       const query = `
-        SELECT TOP 5 displayName, id 
+        SELECT TOP 5 displayName, id, photoUrl 
         FROM users 
         WHERE CONTAINS(displayName, @param0)
       `;

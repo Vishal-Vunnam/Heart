@@ -43,5 +43,43 @@ router.post('/user', async (req: Request, res: Response) => {
   }
 });
 
+router.put('/user', async (req: Request, res: Response) => {
+  try { 
+    const userInfo: UserInfo = req.body;
+
+    // Validate required fields
+    if (!userInfo || !userInfo.email) {
+      return res.status(400).json({ success: false, error: 'Missing required user fields (email).' });
+    }
+
+    // Prepare SQL query to update user
+    const query = `
+      UPDATE users
+      SET email = @param1,
+          displayName = @param2,
+          photoURL = @param3,
+          updatedAt = GETDATE()
+      WHERE id = @param0
+    `;
+    const params = [
+      userInfo.uid,
+      userInfo.email,
+      userInfo.displayName || null,
+      userInfo.photoURL || null
+    ];
+
+    try {
+      await executeQuery(query, params);
+      return res.status(200).json({ success: true, message: 'User updated successfully.' });
+    } catch (dbError: any) {
+      return res.status(500).json({ success: false, error: dbError.message || 'Database error.' });
+    }
+
+  }catch (error: any) {
+      res.status(500).json({ success: false, error: error.message || 'Internal server error.' });
+    }
+
+});
+
 
 export default router; 
