@@ -16,6 +16,7 @@ interface CustomCalloutProps {
   onShare?: () => void;
   onViewDetails?: () => void;
   onSelectNewPolis?: (polis: PolisType) => void;
+  onSelectPost?: (post: DisplayPostInfo) => void;
   onPostsChange: () => void; 
   onPostDeleted?: () => void;
   onEdit?: () => void;
@@ -31,6 +32,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
   onShare,
   onViewDetails,
   onSelectNewPolis,
+  onSelectPost,
   onPostsChange,
   onPostDeleted,
   onEdit
@@ -150,7 +152,14 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
 
       {/* Action Bar */}
       <View style={styles.actionBar}>
-        <TouchableOpacity style={styles.viewDetailsButton} onPress={onViewDetails}>
+        <TouchableOpacity
+          style={styles.viewDetailsButton}
+          onPress={() => {
+            if (onSelectPost) {
+              onSelectPost(post);
+            }
+          }}
+        >
           <Text style={styles.viewDetailsText}>View Details</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={handeLike}>

@@ -521,11 +521,16 @@ export default function HomeScreen() {
                       setSelectedPolis(polis);
                       setSelectedPost(null); // close callout marker
                     }}
+                    onSelectPost={(post) => {
+                      setSelectedPost(post); 
+                      setIsDiscoverModalVisible(true); 
+                    }}
                     onPostsChange={handlePostsChange}
                     onPostDeleted={() => {
                       setSelectedPost(null); // This will close the callout and remove the marker
                       setShowedPostsChanges(true); // Refresh posts
                     }}
+                    
                     onEdit={() => handleEdit(selectedPost.postInfo)}
                   />
                   <TouchableOpacity 
@@ -581,22 +586,30 @@ export default function HomeScreen() {
               <Animated.View style={[styles.discoverModalContent, { transform: [{ translateY: slideAnim }] }]}>
                 <View style={styles.dragHandle} />
                 <DiscoverModal
-                  onPostSelect={(post) => {
-                    handleMarkerPress(post);
-                    setIsDiscoverModalVisible(false);
-                  }}
-                  onPolisSelect={(polis: PolisType) => {
-                    setSelectedPolis(polis);
-                    setIsDiscoverModalVisible(false);
-                  }}
-                  setPolis={
-                    discoverUserId
-                      ? { isUser: true, userInfo: { uid: discoverUserId, displayName: '', email: '', photoURL: null } }
-                      : selectedPolis != null
-                        ? selectedPolis
-                        : null
-                  }
-                />
+                onPostSelect={(post) => {
+                  handleMarkerPress(post);
+                  setIsDiscoverModalVisible(false);
+                }}
+                onPolisSelect={(polis: PolisType) => {
+                  setSelectedPolis(polis);
+                  setIsDiscoverModalVisible(false);
+                }}
+                setPolis={
+                  discoverUserId
+                    ? {
+                        isUser: true,
+                        userInfo: {
+                          uid: discoverUserId,
+                          displayName: '',
+                          email: '',
+                          photoURL: null,
+                        },
+                      }
+                    : selectedPolis
+                }
+                selectedPostFromParent={selectedPost}  // 👈 this is the current value
+                setPost={setSelectedPost}              // 👈 this is the setter function
+              />
               </Animated.View>
             </PanGestureHandler>
           </View>

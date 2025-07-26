@@ -58,15 +58,18 @@ interface DiscoverModalProps {
   onPostSelect: (post: PostInfo) => void;
   onPolisSelect?: (polis: PolisType) => void;
   setPolis: PolisType | null;
+  selectedPostFromParent: DisplayPostInfo | null;
+  setPost: (post: DisplayPostInfo | null) => void;
 }
 
-const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSelect, setPolis }) => {
+const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSelect, setPolis, selectedPostFromParent, setPost  }) => {
   // State
   const [posts, setPosts] = useState<DisplayPostInfo[]>([]);
   const [isLoggedInUser, setIsLoggedInUser] = useState(false);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const textInputRef = useRef<TextInput>(null);
   const [searchText, setSearchText] = useState('');
+  const [selectedPost, setSelectedPost] = useState<DisplayPostInfo | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [polisSuggestions, setPolisSuggestions] = useState<PolisSearchReturn[]>([]);
   const [isSearchingPolis, setIsSearchingPolis] = useState(false);
@@ -117,6 +120,11 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
       }
     }
   }, [selectedPolis]);
+
+  useEffect(() => {
+  setSelectedPolis(setPolis);
+  setSelectedPost(selectedPostFromParent); // <-- this is wrong because setPost is a function now, not a value
+}, [setPolis, setPost]);
 
   // Debounced polis search
   useEffect(() => {
@@ -314,16 +322,26 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
                 </View>
               </ThemedView>
               <ThemedView style={styles.postDisplay}>
-                {posts.length > 0 ? (
+                {selectedPost ? (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => setSelectedPost(null)}
+                        style={{ padding: 12, backgroundColor: '#007AFF', borderRadius: 12, margin: 16 }}
+                      >
+                        <Text style={{ color: 'white', textAlign: 'center' }}>← Back to Posts</Text>
+                      </TouchableOpacity>
+                      <PostView post={selectedPost} />
+                    </>
+                  ) : posts.length > 0 ? (
                   posts.map((post, index) => (
                     <TouchableOpacity
                       key={index}
                       style={styles.postItem}
                       onPress={() => {
-                        if (onPolisSelect) onPolisSelect(selectedPolis);
-                        if (onPostSelect) onPostSelect(post.postInfo);
+                        setSelectedPost(post);
                       }}
                     >
+
                       <View style={{ flex: 1 }}>
                         <ThemedText style={styles.postTitle}>{post.postInfo.title}</ThemedText>
                         <ThemedText style={styles.postDescription}>{post.postInfo.description}</ThemedText>

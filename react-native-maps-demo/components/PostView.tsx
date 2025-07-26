@@ -1,18 +1,18 @@
 import React from 'react';
 import { StyleSheet, ScrollView, View, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
-import { PostInfo } from '@/types/types';
+import { DisplayPostInfo } from '@/types/types';
 import ProtectedImage from './ProtectedImage';
 
 const { width } = Dimensions.get('window');
 
-export const PostView = ({ post }: { post: PostInfo}, {images} : {images: string[]}) => {
+export const PostView = ({ post }: { post: DisplayPostInfo}) => {
   return (
     <View style={styles.container}>
       {/* Header Section with Gradient-like Effect */}
       <View style={styles.header}>
         <View style={styles.titleContainer}>
-          <ThemedText style={styles.title}>{post.title}</ThemedText>
+          <ThemedText style={styles.title}>{post.postInfo.title}</ThemedText>
           <View style={styles.titleAccent} />
         </View>
         
@@ -21,31 +21,31 @@ export const PostView = ({ post }: { post: PostInfo}, {images} : {images: string
           <View style={styles.authorBadge}>
             <View style={styles.authorAvatar}>
               <ThemedText style={styles.authorInitial}>
-                {post.userDisplayName.charAt(0).toUpperCase()}
+                {post.postInfo.userDisplayName.charAt(0).toUpperCase()}
               </ThemedText>
             </View>
-            <ThemedText style={styles.authorName}>{post.userDisplayName}</ThemedText>
+            <ThemedText style={styles.authorName}>{post.postInfo.userDisplayName}</ThemedText>
           </View>
           
           <View style={styles.dateBadge}>
-            <ThemedText style={styles.dateText}>{post.date}</ThemedText>
+            <ThemedText style={styles.dateText}>{post.postInfo.date}</ThemedText>
           </View>
         </View>
       </View>
 
       {/* Description with Modern Typography */}
       <View style={styles.descriptionContainer}>
-        <ThemedText style={styles.description}>{post.description}</ThemedText>
+        <ThemedText style={styles.description}>{post.postInfo.description}</ThemedText>
       </View>
 
       {/* Images Section with Enhanced Design */}
-      {images && images.length > 0 && (
+      {post.images && post.images.length > 0 && (
         <View style={styles.imagesSection}>
           <View style={styles.imagesSectionHeader}>
             <View style={styles.imagesDot} />
             <ThemedText style={styles.imagesLabel}>Gallery</ThemedText>
             <View style={styles.imagesCount}>
-              <ThemedText style={styles.imagesCountText}>{images.length}</ThemedText>
+              <ThemedText style={styles.imagesCountText}>{post.images.length}</ThemedText>
             </View>
           </View>
           
@@ -55,11 +55,11 @@ export const PostView = ({ post }: { post: PostInfo}, {images} : {images: string
             style={styles.imageScroll}
             contentContainerStyle={styles.imageScrollContent}
           >
-            {images.map((img, idx) => (
+            {post.images.map((img, idx) => (
               <View key={idx} style={styles.imageContainer}>
                 <ProtectedImage 
 
-                  url={img}
+                  url={img.url}
                   style={styles.image}
                 />
                 {/* Image overlay with subtle gradient effect */}
