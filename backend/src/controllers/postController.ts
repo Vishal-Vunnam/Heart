@@ -3,6 +3,7 @@ import { uploadToAzureBlob, deleteFromAzureBlob } from '../utils/blobStorage';
 import type { PostInfo, EventInfo, UserInfo, PolisType } from '../types/types';
 import { executeQuery } from '../utils/dbUtils';
 import { v4 as uuidv4 } from 'uuid';
+import { getRandomColor } from '../functions/getRandomColor';
 
 const router = Router();
 function toSqlDateString(date: Date) {
@@ -371,6 +372,7 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
         longitude: row.longitude,
         longitudeDelta: row.longitudeDelta,
         private: !!row.private,
+        markerColor: getRandomColor(), 
       };
 
       return {
@@ -552,30 +554,41 @@ router.get('/post/by-id', async (req: Request, res: Response) =>  {
   }
 
   const query = `
-    SELECT 
-      p.id as postId,
-      p.userId,
-      p.title,
-      p.description,
-      p.createdAt,
-      p.latitude,
-      p.latitudeDelta,
-      p.longitude,
-      p.longitudeDelta,
-      p.private,
-      (
-        SELECT 
-          i.imageUrl
-        FROM images i
-        WHERE i.postId = p.id
-        FOR JSON PATH
-      ) as images
-    FROM posts p
-    LEFT JOIN post_viewer pv 
-      ON p.id = pv.post_id AND pv.user_id = @param1
-    WHERE p.id = @param0
-      AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
-  `;
+  SELECT 
+    p.id AS postId,
+    p.userId,
+    p.title,
+    p.description,
+    p.createdAt,
+    p.latitude,
+    p.latitudeDelta,
+    p.longitude,
+    p.longitudeDelta,
+    p.private,
+    (
+      SELECT 
+        i.imageUrl
+      FROM images i
+      WHERE i.postId = p.id
+      FOR JSON PATH
+    ) AS images,  -- ✅ Comma added here
+    l.likesCount,
+    l.likedByCurrentUser
+  FROM posts p
+  LEFT JOIN post_viewer pv 
+    ON p.id = pv.post_id AND pv.user_id = @param1
+  LEFT JOIN (
+    SELECT
+      post_id AS postId,
+      COUNT(*) AS likesCount,
+      MAX(CASE WHEN user_liked_id = @param1 THEN 1 ELSE 0 END) AS likedByCurrentUser
+    FROM post_likes
+    GROUP BY post_id
+  ) l ON p.id = l.postId
+  WHERE p.id = @param0
+    AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
+`;
+
   const params = [postId, currentUserId];
   try {
     const result = await executeQuery(query, params);
@@ -604,6 +617,8 @@ router.get('/post/by-id', async (req: Request, res: Response) =>  {
       longitude: row.longitude,
       longitudeDelta: row.longitudeDelta,
       private: !!row.private,
+      likesCount: row.likesCount || 0,
+      likedByCurrentUser: row.likedByCurrentUser ? true : false
     };
 
     return res.status(200).json({ success: true, postInfo, images });
@@ -676,6 +691,42 @@ router.put('/edit-post', async (req: Request, res: Response) => {
       success: false,
       error: error.message || "Failed to update post"
     });
+  }
+});
+router.put('/like_post', async (req: Request, res: Response) => { 
+  const postId = req.query.postId as string;
+  const userId = req.query.userId as string;
+  console.log(`[like_post] Received request: postId=${postId}, userId=${userId}`);
+  if (!postId || !userId) {
+    console.warn('[like_post] Missing required query parameters:', { postId, userId });
+    return res.status(400).json({ success: false, error: "Missing required query parameters: id or userId" });
+  }
+  try {
+    // Check if the like already exists
+    const checkLikeQuery = `
+      SELECT 1 FROM post_likes WHERE post_id = @param0 AND user_liked_id = @param1
+    `;
+    console.log('[like_post] Executing checkLikeQuery:', checkLikeQuery, [postId, userId]);
+    const checkResult = await executeQuery(checkLikeQuery, [postId, userId]);
+
+    if (checkResult.recordset.length > 0) {
+      console.log(`[like_post] Like already exists for postId=${postId}, userId=${userId}`);
+      return res.status(200).json({ success: true, message: "Post already liked" });
+    }
+
+    // Insert the like into the post_likes table
+    const insertLikeQuery = `
+      INSERT INTO post_likes (post_id, user_liked_id)
+      VALUES (@param0, @param1)
+    `;
+    console.log('[like_post] Inserting like:', insertLikeQuery, [postId, userId]);
+    await executeQuery(insertLikeQuery, [postId, userId]);
+
+    console.log(`[like_post] Post liked successfully: postId=${postId}, userId=${userId}`);
+    return res.status(200).json({ success: true, message: "Post liked successfully" });
+  } catch (error: any) {
+    console.error('[like_post] Error liking post:', error);
+    return res.status(500).json({ success: false, error: error.message || "Failed to like post" });
   }
 });
 

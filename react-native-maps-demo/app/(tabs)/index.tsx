@@ -14,6 +14,8 @@ import {
   Alert,
 } from 'react-native';
 
+import * as Font from 'expo-font';
+
 // Gesture Handler
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 
@@ -39,7 +41,7 @@ import EditPostModal from '@/modals/EditPostModal';
 
 // Functions 
 import ProtectedImage from '../../components/ProtectedImage';
-
+import { getRandomColor } from '@/functions/getRandomColor';
 // Firebase Firestore & Storage
 // import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/backend/firestore';
 // import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/backend/blob-storage';
@@ -52,8 +54,19 @@ import { PolisType, PostInfo, UserInfo, DisplayPostInfo } from '@/types/types';
 
 // Styles
 import { indexStyles as styles } from '../styles/indexstyles';
+import customMapStyle from '../styles/mapstyles';
+import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
 
+const markerIcons = {
+  red: require('../../assets/images/red_marker.png'),
+  blue: require('../../assets/images/blue_marker.png'),
+  green: require('../../assets/images/green_marker.png'),
+  purple: require('../../assets/images/purple_marker.png'),
+  orange: require('../../assets/images/orange_marker.png'),
+  pink: require('../../assets/images/pink_marker.png'),
+  // add more as needed
+};
 const INITIAL_MAP_REGION = {
   latitude: 37.4219999,
   longitude: -122.0840575,
@@ -156,6 +169,10 @@ export default function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       const auth = getAuth();
+
+      Font.loadAsync({
+      'Koulen-Regular': require('@/assets/fonts/Koulen-Regular.ttf'),
+    });
 
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
@@ -411,41 +428,43 @@ export default function HomeScreen() {
         {/* Navigation Bar */}
         <ThemedView style={styles.navBar}>
           <TouchableOpacity style={styles.navButton} onPress={toggleModal}>
-            <Image source={require('../../assets/images/polis_logo.png')} style={{ width: 42, height: 42, marginRight: 6 }} />
             <Text style={styles.navButtonText}>Polis</Text>
           </TouchableOpacity>
-          {user != null && (
-            <>
-            <TouchableOpacity onPress={() => router.push('/editprofile')}>
-            <Image
-              source={require('../../assets/images/Settings.png')}
-              style={{ width: 20, height: 20, marginLeft: 120, tintColor: 'white' }}
-            />
-            </TouchableOpacity>
-              <TouchableOpacity style={styles.navButton} onPress={displayAccountInfo}>
-                <Text style={styles.signInText}>{user.displayName || user.email}</Text>
-                <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
-              </TouchableOpacity>
-            </>
-          )}
-          {user == null && (
-            <TouchableOpacity style={styles.navButton}   onPress={handleSignIn}>
-              <Text style={styles.signInText}>Sign In</Text>
-              <MaterialIcons name="account-circle" size={24} color="#fff" style={styles.accountIcon} />
-            </TouchableOpacity>
-          )}
+              <View style={styles.rightContainer}>
+                  {user != null ? (
+                    <>
+                      <TouchableOpacity onPress={displayAccountInfo}>
+                        <Text style={styles.signInText}>{'@' + (user.displayName || user.email)}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => router.push('/editprofile')}>
+                      <MaterialIcons
+                        name="settings"
+                        size={24}
+                        color="#000"
+                        style={styles.settingsIcon}
+                      />
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <TouchableOpacity style={styles.navButton} onPress={handleSignIn}>
+                      <Text style={styles.signInText}>Sign In</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
         </ThemedView>
 
-        {/* Polis Header */}
-        {renderPolisHeader()}
 
         {/* Map */}
         <ThemedView style={styles.mapPlaceholder}>
+                  {/* Polis Header */}
+        {renderPolisHeader()}
           <MapView
             ref={mapRef}
             style={styles.map}
-            clusterColor="grey"
+            clusterColor="white"
             initialRegion={INITIAL_MAP_REGION}
+            customMapStyle={customMapStyle} 
+            
             onRegionChangeComplete={(region) => {
               setCurrentLocation(region);
               if (!isProgrammaticMove.current && selectedPost) {
@@ -460,6 +479,37 @@ export default function HomeScreen() {
                 }
               }
             }}
+              renderCluster={(cluster: any) => {
+                const {
+                  id,
+                  geometry: { coordinates },
+                  properties: { point_count },
+                  onPress,
+                } = cluster;
+
+                const coordinate = {
+                  latitude: coordinates[1],
+                  longitude: coordinates[0],
+                };
+
+                return (
+                  <Marker
+                    key={`cluster-${id}`}
+                    coordinate={coordinate}
+                    onPress={onPress}
+                  >
+                    <View
+                      style={styles.cluster}
+                    >
+                      <Text style={styles.clusterText}>
+                        {point_count}
+                      </Text>
+                    </View>
+                  </Marker>
+                );
+              }}
+
+
           >
             {posts.map((post, index) => {
               if (!post.postInfo?.postId) return null;
@@ -467,7 +517,6 @@ export default function HomeScreen() {
               return (
                 <Marker
                   ref={ref => { markerRefs.current[String(postId)] = ref; }}
-                  pinColor="black"
                   key={String(postId)}
                   coordinate={{ latitude, longitude }}
                   onPress={async (e) => {
@@ -475,7 +524,16 @@ export default function HomeScreen() {
                     await handleMarkerPress(post.postInfo);
                     setTimeout(() => setSelectedPost(post), 200);
                   }}
-                />
+                >
+                  <Image
+                    source={markerIcons[post.postInfo.markerColor] || markerIcons.red}
+                    style={{
+                      width: 40,
+                      height: 40,
+                    }}
+                    resizeMode="contain"
+                  />
+                </Marker>
               );
             })}
           </MapView>
@@ -486,14 +544,17 @@ export default function HomeScreen() {
           {/* Action Buttons and Custom Callout Overlay as siblings */}
           <View style={{ flex: 1 }} pointerEvents="box-none">
             {/* Action Buttons */}
-            <View style={styles.actionButtonContainer}>
-              <TouchableOpacity style={styles.iconButton} onPress={handlePost}>
-                <Image source={require('../../assets/images/plus.png')} style={styles.iconImage} />
+          <View style={styles.actionButtonContainer}>
+            <TouchableOpacity style={styles.iconWrapper}  onPress={handlePost}>
+                    <Text style={styles.iconText}>POST</Text>
+                    <View style={styles.iconButton1}/>
+            </TouchableOpacity>
+
+              <TouchableOpacity style={styles.iconWrapper} onPress={openDiscoverModal} >
+              <Text style={styles.iconText}>LOOK</Text>
+                <View style={styles.iconButton2}/>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton} onPress={openDiscoverModal}>
-                <Image source={require('../../assets/images/binoculars.png')} style={styles.iconImage} />
-              </TouchableOpacity>
-            </View>
+          </View>
             {/* Custom Callout Overlay */}
             {selectedPost && (
               <View style={styles.customCalloutOverlay} pointerEvents="box-none">

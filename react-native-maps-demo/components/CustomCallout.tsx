@@ -7,6 +7,7 @@ import { deletePostById } from '@/services/api/posts';
 import { PolisType, DisplayPostInfo } from '@/types/types';
 import PostActionSheet from './PostActionSheet';
 import ProtectedImage from './ProtectedImage';
+import {likePost} from '@/services/api/posts'; // Import likePost function
 
 interface CustomCalloutProps {
   isUserLoggedIn: boolean; 
@@ -52,8 +53,17 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
       console.error('Failed to delete post:', error);
     }
   };
-  const handeLike = () => {
-    setUserLiked(!userLiked); 
+  const handleLike = () => {
+    if (!isUserLoggedIn || !post.postInfo.postId) return;
+    setUserLiked(!userLiked);
+    if (onLike) onLike();
+    likePost(post.postInfo.postId, post.postInfo.userId)
+      .then(() => {
+        console.log('Post liked successfully');
+      })
+      .catch((error) => {
+        console.error('Failed to like post:', error);
+      });
   }
 
   return (
@@ -162,9 +172,9 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
         >
           <Text style={styles.viewDetailsText}>View Details</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={handeLike}>
+        <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
           <Text style={styles.actionIcon}>
-            {userLiked ? '❤️' : '🩶'}
+            {post.postInfo.likedByCurrentUser ? '❤️' : '🩶'}
           </Text>
         </TouchableOpacity>
       </View>

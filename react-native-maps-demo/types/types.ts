@@ -24,6 +24,9 @@ export type PostInfo = {
     longitudeDelta: number; 
     private?: boolean | false; 
     allowedMembers?: string[]; // Add this line for private posts
+    likesCount?: number; // Optional, can be used to display like count
+    likedByCurrentUser?: boolean; // Optional, indicates if the current user has liked this
+    markerColor?: string;
 }
 
 export type EventInfo = {

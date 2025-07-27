@@ -66,3 +66,14 @@ export async function deletePostById(postId: string) {
       method: "DELETE",
     });
 }
+
+export async function likePost(postId: string, userId: string) {
+  console.log("Liking post:", postId, "by user:", userId);
+  const url = `${BASE_URL}/like_post?postId=${encodeURIComponent(postId)}&userId=${encodeURIComponent(userId)}`;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error("Failed to like post");
+  return res.json();
+}

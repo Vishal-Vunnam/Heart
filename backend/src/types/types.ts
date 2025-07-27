@@ -25,6 +25,9 @@ export type PostInfo = {
     longitude: number; 
     longitudeDelta: number; 
     private?: boolean; 
+    likesCount?: number; // Optional, can be used to display like count
+    likedByCurrentUser?: boolean; // Optional, indicates if the current user has liked this
+    markerColor? : string;
 }
 
 export type MarkerPostInfo = { 
@@ -34,6 +37,7 @@ export type MarkerPostInfo = {
   longitude: number;
   longitudeDelta: number;
   private?: boolean;
+  markerColor : string;
 }   
 
 export type EventInfo = {

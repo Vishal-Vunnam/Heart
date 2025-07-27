@@ -1,7 +1,6 @@
 // Styles
-import { StyleSheet } from 'react-native';
-
-
+import { Text, StyleSheet } from 'react-native';
+import { getRandomColor } from '@/functions/getRandomColor';
 export const indexStyles = StyleSheet.create({
   postButton: {
     position: 'absolute',
@@ -29,44 +28,69 @@ export const indexStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  navBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: '#1F2937',
-    borderBottomWidth: 2,
-    borderBottomColor: '#111',
-  },
+navBar: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingHorizontal: 16,
+  backgroundColor: '#fff',
+  borderBottomWidth: 2,
+  borderBottomColor: '#000',
+},
+
   navButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 8,
   },
   navButtonText: {
-    color: '#fff',
+    color: '#000',
     fontSize: 30,
     fontWeight: 'bold',
     marginRight: 4,
-    fontFamily: 'Avenir', // Use Avenir for a modern, geometric sans-serif look
+    fontFamily: 'Koulen-Regular', // Use Avenir for a modern, geometric sans-serif look
     // textShadowColor: '#000',
     // textShadowOffset: { width: 4, height: 4 },
     // textShadowRadius: 3,
   },
-  polisDisplay: {
-    backgroundColor: '#1F2937',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    flexDirection: 'row', // Add row layout
-    alignItems: 'center', // Vertically center items
-    justifyContent: 'flex-start',
-    borderTopWidth: 1,
-    borderTopColor: 'white',
-    color: '#fff',
-    textShadowColor: '#000',
-    textShadowOffset: { width: 3, height: 3 },
-    textShadowRadius: 3,
-  },
+  rightContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 12, // Optional, or use margin on individual items
+},
+signInText: {
+  color: '#000',
+  fontSize: 20,
+  fontWeight: 'bold',
+  fontFamily: 'Koulen-Regular',
+  textShadowColor: '#7e7a7a5d',
+  textShadowOffset: { width: 2, height: 3 },
+  textShadowRadius: 3,
+  textAlign: 'right',
+  maxWidth: 160, // Optional: constrain if needed
+},
+polisDisplay: {
+  backgroundColor: getRandomColor(),
+  paddingVertical: 2,
+  paddingHorizontal: 18,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'flex-start',
+  
+  borderRightWidth: 2,    // right border width
+  borderRightColor: 'black', 
+  borderBottomWidth: 2,   // bottom border width
+  borderBottomColor: 'black',
+
+  color: '#000',
+  textShadowColor: '#000',
+  textShadowOffset: { width: 3, height: 3 },
+  textShadowRadius: 3,
+  zIndex: 200,
+
+  alignSelf: 'flex-start',
+},
+
   profilePicPolis: {
     width: 36,
     height: 36,
@@ -78,26 +102,12 @@ export const indexStyles = StyleSheet.create({
   },
   polisDisplayText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 19,
     textShadowColor: '#000',
-    textShadowOffset: { width: 3, height: 3 },
-    textShadowRadius: 3,
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 0,
+    fontFamily: 'Koulen-Regular',
     
-  },
-  signInText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginRight: 4,
-    fontFamily: 'Avenir',
-    textShadowColor: '#000',
-    textShadowOffset: { width: 3, height: 3 },
-    textShadowRadius: 3,
-  },
-
-  accountIcon: {
-    color: '#fff',
   },
   searchBoxContainer: {
     position: 'absolute',
@@ -140,6 +150,24 @@ export const indexStyles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 0,
     elevation: 0,
+  },
+  cluster: {
+    backgroundColor: '#fff',
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#333',
+  },
+  clusterText: {
+    fontWeight: 'bold', 
+     fontSize: 16, 
+    color: '#000',
+    // textShadowColor: '#fff200ff',
+    // textShadowOffset: { width: 1, height: 1 },
+    // textShadowRadius: 0,
   },
   iconImage: {
     width: 30,
@@ -316,30 +344,70 @@ export const indexStyles = StyleSheet.create({
   },
   actionButtonContainer: {
     position: 'absolute',
-    top: 20,
+    top: 50,
     left: 130,
     zIndex: 10,
     elevation: 10,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    gap: 1, // or use marginBottom on iconButton if gap is not supported
+    gap: 10, // or use marginBottom on iconButton if gap is not supported
   },
+iconWrapper: {
+  alignItems: 'center',
+  justifyContent: 'flex-start',
+  marginBottom: 20,
+},
 
-  iconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "black",
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12, // for spacing between buttons
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
+iconText: {
+  color: '#fff',
+  fontSize: 32,
+  fontWeight: 'bold',
+  fontFamily: 'Koulen-Regular',
+  marginBottom: -10, // "bleed" into the circle below
+  textShadowColor: '#000',
+  textShadowOffset: { width: 2, height: 2 },
+  textShadowRadius: 2,
+  zIndex: 100, 
+  alignSelf: 'center',
+  textAlign: 'center',
+},
+
+iconButton1: {
+  position: 'absolute',
+  top: 3, 
+  right: 3,
+  width: 50,
+  height: 50,
+  borderRadius: 25,
+  backgroundColor: "#f70d1a",
+  alignItems: 'center',
+  justifyContent: 'center',
+  elevation: 2,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+  zIndex: 50, 
+},
+
+iconButton2: { 
+   position: 'absolute',
+  top: 3, 
+  right: 3,
+  width: 50,
+  height: 50,
+  borderRadius: 25,
+  backgroundColor: "#5e3a99",
+  alignItems: 'center',
+  justifyContent: 'center',
+  elevation: 2,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+},
+
   calloutContainer: {
     backgroundColor: 'rgba(32,32,32,0.95)',
     borderRadius: 12,

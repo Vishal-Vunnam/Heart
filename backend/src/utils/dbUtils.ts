@@ -38,6 +38,8 @@ export async function createTables() {
     )`,
 
 
+
+
     // Create the posts followers if it doesn't exist
     `IF NOT EXISTS (SELECT * FROM sysobject WHERE name = 'followers' AND xtype = 'U')
     CREATE TABLE followers (
@@ -63,6 +65,13 @@ export async function createTables() {
       updatedAt DATETIME2 DEFAULT GETDATE(),       -- Timestamp when post was last updated
       private BIT DEFAULT 0,                        -- Boolean flag for private posts, default is false
       FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE -- Link to users table, cascade on delete
+    )`,
+
+    `IF NOT EXISTS (SELECT * FROM sysobjects WHERE name = 'post_likes' AND xtype = 'U')
+    CREATE TABLE post_likes (
+      post_id NVARCHAR(255) NOT NULL,         -- ID of the post being liked
+      user_liked_id NVARCHAR(50) NOT NULL,    -- ID of the user who liked
+      PRIMARY KEY (post_id, user_liked_id)    -- Composite primary key ensures uniqueness
     )`,
 
     // Events table: stores event-specific data linked to a post
