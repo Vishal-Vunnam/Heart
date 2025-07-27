@@ -35,7 +35,7 @@ import Feather from '@expo/vector-icons/Feather';
 // Components
 import { ThemedView } from '@/components/ThemedView';
 import PostModal from '@/modals/PostModal';
-import DiscoverModal from '@/modals/DiscoverModal';
+import DiscoverModal from '@/discover/DiscoverModal';
 import CustomCallout from '@/components/CustomCallout';
 import EditPostModal from '@/modals/EditPostModal';
 
@@ -441,7 +441,6 @@ export default function HomeScreen() {
                         name="settings"
                         size={24}
                         color="#000"
-                        style={styles.settingsIcon}
                       />
                       </TouchableOpacity>
                     </>
@@ -545,14 +544,15 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }} pointerEvents="box-none">
             {/* Action Buttons */}
           <View style={styles.actionButtonContainer}>
-            <TouchableOpacity style={styles.iconWrapper}  onPress={handlePost}>
-                    <Text style={styles.iconText}>POST</Text>
+            <TouchableOpacity style={styles.iconWrapper1}  onPress={handlePost}>
                     <View style={styles.iconButton1}/>
+                    <Text style={styles.iconText}>POST</Text>
             </TouchableOpacity>
 
-              <TouchableOpacity style={styles.iconWrapper} onPress={openDiscoverModal} >
-              <Text style={styles.iconText}>LOOK</Text>
+              <TouchableOpacity style={styles.iconWrapper2} onPress={openDiscoverModal} >
                 <View style={styles.iconButton2}/>
+
+                <Text style={styles.iconText}>LOOK</Text>
               </TouchableOpacity>
           </View>
             {/* Custom Callout Overlay */}

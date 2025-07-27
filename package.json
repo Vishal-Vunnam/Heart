@@ -5,6 +5,7 @@
     "ios-frontend": "cd react-native-maps-demo && npx expo start --ios --port 19000"
   },
   "dependencies": {
+    "@expo-google-fonts/koulen": "^0.4.0",
     "@react-google-maps/api": "^2.20.7",
     "@react-native-community/cli": "latest",
     "expo": "^53.0.20",

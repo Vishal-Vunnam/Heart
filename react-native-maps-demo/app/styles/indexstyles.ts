@@ -48,7 +48,7 @@ navBar: {
     fontSize: 30,
     fontWeight: 'bold',
     marginRight: 4,
-    fontFamily: 'Koulen-Regular', // Use Avenir for a modern, geometric sans-serif look
+ fontFamily: 'Koulen_400Regular', // Use Avenir for a modern, geometric sans-serif look
     // textShadowColor: '#000',
     // textShadowOffset: { width: 4, height: 4 },
     // textShadowRadius: 3,
@@ -62,7 +62,7 @@ signInText: {
   color: '#000',
   fontSize: 20,
   fontWeight: 'bold',
-  fontFamily: 'Koulen-Regular',
+ fontFamily: 'Koulen_400Regular',
   textShadowColor: '#7e7a7a5d',
   textShadowOffset: { width: 2, height: 3 },
   textShadowRadius: 3,
@@ -106,7 +106,7 @@ polisDisplay: {
     textShadowColor: '#000',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
-    fontFamily: 'Koulen-Regular',
+ fontFamily: 'Koulen_400Regular',
     
   },
   searchBoxContainer: {
@@ -290,25 +290,29 @@ polisDisplay: {
     left: 0,
     right: 0,
     bottom: 0,
-    // backgroundColor: 'rgba(32,32,32,0.85)',
+    // backgroundColor: 'rgba(255, 255, 255, 0.85)',
     justifyContent: 'flex-end',
     // zIndex: 100,
     elevation: 100,
+    borderColor: 'black',
+    borderWidth:2, 
   },
   discoverModalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+        borderColor: 'black',
+    borderWidth:3,
     height: '70%',
     paddingTop: 10,
-    backgroundColor: 'rgba(32, 32, 32, 0.69)',
+    backgroundColor: 'rgba(255, 255, 255, 1)',
   },
   dragHandle: {
     width: 40,
-    height: 4,
+    height: 2,
     backgroundColor: '#ccc',
     borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 5,
   },
   discoverContent: {
     flex: 1,
@@ -343,32 +347,35 @@ polisDisplay: {
     color: '#666',
   },
   actionButtonContainer: {
-    position: 'absolute',
-    top: 50,
-    left: 130,
+    position: 'relative',
+    top: 60,
+    left: 150,
     zIndex: 10,
     elevation: 10,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    gap: 10, // or use marginBottom on iconButton if gap is not supported
+    alignSelf: 'flex-end',
+ // or use marginBottom on iconButton if gap is not supported
   },
-iconWrapper: {
+iconWrapper1: {
   alignItems: 'center',
-  justifyContent: 'flex-start',
-  marginBottom: 20,
+},
+iconWrapper2: {
+  top:85, 
+  alignItems: 'center',
 },
 
 iconText: {
+  position: 'absolute',
   color: '#fff',
   fontSize: 32,
   fontWeight: 'bold',
-  fontFamily: 'Koulen-Regular',
-  marginBottom: -10, // "bleed" into the circle below
+  fontFamily: 'Koulen_400Regular', // "bleed" into the circle below
   textShadowColor: '#000',
   textShadowOffset: { width: 2, height: 2 },
   textShadowRadius: 2,
-  zIndex: 100, 
+  zIndex: 150, 
   alignSelf: 'center',
   textAlign: 'center',
 },
@@ -376,7 +383,6 @@ iconText: {
 iconButton1: {
   position: 'absolute',
   top: 3, 
-  right: 3,
   width: 50,
   height: 50,
   borderRadius: 25,
@@ -388,13 +394,13 @@ iconButton1: {
   shadowOpacity: 0.2,
   shadowRadius: 4,
   shadowOffset: { width: 0, height: 2 },
-  zIndex: 50, 
+  zIndex: 1, 
+  
 },
 
 iconButton2: { 
-   position: 'absolute',
+  position: 'absolute',
   top: 3, 
-  right: 3,
   width: 50,
   height: 50,
   borderRadius: 25,
@@ -420,7 +426,6 @@ iconButton2: {
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 6,
-    zIndex: 50,
   },
   calloutTitle: {
     color: '#fff',
