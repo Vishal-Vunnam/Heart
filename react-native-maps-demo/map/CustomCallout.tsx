@@ -2,12 +2,13 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
-import { ThemedText } from './ThemedText';
+import { ThemedText } from '../components/ThemedText';
 import { deletePostById } from '@/services/api/posts';
 import { PolisType, DisplayPostInfo } from '@/types/types';
-import PostActionSheet from './PostActionSheet';
-import ProtectedImage from './ProtectedImage';
+import PostActionSheet from '../post/PostActionSheet';
+import ProtectedImage from '../components/ProtectedImage';
 import {likePost} from '@/services/api/posts'; // Import likePost function
+import { getRandomColor } from '@/functions/getRandomColor'; // Assuming you have a utility function for random colors
 
 interface CustomCalloutProps {
   isUserLoggedIn: boolean; 
@@ -96,12 +97,23 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
       </View>
 
       {/* Title and Date Row */}
-      <View style={styles.titleDateRow}>
+      <View style={styles.titleRow}>
         <ThemedText style={styles.title} numberOfLines={1} ellipsizeMode="tail">
           {post.postInfo.title}
         </ThemedText>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Text style={styles.dateNextToTitle}>{new Date(post.postInfo.date).toLocaleDateString()}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {post.tag ? (
+            <TouchableOpacity
+              style={styles.tagButton}
+              onPress={() => {
+                if (onSelectNewPolis) {
+                  onSelectNewPolis({ isUser: false, tag: post.tag });
+                }
+              }}
+            >
+              <ThemedText style={styles.tagText}>{post.tag}</ThemedText>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={styles.moreButton}
             onPress={() => setShowActionSheet(!showActionSheet)}
@@ -122,13 +134,13 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
           />
         )}
       </View>
-      
       {/* Scrollable Content */}
       <ScrollView 
         style={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContentContainer}
       >
+        <Text style={styles.dateNextToTitle}>{new Date(post.postInfo.date).toLocaleDateString()}</Text>
         <View style={styles.content}>
           <ThemedText style={styles.description}>
             {post.postInfo.description}
@@ -188,37 +200,42 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
 const styles = StyleSheet.create({
   // ...styles unchanged...
   container: {
-    backgroundColor: '#1F2937',
+    backgroundColor: '#ffffffff',
     borderRadius: 24,
-    padding: 24,
+    paddingHorizontal: 0, 
+    paddingVertical: 8, 
     width: Math.min(screenWidth * 0.85, 400),
-    maxHeight: screenHeight * 0.4,
+    height: screenHeight * 0.37,
     elevation: 12,
-    borderWidth: 1,
-    borderColor: '#374151',
+    borderWidth: 3,
+    borderColor: '#000000ff',
   },
   scrollContent: {
     flexGrow: 1,
-    marginBottom: 12,
+    marginBottom: 0,
   },
   scrollContentContainer: {
-    paddingBottom: 8,
+    paddingBottom: 0,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    borderBottomColor: 'black',
+    borderBottomWidth: 3, 
+    paddingHorizontal: 16,
+
   },
   authorInfo: {
     flexDirection: 'row',
     flex: 1,
+    
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#3B82F6',
+    backgroundColor: getRandomColor(),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -232,24 +249,32 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+      shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    shadowColor: '#rgba(0, 0, 0, 1)',
+    fontFamily: 'Anton_400Regular',
+    // fontFamily: 'Koulen_400Regular',
   },
-  authorDetails: {
-    flex: 1,
-  },
+
+
   authorName: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '700',
-    flex: 1,
-    letterSpacing: 0.3,
+  color: 'black',
+  fontSize: 25  ,
+  letterSpacing: 0.3,
+  fontFamily: 'Koulen_400Regular',
+  lineHeight: 45, // Match the font size to reduce extra space
+  marginTop: -2, // Slight negative margin to pull it down
+  includeFontPadding: false, // Android only - removes extra padding
+  textAlignVertical: 'center',
   },
   postDate: {
-    color: '#9CA3AF',
+    color: 'black',
     fontSize: 12,
     marginTop: 0,
+  fontFamily: 'Koulen_400Regular',
   },
   moreButton: {
-    padding: 8,
     borderRadius: 12,
     minWidth: 36,
     bottom: 5,
@@ -257,33 +282,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   moreButtonText: {
-    color: '#E5E7EB',
+    color: '#000000ff',
     fontSize: 16,
     fontWeight: 'bold',
     transform: [{ rotate: '90deg' }],
   },
   content: {
     marginBottom: 16,
-    paddingHorizontal: 4,
-    paddingTop: 4,
+    paddingHorizontal: 16,
+    paddingTop: 24,
   },
   title: {
-    color: 'white',
+    color: 'black',
     fontSize: 22,
+    textDecorationLine: 'underline',
     fontWeight: '800',
-    marginBottom: 8,
     letterSpacing: 0.4,
     lineHeight: 26,
-    textShadowColor: 'rgba(59, 130, 246, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-    overflow: 'hidden',
+    overflow: 'hidden',  
+    fontFamily: 'Anton_400Regular',
   },
   description: {
     color: '#E5E7EB',
     fontSize: 15,
     lineHeight: 22,
-    marginTop: 8,
     fontWeight: '400',
     letterSpacing: 0.2,
     paddingLeft: 4,
@@ -314,8 +336,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 5,
-    paddingHorizontal: 4,
+
     borderTopWidth: 1,
     borderTopColor: '#374151',
   },
@@ -454,7 +475,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  titleDateRow: {
+  titleRow: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 4,
@@ -462,14 +485,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   dateNextToTitle: {
-    color: '#9CA3AF',
+    color: '#000000ff',
     fontSize: 12,
     fontWeight: '500',
     marginTop: 4,
     paddingHorizontal: 8,
-    paddingVertical: 4,
     bottom: 7,
-    backgroundColor: '#374151',
     borderRadius: 8,
     overflow: 'hidden',
   },

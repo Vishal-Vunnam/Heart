@@ -49,6 +49,7 @@ export type EventInfo = {
 export type DisplayPostInfo = {
   postInfo: PostInfo;
   images: string[];
+  tag?: string; 
 };
 
 export type UserSearchReturn = {

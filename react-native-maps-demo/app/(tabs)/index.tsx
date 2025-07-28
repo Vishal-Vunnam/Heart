@@ -34,10 +34,10 @@ import Feather from '@expo/vector-icons/Feather';
 
 // Components
 import { ThemedView } from '@/components/ThemedView';
-import PostModal from '@/modals/PostModal';
+import PostModal from '@/post/PostModal';
 import DiscoverModal from '@/discover/DiscoverModal';
-import CustomCallout from '@/components/CustomCallout';
-import EditPostModal from '@/modals/EditPostModal';
+import CustomCallout from '@/map/CustomCallout';
+import EditPostModal from '@/post/EditPostModal';
 
 // Functions 
 import ProtectedImage from '../../components/ProtectedImage';
@@ -54,7 +54,7 @@ import { PolisType, PostInfo, UserInfo, DisplayPostInfo } from '@/types/types';
 
 // Styles
 import { indexStyles as styles } from '../styles/indexstyles';
-import customMapStyle from '../styles/mapstyles';
+import customMapStyle from '../../map/mapstyles';
 import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
 
@@ -74,43 +74,6 @@ const INITIAL_MAP_REGION = {
   longitudeDelta: 0.01,
 };
 
-function renderPostImages(images?: string[]) {
-  if (!images || images.length === 0) return null;
-  return images.map((imageUrl, idx) => (
-    <TouchableOpacity
-      key={idx}
-      onPress={() => {
-        // Show image full screen
-        Alert.alert(
-          'Image',
-          'View full screen?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'View', 
-              onPress: () => {
-                // You can implement a modal or navigation to show full screen image
-                // For now, we'll just show an alert with the image URL
-              }
-            }
-          ]
-        );
-      }}
-    >
-      <Image
-        // We cannot use an async function directly in the source prop.
-        // Instead, use a stateful ImageWithSAS component to handle async fetching.
-        {...ProtectedImage({
-          url: imageUrl,
-          style: { width: 100, height: 100, marginVertical: 4, borderRadius: 8 },
-          resizeMode: "cover"
-        })}
-        style={{ width: 100, height: 100, marginVertical: 4, borderRadius: 8 }}
-        resizeMode="cover"
-      />
-    </TouchableOpacity>
-  ));
-}
 export default function HomeScreen() {
   // 1. State variables
   const [user, setUser] = useState<UserInfo | null>(null);
