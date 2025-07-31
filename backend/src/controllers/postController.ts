@@ -407,11 +407,12 @@ router.get('/markerposts/by-author', async (req: Request, res: Response) =>  {
   const query = `
     SELECT 
       p.id as postId,
+      p.userId,
       p.latitude,
       p.latitudeDelta,
       p.longitude,
       p.longitudeDelta,
-      p.private,
+      p.private
     FROM posts p
     LEFT JOIN post_viewer pv 
       ON p.id = pv.post_id AND pv.user_id = @param1
@@ -442,24 +443,16 @@ router.get('/markerposts/by-author', async (req: Request, res: Response) =>  {
 
     // Do not filter based on private; return all posts as-is
     const posts = (result.recordset || []).map((row: any) => {
-      let images: any[] = [];
-      try {
-        images = row.images ? JSON.parse(row.images) : [];
-      } catch {
-        images = [];
-      }
 
-      const postInfo = {
+        return {
         postId: row.postId,
+        userId: row.userId, 
         latitude: row.latitude,
         latitudeDelta: row.latitudeDelta,
         longitude: row.longitude,
         longitudeDelta: row.longitudeDelta,
         private: !!row.private,
-      };
-
-      return {
-        postInfo
+        markerColor: getRandomColor(), 
       };
     });
 
@@ -548,7 +541,7 @@ router.get('/posts/by-tag', async (req: Request, res: Response) => {
 });
 
 router.get('/post/by-id', async (req: Request, res: Response) =>  { 
-  const postId = req.query.id as string; 
+  const postId = req.query.postId as string; 
   const currentUserId = req.query.currentUserId as string;
   if (!postId) {
     return res.status(400).json({ success: false, error: "Missing required query parameter: id" });
@@ -558,6 +551,8 @@ router.get('/post/by-id', async (req: Request, res: Response) =>  {
   SELECT 
     p.id AS postId,
     p.userId,
+    u.displayName as userDisplayName,
+    u.photoURL as userPhotoURL,
     p.title,
     p.description,
     p.createdAt,
@@ -586,6 +581,7 @@ router.get('/post/by-id', async (req: Request, res: Response) =>  {
     FROM post_likes
     GROUP BY post_id
   ) l ON p.id = l.postId
+  LEFT JOIN users u ON p.userId = u.id
   WHERE p.id = @param0
     AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
 `;
@@ -609,6 +605,8 @@ router.get('/post/by-id', async (req: Request, res: Response) =>  {
     const postInfo = {
       postId: row.postId,
       userId: row.userId,
+      userDisplayName: row.userDisplayName, 
+      userPhotoURL: row.userPhotoURL,
       type: 'post',
       title: row.title,
       description: row.description,

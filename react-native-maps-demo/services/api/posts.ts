@@ -54,6 +54,36 @@ export async function getPostsByAuthorId(authorId: string) {
   return data;
 }
 
+export async function getPost(postId: string) {
+    const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.uid;
+  const url = new URL(`${BASE_URL}/post/by-id`);
+  url.searchParams.append('postId', postId);
+  if(currentUserId) {
+      url.searchParams.append('currentUserId', currentUserId); 
+  }
+  const res = await fetch(url.toString());
+  if(!res.ok) throw new Error("Failed to fetch post by Id"); 
+  const data = await res.json();
+  return data; 
+}
+
+export async function getMarkerPostsByAuthorId(authorId: string){ 
+    const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.uid;
+
+  // Send current user as a query param (if available)
+  const url = new URL(`${BASE_URL}/markerposts/by-author`);
+  url.searchParams.append('authorId', authorId);
+  if (currentUserId) {
+    url.searchParams.append('currentUserId', currentUserId);
+  }
+
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error("Failed to fetch posts by authorId");
+  const data = await res.json();
+  return data;
+}
 // Get posts by tag
 export async function getPostsByTag(tag: string) {
   const res = await fetch(`${BASE_URL}/posts/by-tag?tag=${encodeURIComponent(tag)}`);

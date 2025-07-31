@@ -54,11 +54,11 @@ interface DiscoverModalProps {
   onPostSelect: (post: PostInfo) => void;
   onPolisSelect?: (polis: PolisType) => void;
   setPolis: PolisType | null;
-  selectedPostFromParent: DisplayPostInfo | null;
-  setPost: (post: DisplayPostInfo | null) => void;
+  selectedPostIdFromParent: DisplayPostInfo | null;
+  setPostId: (post: DisplayPostInfo | null) => void;
 }
 
-const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSelect, setPolis, selectedPostFromParent, setPost }) => {
+const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSelect, setPolis, selectedPostIdFromParent, setPostId }) => {
   const [posts, setPosts] = useState<DisplayPostInfo[]>([]);
   const [isLoggedInUser, setIsLoggedInUser] = useState(false);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);

@@ -46,12 +46,12 @@ import { getRandomColor } from '@/functions/getRandomColor';
 // Firebase Firestore & Storage
 // import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/backend/firestore';
 // import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/backend/blob-storage';
-import { getAllPosts, createPost, getPostsByAuthorId, getPostsByTag } from '@/services/api/posts';
+import { getAllPosts, createPost, getPostsByAuthorId, getPostsByTag, getMarkerPostsByAuthorId } from '@/services/api/posts';
 import { getImageUrlWithSAS } from '@/services/api/image';
 import { getCurrentUser } from '@/services/auth/fireAuth';
 
 // Types
-import { PolisType, PostInfo, UserInfo, DisplayPostInfo } from '@/types/types';
+import { PolisType, PostInfo, UserInfo, DisplayPostInfo, MarkerPostInfo } from '@/types/types';
 
 // Styles
 import { indexStyles as styles } from '../styles/indexstyles';
@@ -82,13 +82,13 @@ export default function HomeScreen() {
   const [isPostModalVisible, setIsPostModalVisible] = useState(false);
   const [isDiscoverModalVisible, setIsDiscoverModalVisible] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
-  const [posts, setPosts] = useState<DisplayPostInfo[]>([]);
+  const [posts, setPosts] = useState<MarkerPostInfo[]>([]);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
   const markerRefs = useRef<{ [key: string]: MapMarker | null }>({});
   const mapRef = useRef<MapView>(null);
   const textInputRef = useRef<TextInput>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const [selectedPost, setSelectedPost] = useState<DisplayPostInfo | null>(null);
+  const [selectedPost, setSelectedPost] = useState<MarkerPostInfo | null >(null);
   const isProgrammaticMove = useRef(false);
   const [discoverUserId, setDiscoverUserId] = useState<string | null>(null);
   const [showedPostsChanges, setShowedPostsChanges] = useState<boolean> (false);
@@ -109,19 +109,19 @@ export default function HomeScreen() {
     setEditModalVisible(true);
   };
   // Handler for submit
-  const handleEditSubmit = (editedPost: DisplayPostInfo) => {
-    // Update the post in posts state (replace by postId), preserving DisplayPostInfo structure
-    setPosts(prevPosts =>
-      prevPosts.map(p =>
-        p.postInfo.postId === editedPost.postInfo.postId
-          ? { ...p, postInfo: { ...p.postInfo, ...editedPost } }
-          : p
-      )
-    );
-    setEditModalVisible(false);
-    setPostToEdit(null);
-    setSelectedPost(editedPost); // Optionally show the updated post
-  };
+  // const handleEditSubmit = (editedPost: postId) => {
+  //   // Update the post in posts state (replace by postId), preserving DisplayPostInfo structure
+  //   // setPosts(prevPosts =>
+  //   //   prevPosts.map(p =>
+  //   //     p.postInfo.postId === editedPost.postInfo.postId
+  //   //       ? { ...p, postInfo: { ...p.postInfo, ...editedPost } }
+  //   //       : p
+  //   //   )
+  //   // );
+  //   setEditModalVisible(false);
+  //   setPostToEdit(null);
+  //   setSelectedPost(editedPost.postId); // Optionally show the updated post
+  // };
 
   // export type UserInfo = {
   //   displayName: string; 
@@ -178,12 +178,13 @@ export default function HomeScreen() {
     console.log("please");
     if (selectedPolis) {
       if (selectedPolis.isUser) {
-        getPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
+        getMarkerPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
           if (userPosts && userPosts.success && Array.isArray(userPosts.posts)) {
             setPosts(userPosts.posts); // set directly
           } else {
             setPosts([]);
           }
+        
         });
       } else {
         getPostsByTag(selectedPolis.tag).then((tagPosts) => {
@@ -234,7 +235,7 @@ export default function HomeScreen() {
 
 
   // 3. Event Handlers
-  const handleMarkerPress = async (post: PostInfo) => {
+  const handleMarkerPress = async (post: MarkerPostInfo) => {
     if (!mapRef.current) return;
   
     isProgrammaticMove.current = true;
@@ -476,11 +477,10 @@ export default function HomeScreen() {
                 setSelectedPost(null);
                 // Close the marker callout as well
                 if (
-                  selectedPost?.postInfo.postId !== undefined &&
-                  selectedPost?.postInfo.postId !== null &&
-                  markerRefs.current[String(selectedPost.postInfo.postId)]
+                  selectedPost !== null &&
+                  markerRefs.current[String(selectedPost)]
                 ) {
-                  markerRefs.current[String(selectedPost.postInfo.postId)]?.hideCallout?.();
+                  markerRefs.current[String(selectedPost)]?.hideCallout?.();
                 }
               }
             }}
@@ -517,8 +517,8 @@ export default function HomeScreen() {
 
           >
             {posts.map((post, index) => {
-              if (!post.postInfo?.postId) return null;
-              const { postId, latitude, longitude } = post.postInfo;
+              if (!post.latitude) return null;
+              const { postId, latitude, longitude } = post;
               return (
                 <Marker
                   ref={ref => { markerRefs.current[String(postId)] = ref; }}
@@ -526,12 +526,12 @@ export default function HomeScreen() {
                   coordinate={{ latitude, longitude }}
                   onPress={async (e) => {
                     e.stopPropagation();
-                    await handleMarkerPress(post.postInfo);
+                    await handleMarkerPress(post);
                     setTimeout(() => setSelectedPost(post), 200);
                   }}
                 >
                   <Image
-                    source={markerIcons[post.postInfo.markerColor] || markerIcons.red}
+                    source={markerIcons[post.markerColor] || markerIcons.red}
                     style={{
                       width: 40,
                       height: 40,
@@ -576,22 +576,22 @@ export default function HomeScreen() {
               <View style={styles.customCalloutOverlay} pointerEvents="box-none">
                 <View style={styles.customCalloutContainer}>
                   <CustomCallout
-                    isUserLoggedIn={selectedPost.postInfo.userId == user?.uid}
-                    post={selectedPost}
+                    isUserLoggedIn={selectedPost.userId == user?.uid}
+                    postId={selectedPost.postId}
                     onLike={() => {
-                      console.log("Like post:", selectedPost.postInfo.postId);
+                      console.log("Like post:", selectedPost.postId);
                       // TODO: Implement like functionality
                     }}
                     onComment={() => {
-                      console.log("Comment on post:", selectedPost.postInfo.postId);
+                      console.log("Comment on post:", selectedPost.postId);
                       // TODO: Implement comment functionality
                     }}
                     onShare={() => {
-                      console.log("Share post:", selectedPost.postInfo.postId);
+                      console.log("Share post:", selectedPost.postId);
                       // TODO: Implement share functionality
                     }}
                     onViewDetails={() => {
-                      handleMarkerPress(selectedPost.postInfo);
+                      handleMarkerPress(selectedPost);
                       setSelectedPost(null);
                     }}
                     onSelectNewPolis={(polis) => {
@@ -608,7 +608,7 @@ export default function HomeScreen() {
                       setShowedPostsChanges(true); // Refresh posts
                     }}
                     
-                    onEdit={() => handleEdit(selectedPost.postInfo)}
+                    // onEdit={() => handleEdit(selectedPost.postInfo)}
                   />
                   <TouchableOpacity 
                     style={styles.closeCalloutButton}
@@ -684,8 +684,8 @@ export default function HomeScreen() {
                       }
                     : selectedPolis
                 }
-                selectedPostFromParent={selectedPost}  // 👈 this is the current value
-                setPost={setSelectedPost}              // 👈 this is the setter function
+                selectedPostIdFromParent={selectedPost.postId}  // 👈 this is the current value
+                setPostId={setSelectedPost.postId}              // 👈 this is the setter function
               />
               </Animated.View>
             </PanGestureHandler>

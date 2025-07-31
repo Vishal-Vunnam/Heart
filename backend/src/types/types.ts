@@ -32,6 +32,7 @@ export type PostInfo = {
 
 export type MarkerPostInfo = { 
   postId: string; 
+  userId: string;
   latitude: number;
   latitudeDelta: number;
   longitude: number;

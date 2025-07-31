@@ -64,3 +64,15 @@ export type PolisSearchReturn = {
     id: string;
     is_tag: boolean;
 }
+
+type MarkerColor = 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink';
+export type MarkerPostInfo = { 
+  postId: string; 
+  userId: string;
+  latitude: number;
+  latitudeDelta: number;
+  longitude: number;
+  longitudeDelta: number;
+  private?: boolean;
+  markerColor : MarkerColor;
+}   

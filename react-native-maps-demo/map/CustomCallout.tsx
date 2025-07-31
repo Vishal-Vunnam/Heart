@@ -1,9 +1,9 @@
 // Remove all image loading state logic and ActivityIndicator
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { ThemedText } from '../components/ThemedText';
-import { deletePostById } from '@/services/api/posts';
+import { deletePostById, getPost} from '@/services/api/posts';
 import { PolisType, DisplayPostInfo } from '@/types/types';
 import PostActionSheet from '../post/PostActionSheet';
 import ProtectedImage from '../components/ProtectedImage';
@@ -11,9 +11,10 @@ import {likePost} from '@/services/api/posts'; // Import likePost function
 import { getRandomColor } from '@/functions/getRandomColor'; // Assuming you have a utility function for random colors
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
+
 interface CustomCalloutProps {
   isUserLoggedIn: boolean; 
-  post: DisplayPostInfo;
+  postId: string;
   onLike?: () => void;
   onComment?: () => void;
   onShare?: () => void;
@@ -29,7 +30,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const CustomCallout: React.FC<CustomCalloutProps> = ({
   isUserLoggedIn,
-  post,
+  postId,
   onLike,
   onComment,
   onShare,
@@ -40,10 +41,38 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
   onPostDeleted,
   onEdit
 }) => {
-  const [showActionSheet, setShowActionSheet] = useState<boolean>(false);
-  const [userLiked, setUserLiked] = useState<boolean>(post?.postInfo?.likedByCurrentUser ?? false);
+const [showActionSheet, setShowActionSheet] = useState<boolean>(false);
+const [post, setPost] = useState<DisplayPostInfo | null>(null);
+const [userLiked, setUserLiked] = useState<boolean>(false);
+
+useEffect(() => {
+  let isMounted = true; // safety flag
+
+  const fetchPost = async () => {
+    if (!postId) return;
+
+    try {
+      const postInfo = await getPost(postId);
+      if (isMounted) {
+        setPost(postInfo);
+        setUserLiked(postInfo?.postInfo?.likedByCurrentUser ?? false);
+      }
+    } catch (err) {
+      console.error("❌ Failed to fetch post:", err);
+    }
+  };
+
+  fetchPost();
+
+  return () => {
+    isMounted = false;
+    console.log("🧹 Cleanup on unmount (modal closed)");
+  };
+}, []); // ✅ empty deps → runs only once when modal opens
+
 
   const handleDeletePost = async () => {
+    if(!post) return; 
     if (!isUserLoggedIn || !post.postInfo.postId) return;
     try {
       await deletePostById(post.postInfo.postId);
@@ -56,6 +85,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
     }
   };
   const handleLike = () => {
+    if(!post) return; 
     if (!isUserLoggedIn || !post.postInfo.postId) return;
     setUserLiked(!userLiked);
     if (onLike) onLike();
@@ -68,7 +98,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
       });
   }
 
-  return (
+  return post ? ( 
     <View style={styles.container} >
       {/* Header */}
       <View style={styles.header}>
@@ -182,6 +212,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
         >
           <Text style={styles.viewDetailsText}>View Details</Text>
         </TouchableOpacity>
+        <Text> {post.postInfo.likesCount} </Text>
         <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
           <MaterialIcons
             name={userLiked ? 'favorite' : 'favorite-border'}
@@ -194,7 +225,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
       {/* Arrow */}
       <View style={styles.arrow} />
     </View>
-  );
+  ) : null; 
 };
 
 const styles = StyleSheet.create({
