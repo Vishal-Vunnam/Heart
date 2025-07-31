@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import * as Font from 'expo-font';
+import * as Location from 'expo-location';
 
 // Gesture Handler
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
@@ -193,6 +194,43 @@ export default function HomeScreen() {
     setShowedPostsChanges(false);
   }, [selectedPolis, showedPostsChanges]);
 
+  const goToCurrentLocation = async () => {
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Location permission is required to show your position.');
+      return;
+    }
+
+    const location = await Location.getCurrentPositionAsync({});
+    const { latitude, longitude } = location.coords;
+
+    setCurrentLocation({
+      latitude,
+      longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+    isProgrammaticMove.current = true; 
+    if (!mapRef.current) return;
+  
+    if('animateCamera' in mapRef.current)
+        mapRef.current.animateCamera(
+          {
+            center: {
+              latitude: latitude,
+              longitude: longitude,
+            },
+            zoom: 26,
+          },
+          { duration: 500 }
+        );
+  } catch (error) {
+    console.error('Error getting current location:', error);
+    Alert.alert('Error', 'Unable to get current location.');
+  }
+};
+
 
 
   // 3. Event Handlers
@@ -227,7 +265,12 @@ export default function HomeScreen() {
           },
           500
         );
+
+        setTimeout(() => {
+      isProgrammaticMove.current = false;
+    }, 600); 
       }
+
     } catch (error) {
       console.error('Map animation error:', error);
     }
@@ -421,12 +464,12 @@ export default function HomeScreen() {
                   {/* Polis Header */}
         {renderPolisHeader()}
           <MapView
-            ref={mapRef}
+            provider="google"
+            mapRef={ref => mapRef.current = ref}
             style={styles.map}
             clusterColor="white"
             initialRegion={INITIAL_MAP_REGION}
-            customMapStyle={customMapStyle} 
-            
+            customMapStyle={[]}
             onRegionChangeComplete={(region) => {
               setCurrentLocation(region);
               if (!isProgrammaticMove.current && selectedPost) {
@@ -507,7 +550,12 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }} pointerEvents="box-none">
             {/* Action Buttons */}
           <View style={styles.actionButtonContainer}>
-            <TouchableOpacity style={styles.iconWrapper1}  onPress={handlePost}>
+            <TouchableOpacity style={styles.iconWrapper1}  onPress={() => {
+              goToCurrentLocation();
+            setTimeout(() => {
+              handlePost();
+            }, 500);
+            }}>
                     <View style={styles.iconButton1}/>
                     <Text style={styles.iconText}>POST</Text>
             </TouchableOpacity>
@@ -517,7 +565,12 @@ export default function HomeScreen() {
 
                 <Text style={styles.iconText}>LOOK</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity style={styles.goToLocationButton} onPress={goToCurrentLocation}>
+                <MaterialIcons name="near-me" size={24} color="#000" />
+              </TouchableOpacity>
           </View>
+
             {/* Custom Callout Overlay */}
             {selectedPost && (
               <View style={styles.customCalloutOverlay} pointerEvents="box-none">

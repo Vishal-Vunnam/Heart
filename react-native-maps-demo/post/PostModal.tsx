@@ -10,6 +10,7 @@ import { uploadImageToPost } from '@/services/api/image';
 import { getCurrentUser } from '@/services/auth/fireAuth';
 import { createPost } from '@/services/api/posts';
 import { searchUsers} from '@/services/api/search';
+import { getRandomColor } from '@/functions/getRandomColor';
 
 interface PostModalProps {
   userId: string;
@@ -53,7 +54,7 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
         setMemberSuggestions([]);
       }
       setIsSearchingMembers(false);
-    }, 800);
+    }, 500);
     return () => clearTimeout(handler);
   }, [memberSearch, allowedMembers]);
 
@@ -355,10 +356,13 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
                       )}
 
                       {/* Selected Members */}
-                      {allowedMembers.length > 0 && (
+                      {allowedMembers.length > 0 &&  (
                         <View style={modalStyles.selectedMembersContainer}>
-                          {allowedMembers.map(member => (
-                            <View key={member.id} style={modalStyles.memberChip}>
+                        {allowedMembers.map((member) => {
+                          const backgroundColor = getRandomColor();
+
+                          return (
+                            <View key={member.id} style={[modalStyles.memberChip, { backgroundColor }]}>
                               <View style={modalStyles.memberAvatar}>
                                 <Feather name="user" size={12} color="#6B7280" />
                               </View>
@@ -370,7 +374,8 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
                                 <Feather name="x" size={12} color="#6B7280" />
                               </TouchableOpacity>
                             </View>
-                          ))}
+                          );
+                        })}
                         </View>
                       )}
                     </View>
@@ -469,17 +474,17 @@ const modalStyles = StyleSheet.create({
     height: '100%',
   },
   modalContent: {
-    backgroundColor: '#1F2937',
+    backgroundColor: '#ffffffff',
     borderRadius: 24,
     width: '92%',
     maxHeight: '90%',
-    borderWidth: 2,
-    borderColor: 'white',
+    borderWidth: 3,
+    borderColor: '#000000ff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: 12,
   },
   scrollContainer: {
     padding: 24,
@@ -489,16 +494,29 @@ const modalStyles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    borderBottomColor: 'black',
+    borderBottomWidth: 3,
+    paddingBottom: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 25,
     fontWeight: '700',
-    color: 'white',
+    color: 'black',
+    fontFamily: 'Koulen_400Regular',
+    letterSpacing: 0.3,
   },
   closeButton: {
     padding: 8,
-    backgroundColor: '#374151',
+    backgroundColor: '#000000ff',
     borderRadius: 12,
+    minWidth: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   pageIndicator: {
     flexDirection: 'row',
@@ -511,41 +529,45 @@ const modalStyles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4B5563',
+    backgroundColor: '#55555534',
   },
   activeDot: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#000000ff',
     width: 24,
   },
   inputGroup: {
     marginBottom: 20,
   },
   label: {
-    color: '#E5E7EB',
-    fontSize: 14,
+    color: '#000000ff',
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
+    fontFamily: 'Anton_400Regular',
+    textDecorationLine: 'underline',
   },
   input: {
-    backgroundColor: '#374151',
-    color: 'white',
+    backgroundColor: '#ffffffff',
+    color: 'black',
     height: 48,
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#4B5563',
+    borderWidth: 2,
+    borderColor: '#55555534',
+    fontFamily: 'Anton_400Regular',
   },
   textArea: {
     height: 100,
     paddingTop: 12,
+    textAlignVertical: 'top',
   },
   tagInputContainer: {
-    backgroundColor: '#374151',
+    backgroundColor: '#ffffffff',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#4B5563',
+    borderWidth: 2,
+    borderColor: '#55555534',
   },
   tagInputRow: {
     flexDirection: 'row',
@@ -555,17 +577,24 @@ const modalStyles = StyleSheet.create({
   },
   hashIcon: {
     marginRight: 8,
+    color: '#000000ff',
   },
   tagInput: {
     flex: 1,
-    color: 'white',
+    color: 'black',
     height: 40,
     fontSize: 16,
+    fontFamily: 'Anton_400Regular',
   },
   addTagButton: {
     padding: 8,
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#ffffffff',
     borderRadius: 8,
+  },
+  addTagButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   tagChipsContainer: {
     flexDirection: 'row',
@@ -576,93 +605,114 @@ const modalStyles = StyleSheet.create({
   tagChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E40AF',
+    backgroundColor: '#ffffffff',
+        borderColor: 'black',
+    borderWidth: 2, 
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    elevation: 2,
   },
   tagChipText: {
-    color: 'white',
-    fontSize: 14,
+    color: 'black',
+    fontSize: 13,
     marginRight: 6,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    fontFamily: 'Anton_400Regular',
   },
   removeTagButton: {
-    backgroundColor: 'rgba(107, 114, 128, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 10,
     padding: 2,
   },
   picker: {
-    backgroundColor: '#374151',
-    borderColor: '#4B5563',
+    backgroundColor: '#ffffffff',
+    borderColor: '#55555534',
     borderRadius: 12,
     height: 48,
+    borderWidth: 2,
   },
   pickerText: {
-    color: 'white',
+    color: 'black',
     fontSize: 16,
+    fontFamily: 'Anton_400Regular',
   },
   pickerPlaceholder: {
-    color: '#6B7280',
+    color: '#555555',
   },
   pickerDropdown: {
-    backgroundColor: '#374151',
-    borderColor: '#4B5563',
+    backgroundColor: '#ffffffff',
+    borderColor: '#55555534',
     borderRadius: 12,
     marginTop: 4,
+    borderWidth: 2,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#374151',
+    backgroundColor: '#ffffffff',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#4B5563',
+    borderWidth: 2,
+    borderColor: '#55555534',
     paddingHorizontal: 16,
     height: 48,
   },
   searchIcon: {
     marginRight: 12,
+    color: '#000000ff',
   },
   searchInput: {
     flex: 1,
-    color: 'white',
+    color: 'black',
     fontSize: 16,
+    fontFamily: 'Anton_400Regular',
   },
   loadingIndicator: {
     marginLeft: 8,
   },
   loadingText: {
-    color: '#3B82F6',
+    color: '#000000ff',
     fontSize: 16,
+    fontFamily: 'Anton_400Regular',
   },
   searchResults: {
-    backgroundColor: '#374151',
+    backgroundColor: '#ffffffff',
     borderRadius: 12,
     marginTop: 8,
     maxHeight: 200,
-    borderWidth: 1,
-    borderColor: '#4B5563',
+    borderWidth: 2,
+    borderColor: '#55555534',
+    elevation: 4,
   },
   searchResultItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#4B5563',
+    borderBottomWidth: 2,
+    borderBottomColor: '#55555534',
   },
   userAvatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#4B5563',
+    backgroundColor: '#000000ff',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    elevation: 4,
+  },
+  userAvatarText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'Anton_400Regular',
   },
   searchResultText: {
     flex: 1,
-    color: 'white',
+    color: 'black',
     fontSize: 16,
+    fontFamily: 'Anton_400Regular',
   },
   selectedMembersContainer: {
     flexDirection: 'row',
@@ -673,27 +723,42 @@ const modalStyles = StyleSheet.create({
   memberChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#059669',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
+      elevation: 4, // Android shadow
+  shadowColor: '#000',       // iOS shadow
+  shadowOffset: {
+    width: 4,
+    height: 4,
+  },
+  shadowOpacity: 1,
+  shadowRadius: 0,
   },
   memberAvatar: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 6,
+  },
+  memberAvatarText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    fontFamily: 'Anton_400Regular',
   },
   memberChipText: {
     color: 'white',
     fontSize: 14,
     marginRight: 6,
+    fontFamily: 'Anton_400Regular',
+    fontWeight: '700',
   },
   removeMemberButton: {
-    backgroundColor: 'rgba(107, 114, 128, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 1)',
     borderRadius: 10,
     padding: 2,
   },
@@ -701,22 +766,25 @@ const modalStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#3B82F6',
+    borderColor: '#000000ff',
     borderStyle: 'dashed',
     borderRadius: 16,
     paddingVertical: 32,
-    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   imagePickerText: {
-    color: '#3B82F6',
+    color: '#000000ff',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '800',
     marginTop: 8,
+    fontFamily: 'Anton_400Regular',
+    letterSpacing: 0.4,
   },
   imagePickerSubtext: {
-    color: '#6B7280',
+    color: '#555555',
     fontSize: 14,
     marginTop: 4,
+    fontFamily: 'Koulen_400Regular',
   },
   imagePreviewContainer: {
     flexDirection: 'row',
@@ -731,12 +799,14 @@ const modalStyles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#55555534',
   },
   removeImageButton: {
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: '#EF4444',
+    backgroundColor: '#000000ff',
     borderRadius: 12,
     width: 24,
     height: 24,
@@ -747,51 +817,62 @@ const modalStyles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
+  removeImageButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   actionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
+    gap: 12,
   },
   primaryButton: {
+    flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#3B82F6',
+    backgroundColor: getRandomColor(),
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 6,
   },
   primaryButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    fontFamily: 'Anton_400Regular',
+    letterSpacing: 0.5,
+    textDecorationLine: 'underline',
   },
   secondaryButton: {
+    flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#374151',
+    backgroundColor: '#ffffffff',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderWidth: 1,
-    borderColor: '#4B5563',
+    borderWidth: 2,
+    borderColor: '#55555534',
   },
   secondaryButtonText: {
-    color: '#D1D5DB',
+    color: '#000000ff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'Anton_400Regular',
   },
   buttonDisabled: {
-    backgroundColor: '#4B5563',
-    shadowOpacity: 0,
+    backgroundColor: '#55555534',
+    elevation: 0,
+  },
+  buttonDisabledText: {
+    color: '#555555',
   },
   spinner: {
     width: 16,
@@ -800,6 +881,18 @@ const modalStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.3)',
     borderTopColor: 'white',
+  },
+  sectionDivider: {
+    height: 2,
+    backgroundColor: '#55555534',
+    marginVertical: 16,
+  },
+  helpText: {
+    color: '#555555',
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: 'italic',
+    fontFamily: 'Koulen_400Regular',
   },
 });
 

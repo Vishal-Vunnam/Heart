@@ -97,6 +97,7 @@ router.post('/posts', async (req: Request, res: Response) => {
             // Insert tag into tags table if it doesn't exist, then insert into post_tags
             const tagId = require('crypto').createHash('sha256').update(tag).digest('hex');
             // Insert tag if not exists
+            console.log('adding tag', tag);
             await executeQuery(
               `
               IF NOT EXISTS (SELECT 1 FROM tags WHERE name = @param0)

@@ -3,13 +3,14 @@ import { StyleSheet, ScrollView, View, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { DisplayPostInfo } from '@/types/types';
 import ProtectedImage from './ProtectedImage';
+import { getRandomColor } from '@/functions/getRandomColor';
 
 const { width } = Dimensions.get('window');
 
 export const PostView = ({ post }: { post: DisplayPostInfo}) => {
   return (
     <View style={styles.container}>
-      {/* Header Section with Gradient-like Effect */}
+      {/* Header Section */}
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <ThemedText style={styles.title}>{post.postInfo.title}</ThemedText>
@@ -58,11 +59,10 @@ export const PostView = ({ post }: { post: DisplayPostInfo}) => {
             {post.images.map((img, idx) => (
               <View key={idx} style={styles.imageContainer}>
                 <ProtectedImage 
-
                   url={img.url}
                   style={styles.image}
                 />
-                {/* Image overlay with subtle gradient effect */}
+                {/* Image overlay with subtle effect */}
                 <View style={styles.imageOverlay} />
               </View>
             ))}
@@ -78,11 +78,13 @@ export const PostView = ({ post }: { post: DisplayPostInfo}) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1F2937',
-    borderRadius: 20,
+    backgroundColor: '#ffffffff',
+    borderRadius: 24,
     margin: 12,
     overflow: 'hidden',
-    // Modern shadow for depth
+    borderWidth: 3,
+    borderColor: '#000000ff',
+    // Enhanced shadow for depth
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -90,15 +92,17 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: 12,
   },
   
   header: {
     padding: 20,
     paddingBottom: 16,
-    backgroundColor: '#374151',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: '#ffffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderBottomWidth: 3,
+    borderBottomColor: '#000000ff',
   },
   
   titleContainer: {
@@ -107,20 +111,22 @@ const styles = StyleSheet.create({
   },
   
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
-    color: 'white',
-    lineHeight: 30,
-    letterSpacing: -0.5,
+    color: '#000000ff',
+    lineHeight: 32,
+    letterSpacing: 0.4,
+    fontFamily: 'Anton_400Regular',
+    textDecorationLine: 'underline',
   },
   
   titleAccent: {
     position: 'absolute',
-    bottom: -4,
+    bottom: -6,
     left: 0,
-    width: 40,
-    height: 3,
-    backgroundColor: '#3B82F6',
+    width: 50,
+    height: 4,
+    backgroundColor: '#000000ff',
     borderRadius: 2,
   },
   
@@ -133,19 +139,18 @@ const styles = StyleSheet.create({
   authorBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: getRandomColor(),
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.2)',
+    elevation: 2,
   },
   
   authorAvatar: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#ffffffff',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -154,79 +159,97 @@ const styles = StyleSheet.create({
   authorInitial: {
     fontSize: 12,
     fontWeight: '700',
-    color: 'white',
+    color: '#000000ff',
+    fontFamily: 'Anton_400Regular',
   },
   
   authorName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#E5E7EB',
+    color: '#ffffffff',
+    fontFamily: 'Anton_400Regular',
+    letterSpacing: 0.3,
   },
   
   dateBadge: {
-    backgroundColor: '#4B5563',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: '#ffffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#55555534',
   },
   
   dateText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#000000ff',
     fontWeight: '500',
+    fontFamily: 'Koulen_400Regular',
   },
   
   descriptionContainer: {
     padding: 20,
     paddingTop: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: '#55555534',
   },
   
   description: {
     fontSize: 16,
-    color: '#E5E7EB',
+    color: '#000000ff',
     lineHeight: 24,
     fontWeight: '400',
+    fontFamily: 'Anton_400Regular',
+    letterSpacing: 0.2,
   },
   
   imagesSection: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingVertical: 20,
   },
   
   imagesSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: '#55555534',
   },
   
   imagesDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#059669',
-    marginRight: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#000000ff',
+    marginRight: 12,
   },
   
   imagesLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#D1D5DB',
+    color: '#000000ff',
     flex: 1,
+    fontFamily: 'Anton_400Regular',
+    letterSpacing: 0.4,
+    textDecorationLine: 'underline',
   },
   
   imagesCount: {
-    backgroundColor: '#059669',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    minWidth: 20,
+    backgroundColor: '#000000ff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 24,
     alignItems: 'center',
+    elevation: 2,
   },
   
   imagesCountText: {
     fontSize: 12,
     fontWeight: '700',
     color: 'white',
+    fontFamily: 'Anton_400Regular',
   },
   
   imageScroll: {
@@ -239,15 +262,18 @@ const styles = StyleSheet.create({
   
   imageContainer: {
     position: 'relative',
-    marginRight: 12,
+    marginRight: 16,
     borderRadius: 16,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#55555534',
+    elevation: 4,
   },
   
   image: {
     width: 140,
     height: 140,
-    borderRadius: 16,
+    borderRadius: 14,
   },
   
   imageOverlay: {
@@ -256,15 +282,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(59, 130, 246, 0.05)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+    borderRadius: 14,
   },
   
   bottomAccent: {
-    height: 4,
-    backgroundColor: '#3B82F6',
+    height: 6,
+    backgroundColor: '#000000ff',
     marginHorizontal: 20,
     marginBottom: 16,
-    borderRadius: 2,
+    borderRadius: 3,
   },
 });

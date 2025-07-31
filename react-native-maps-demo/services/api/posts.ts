@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:4000/api"; // Change to your backend URL
+const BASE_URL = "http://10.0.0.53:4000/api"; // Change to your backend URL
 // Get all posts
 export async function getAllPosts() {
   const res = await fetch(`${BASE_URL}/posts`);

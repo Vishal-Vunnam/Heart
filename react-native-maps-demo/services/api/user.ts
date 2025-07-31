@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:4000/api/user"; // Change to your backend URL if needed
+const BASE_URL = "http://10.0.0.53:4000/api/user"; // Change to your backend URL if needed
 
 import { UserInfo } from "@/types/types";
 /**

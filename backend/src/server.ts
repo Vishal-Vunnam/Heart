@@ -4,4 +4,5 @@ dotenv.config();
 import app from './app';
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const HOST = process.env.HOST || '10.0.0.53';
+app.listen(PORT, () => console.log(`Server running on port http://${HOST}:${PORT}`));

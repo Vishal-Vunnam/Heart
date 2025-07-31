@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, Image, SafeAreaView } from 'react-native';
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  Alert,
+  Image,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { router } from 'expo-router';
 import { updateProfile } from 'firebase/auth';
 import { createUser } from '@/services/api/user';
@@ -104,17 +116,21 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ThemedView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Image 
-            source={require('../assets/images/polis_logo.png')} 
-            style={styles.logo} 
-          />
-          <Text style={styles.appTitle}>Polis</Text>
-        </View>
+  <ThemedView style={styles.container}>
+    {/* Header */}
+    <View style={styles.header}>
+      <Text style={styles.appTitle}>Polis</Text>
+    </View>
 
-        {/* Form Container */}
+    {/* Form Container with Scroll */}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.formContainer}>
           <Text style={styles.title}>{isSignUp ? 'Create Account' : 'Welcome Back'}</Text>
           <Text style={styles.subtitle}>
@@ -127,10 +143,8 @@ export default function SignInScreen() {
                 style={styles.input}
                 placeholder="Username"
                 placeholderTextColor="#888"
-                secureTextEntry={false}
                 value={username}
                 onChangeText={setUsername}
-                onSubmitEditing={() => Keyboard.dismiss()}
               />
               <TouchableOpacity style={styles.photoPickerButton} onPress={pickImage}>
                 <Text style={styles.photoPickerButtonText}>
@@ -139,37 +153,29 @@ export default function SignInScreen() {
               </TouchableOpacity>
               {photoUri && (
                 <View style={{ alignItems: 'center', marginBottom: 16 }}>
-                  <Image
-                    source={{ uri: photoUri }}
-                    style={styles.profilePreview}
-                  />
+                  <Image source={{ uri: photoUri }} style={styles.profilePreview} />
                 </View>
               )}
             </>
           )}
-          
+
+          {/* Email + Password Inputs */}
           <TextInput
             style={styles.input}
             placeholder="Email"
             placeholderTextColor="#888"
-            secureTextEntry={false}
-            autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
+            autoCapitalize="none"
           />
-          
           <TextInput
             style={styles.input}
             placeholder="Password"
             placeholderTextColor="#888"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry={true}
-            autoComplete="password-new"
-            autoCorrect={false}
-            spellCheck={false}
-            importantForAutofill="no"
+            secureTextEntry
           />
 
           <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
@@ -192,13 +198,16 @@ export default function SignInScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Your map-based social experience</Text>
-        </View>
-      </ThemedView>
-    </SafeAreaView>
+    {/* Footer */}
+    <View style={styles.footer}>
+      <Text style={styles.footerText}>Your map-based social experience</Text>
+    </View>
+  </ThemedView>
+</SafeAreaView>
+
   );
 }
 
@@ -218,16 +227,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 60,
     marginBottom: 40,
+    borderBottomWidth: 3,
+    borderBottomColor: 'black',
+    paddingBottom: 20,
   },
+  scrollContent: {
+  flexGrow: 1,
+  justifyContent: 'center',
+  paddingBottom: 40,
+},
+
   logo: {
     width: 42,
     height: 42,
     marginRight: 12,
+    borderRadius: 21,
+    borderWidth: 2,
+    borderColor: '#000000ff',
   },
   appTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1E3A5F',
+    color: '#000000ff',
+    fontFamily: 'Koulen_400Regular',
+    letterSpacing: 0.5,
   },
   formContainer: {
     flex: 1,
@@ -236,83 +259,175 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1E3A5F',
+    fontWeight: '800',
+    color: '#000000ff',
     marginBottom: 8,
     textAlign: 'center',
+    fontFamily: 'Anton_400Regular',
+    letterSpacing: 0.4,
+    textDecorationLine: 'underline',
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#555555',
     marginBottom: 40,
     textAlign: 'center',
+    fontFamily: 'Koulen_400Regular',
   },
   input: {
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: '#ffffffff',
+    borderWidth: 2,
+    borderColor: '#55555534',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     fontSize: 16,
-    color: '#333',
+    color: '#000000ff',
+    fontFamily: 'Anton_400Regular',
+    elevation: 2,
+  },
+  inputFocused: {
+    borderColor: '#000000ff',
+    borderWidth: 3,
   },
   photoPickerButton: {
-    backgroundColor: '#e0e7ff',
-    borderRadius: 8,
-    paddingVertical: 10,
+    backgroundColor: '#ffffffff',
+    borderRadius: 12,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
     marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#000000ff',
+    borderStyle: 'dashed',
+    elevation: 2,
   },
   photoPickerButtonText: {
-    color: '#3f68df',
+    color: '#000000ff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    fontFamily: 'Anton_400Regular',
+    letterSpacing: 0.4,
   },
   profilePreview: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    marginTop: 4,
-    borderWidth: 2,
-    borderColor: '#3f68df',
+    marginTop: 8,
+    borderWidth: 3,
+    borderColor: '#000000ff',
+    alignSelf: 'center',
+    elevation: 4,
   },
   authButton: {
-    backgroundColor: '#3f68df',
-    borderRadius: 12,
+    backgroundColor: '#000000ff',
+    borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 24,
     marginTop: 8,
     marginBottom: 24,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 6,
   },
   authButtonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    fontFamily: 'Anton_400Regular',
+    letterSpacing: 0.5,
+    textDecorationLine: 'underline',
+  },
+  authButtonDisabled: {
+    backgroundColor: '#55555534',
+    elevation: 2,
+  },
+  authButtonDisabledText: {
+    color: '#555555',
+    textDecorationLine: 'none',
   },
   toggleButton: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#ffffffff',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#55555534',
+    marginVertical: 8,
   },
   toggleText: {
-    color: '#3f68df',
+    color: '#000000ff',
     fontSize: 16,
+    fontFamily: 'Anton_400Regular',
+    fontWeight: '600',
     textDecorationLine: 'underline',
   },
   footer: {
     alignItems: 'center',
     marginBottom: 40,
+    borderTopWidth: 3,
+    borderTopColor: '#55555534',
+    paddingTop: 20,
   },
   footerText: {
-    color: '#666',
+    color: '#555555',
     fontSize: 14,
     textAlign: 'center',
+    fontFamily: 'Koulen_400Regular',
+    lineHeight: 20,
+  },
+  errorText: {
+    color: '#000000ff',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontFamily: 'Anton_400Regular',
+    fontWeight: '600',
+    backgroundColor: '#ffffffff',
+    borderWidth: 2,
+    borderColor: '#000000ff',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  loadingSpinner: {
+    marginRight: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  formSection: {
+    marginBottom: 32,
+  },
+  sectionDivider: {
+    height: 2,
+    backgroundColor: '#55555534',
+    marginVertical: 24,
+    marginHorizontal: 40,
+  },
+  inputLabel: {
+    color: '#000000ff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    fontFamily: 'Anton_400Regular',
+    letterSpacing: 0.4,
+    textDecorationLine: 'underline',
+    marginLeft: 4,
+  },
+  helpText: {
+    color: '#555555',
+    fontSize: 12,
+    marginTop: -12,
+    marginBottom: 16,
+    marginLeft: 4,
+    fontStyle: 'italic',
+    fontFamily: 'Koulen_400Regular',
   },
 });

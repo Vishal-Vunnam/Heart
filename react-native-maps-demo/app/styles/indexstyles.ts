@@ -20,6 +20,23 @@ export const indexStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+goToLocationButton: {
+  backgroundColor: 'white',
+  borderRadius: 18,       // round
+  width: 32,              // small white circle
+  height: 32,
+  alignItems: 'stretch',
+  justifyContent: 'space-evenly',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 5,
+  position: 'absolute',
+  top: 175,
+  borderColor: 'black',
+  borderWidth: 3
+},
   safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -34,7 +51,7 @@ navBar: {
   alignItems: 'center',
   paddingHorizontal: 16,
   backgroundColor: '#fff',
-  borderBottomWidth: 2,
+  borderBottomWidth: 3,
   borderBottomColor: '#000',
 },
 
@@ -77,9 +94,9 @@ polisDisplay: {
   alignItems: 'center',
   justifyContent: 'flex-start',
   
-  borderRightWidth: 2,    // right border width
+  borderRightWidth: 3,    // right border width
   borderRightColor: 'black', 
-  borderBottomWidth: 2,   // bottom border width
+  borderBottomWidth: 3,   // bottom border width
   borderBottomColor: 'black',
 
   color: '#000',
@@ -412,6 +429,7 @@ iconButton2: {
   shadowOpacity: 0.2,
   shadowRadius: 4,
   shadowOffset: { width: 0, height: 2 },
+  
 },
 
   calloutContainer: {
@@ -443,7 +461,7 @@ iconButton2: {
     top: 0,
     left: 0,
     right: 0,
-    bottom: 180,
+    bottom: 280,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 50,

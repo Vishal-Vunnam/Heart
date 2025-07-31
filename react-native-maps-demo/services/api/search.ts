@@ -1,4 +1,4 @@
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000/api";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://10.0.0.53:4000/api";
 
 
 import { UserSearchReturn, PolisSearchReturn } from "@/types/types";

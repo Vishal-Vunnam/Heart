@@ -9,6 +9,7 @@ import PostActionSheet from '../post/PostActionSheet';
 import ProtectedImage from '../components/ProtectedImage';
 import {likePost} from '@/services/api/posts'; // Import likePost function
 import { getRandomColor } from '@/functions/getRandomColor'; // Assuming you have a utility function for random colors
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 interface CustomCalloutProps {
   isUserLoggedIn: boolean; 
@@ -40,7 +41,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
   onEdit
 }) => {
   const [showActionSheet, setShowActionSheet] = useState<boolean>(false);
-  const [userLiked, setUserLiked] = useState<boolean>(false); 
+  const [userLiked, setUserLiked] = useState<boolean>(post?.postInfo?.likedByCurrentUser ?? false);
 
   const handleDeletePost = async () => {
     if (!isUserLoggedIn || !post.postInfo.postId) return;
@@ -140,8 +141,8 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContentContainer}
       >
-        <Text style={styles.dateNextToTitle}>{new Date(post.postInfo.date).toLocaleDateString()}</Text>
-        <View style={styles.content}>
+        <View style={styles.dateAndDescriptionContainer}>
+          <Text style={styles.dateNextToTitle}>{new Date(post.postInfo.date).toLocaleDateString()}</Text>
           <ThemedText style={styles.description}>
             {post.postInfo.description}
           </ThemedText>
@@ -150,7 +151,7 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
         {/* Multiple Images */}
         {post.images && post.images.length > 0 && (
           <View style={styles.imageContainer}>
-            {post.images.slice(0, 2).map((image, index) => {
+            {post.images.map((image, index) => {
               const imageUrl = typeof image === 'string'
                 ? image
                 : (image && typeof image === 'object' && 'imageUrl' in image
@@ -165,9 +166,6 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
                 </View>
               );
             })}
-            {post.images.length > 2 && (
-              <Text style={styles.moreImagesText}>+{post.images.length - 2} more images</Text>
-            )}
           </View>
         )}
       </ScrollView>
@@ -185,9 +183,11 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
           <Text style={styles.viewDetailsText}>View Details</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-          <Text style={styles.actionIcon}>
-            {post.postInfo.likedByCurrentUser ? '❤️' : '🩶'}
-          </Text>
+          <MaterialIcons
+            name={userLiked ? 'favorite' : 'favorite-border'}
+            size={28}
+            color={userLiked ? 'red' : 'black'}
+          />
         </TouchableOpacity>
       </View>
 
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0, 
     paddingVertical: 8, 
     width: Math.min(screenWidth * 0.85, 400),
-    height: screenHeight * 0.37,
+    height: screenHeight * 0.4,
     elevation: 12,
     borderWidth: 3,
     borderColor: '#000000ff',
@@ -303,22 +303,24 @@ const styles = StyleSheet.create({
     fontFamily: 'Anton_400Regular',
   },
   description: {
-    color: '#E5E7EB',
+    color: '#000000ff',
     fontSize: 15,
     lineHeight: 22,
     fontWeight: '400',
     letterSpacing: 0.2,
-    paddingLeft: 4,
-    paddingRight: 4,
+    marginTop: -12,
     opacity: 0.95,
-    borderBottomColor: '#374151',
-    borderBottomWidth: 1, 
+    borderBottomColor: '#55555534',
+    borderBottomWidth: 2, 
+    fontFamily: 'Anton_400Regular',
   },
+
   imageContainer: {
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+    
   },
   singleImageContainer: {
     width: '100%',
@@ -331,6 +333,9 @@ const styles = StyleSheet.create({
     aspectRatio: 1.6,
     maxHeight: 200,
     resizeMode: 'contain',
+    paddingVertical: 8,
+    borderBottomColor: '#55555534',
+    borderBottomWidth: 2, 
   },
   actionBar: {
     flexDirection: 'row',
@@ -476,8 +481,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   titleRow: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 4,
@@ -486,13 +491,16 @@ const styles = StyleSheet.create({
   },
   dateNextToTitle: {
     color: '#000000ff',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
-    marginTop: 4,
-    paddingHorizontal: 8,
-    bottom: 7,
+    lineHeight: 46,
     borderRadius: 8,
     overflow: 'hidden',
+    fontFamily: 'Koulen_400Regular',
+  },
+  dateAndDescriptionContainer: {
+    paddingHorizontal: 16,
+        marginTop: -15,
   },
   moreImagesText: {
     color: '#9CA3AF',
