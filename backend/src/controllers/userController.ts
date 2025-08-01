@@ -80,6 +80,38 @@ router.put('/user', async (req: Request, res: Response) => {
     }
 
 });
+ 
+router.post('/add-friend', async (req: Request, res: Response) => { 
+
+  try {
+  const followeeId = req.body.followerId;
+  const currentUserId = req.query.currentUserId as string;
+
+  if (!followeeId|| !currentUserId) {
+    return res.status(400).json({ success: false, error: 'Missing required user/follower fields.' });
+  }
+   const query = `
+   IF NOT EXISTS ( SELECT 1 FROM friendships WHERE follower_id = @param0 AND followee_id = @param1)
+   INSERT INTO friendships (follower_id, followee_id)
+   VALUES (@param0, @param1);
+   `
+   const params = [ 
+    currentUserId, 
+    followeeId
+   ]
+
+  try {
+      await executeQuery(query, params);
+      return res.status(200).json({ success: true, message: 'Friendship added.' });
+    } catch (dbError: any) {
+      return res.status(500).json({ success: false, error: dbError.message || 'Database error.' });
+    }
+
+  }catch (error: any) {
+      res.status(500).json({ success: false, error: error.message || 'Internal server error.' });
+    }
+
+})
 
 
 export default router; 

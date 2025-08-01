@@ -39,16 +39,6 @@ export async function createTables() {
 
 
 
-
-    // Create the posts followers if it doesn't exist
-    `IF NOT EXISTS (SELECT * FROM sysobject WHERE name = 'followers' AND xtype = 'U')
-    CREATE TABLE followers (
-    follower_id VARCHAR(50) NOT NULL,
-    followee_id VARCHAR(50) NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (follower_id, followee_id),
-    )`,
-
     // Create the posts table if it doesn't exist
     `IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='posts' AND xtype='U')
     CREATE TABLE posts (
@@ -117,6 +107,15 @@ export async function createTables() {
       FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id)  -- No cascade to avoid multiple cascade paths
     )`,
+    `
+    IF NOT EXISTS (SELECT * FROM sysobject WHERE name='post_viewer' AND xtype='U')
+    CREATE TABLE friendships (
+    follower_id NVARCHAR(50) NOT NULL,
+    followee_id NVARCHAR(50) NOT NULL,
+    PRIMARY KEY (follower_id, followee_id),
+    FOREIGN KEY (follower_id) REFERENCES users(id),
+    FOREIGN KEY (followee_id) REFERENCES users(id)
+  )`,
 
     `IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_post_tags_postId')
     CREATE INDEX idx_post_tags_postId ON post_tags(postId)`,

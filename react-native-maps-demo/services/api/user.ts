@@ -1,6 +1,7 @@
 const BASE_URL = "http://10.0.0.53:4000/api/user"; // Change to your backend URL if needed
 
 import { UserInfo } from "@/types/types";
+import { getCurrentUser } from "../auth/fireAuth";
 /**
  * Create a user in the backend database.
  * @param userInfo The user info object (should include id, email, displayName, photoURL)
@@ -31,4 +32,13 @@ export async function updateUser(userInfo: UserInfo
   });
   if (!res.ok) throw new Error("Failed to update user");
   return res.json();
+}
+
+export async function addFriend(followeeId: string) { 
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.uid;
+  const res = await fetch(BASE_URL, {
+    method: "POST", 
+    headers: { }
+  }) 
 }

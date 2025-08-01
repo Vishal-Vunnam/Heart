@@ -94,10 +94,10 @@ polisDisplay: {
   alignItems: 'center',
   justifyContent: 'flex-start',
   
-  borderRightWidth: 3,    // right border width
-  borderRightColor: 'black', 
-  borderBottomWidth: 3,   // bottom border width
-  borderBottomColor: 'black',
+  // borderRightWidth: 3,    // right border width
+  // borderRightColor: 'black', 
+  // borderBottomWidth: 3,   // bottom border width
+  // borderBottomColor: 'black',
 
   color: '#000',
   textShadowColor: '#000',
@@ -121,9 +121,9 @@ polisDisplay: {
     color: '#fff',
     fontSize: 19,
     textShadowColor: '#000',
-    textShadowOffset: { width: 2, height: 2 },
+    textShadowOffset: { width: 3, height: 3 },
     textShadowRadius: 0,
- fontFamily: 'Koulen_400Regular',
+    fontFamily: 'Koulen_400Regular',
     
   },
   searchBoxContainer: {
@@ -390,8 +390,8 @@ iconText: {
   fontWeight: 'bold',
   fontFamily: 'Koulen_400Regular', // "bleed" into the circle below
   textShadowColor: '#000',
-  textShadowOffset: { width: 2, height: 2 },
-  textShadowRadius: 2,
+  textShadowOffset: { width: 3, height: 3 },
+  textShadowRadius: 0,
   zIndex: 150, 
   alignSelf: 'center',
   textAlign: 'center',
@@ -403,15 +403,17 @@ iconButton1: {
   width: 50,
   height: 50,
   borderRadius: 25,
-  backgroundColor: "#f70d1a",
+  backgroundColor: getRandomColor(),
   alignItems: 'center',
   justifyContent: 'center',
   elevation: 2,
   shadowColor: '#000',
   shadowOpacity: 0.2,
-  shadowRadius: 4,
+  shadowRadius: 0,
   shadowOffset: { width: 0, height: 2 },
-  zIndex: 1, 
+  zIndex: 1,
+  // borderColor: 'black', 
+  // borderWidth: 3,  
   
 },
 
@@ -421,7 +423,7 @@ iconButton2: {
   width: 50,
   height: 50,
   borderRadius: 25,
-  backgroundColor: "#5e3a99",
+  backgroundColor: getRandomColor(),
   alignItems: 'center',
   justifyContent: 'center',
   elevation: 2,

@@ -563,7 +563,7 @@ export default function HomeScreen() {
               <TouchableOpacity style={styles.iconWrapper2} onPress={openDiscoverModal} >
                 <View style={styles.iconButton2}/>
 
-                <Text style={styles.iconText}>LOOK</Text>
+                <Text style={styles.iconText}>SEEK</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.goToLocationButton} onPress={goToCurrentLocation}>

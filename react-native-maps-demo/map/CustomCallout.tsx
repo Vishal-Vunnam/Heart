@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 0, 
     paddingVertical: 8, 
-    width: Math.min(screenWidth * 0.85, 400),
+    width: Math.min(screenWidth * 0.90, 400),
     height: screenHeight * 0.4,
     elevation: 12,
     borderWidth: 3,
