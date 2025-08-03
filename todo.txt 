@@ -2,10 +2,15 @@ BUGS:
 -edit profile 
 
 TODO:
--edit post
--delete post
--test for memory leaks 
--make pictures look better
--friends
--discover page
--discover page styling
+    -edit post
+    -delete post
+    -test for memory leaks 
+    -make pictures look better
+    -friends
+    -discover page
+    -discover page styling
+
+Backend User Cache:
+    -User Posts
+    -User Followers
+    -Discover Page

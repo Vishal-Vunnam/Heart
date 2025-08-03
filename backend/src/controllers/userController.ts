@@ -84,19 +84,18 @@ router.put('/user', async (req: Request, res: Response) => {
 router.post('/add-friend', async (req: Request, res: Response) => { 
 
   try {
-  const followeeId = req.body.followerId;
-  const currentUserId = req.query.currentUserId as string;
-
-  if (!followeeId|| !currentUserId) {
+  const { followerId, followeeId } = req.body;
+  if (!followeeId|| !followerId) {
     return res.status(400).json({ success: false, error: 'Missing required user/follower fields.' });
   }
+  console.log("running")
    const query = `
    IF NOT EXISTS ( SELECT 1 FROM friendships WHERE follower_id = @param0 AND followee_id = @param1)
    INSERT INTO friendships (follower_id, followee_id)
    VALUES (@param0, @param1);
    `
    const params = [ 
-    currentUserId, 
+    followerId, 
     followeeId
    ]
 
@@ -112,6 +111,69 @@ router.post('/add-friend', async (req: Request, res: Response) => {
     }
 
 })
+
+router.get('/friends', async (req: Request, res: Response) => { 
+  try { 
+    console.log("HERE")
+    const currentUserId = req.query.currentUserId as string;
+
+    if (!currentUserId) {
+      return res.status(200).json({ success: true, friends: {} });
+    }
+
+    const query = `
+      SELECT f.followee_id as followeeId, u.displayName AS followeeName
+      FROM friendships f
+      JOIN users u ON f.followee_id = u.id
+      WHERE f.follower_id = @param0;
+    `;
+    const params = [currentUserId];
+
+    const result = await executeQuery(query, params);
+
+    return res.status(200).json({
+      success: true,
+      friends: result.recordset || []
+    });
+
+  } catch (error) {
+    console.error('Error fetching friends:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+router.get('/is-friend', async (req: Request, res: Response) => {
+  try {
+    const currentUserId = req.query.currentUserId as string;
+    const followeeId = req.query.followeeId as string;
+    console.log("CHECKING", followeeId, currentUserId)
+
+    if (!currentUserId || !followeeId) {
+      return res.status(400).json({ success: false, error: "Missing currentUserId or followeeId" });
+    }
+
+    const query = `
+      SELECT * FROM friendships
+      WHERE follower_id = @param0 AND followee_id = @param1;
+    `;
+    const params = [currentUserId, followeeId];
+
+    const result = await executeQuery(query, params);
+    console.log(result);
+
+    const isFriend = result.recordset.length > 0;
+
+    return res.status(200).json({
+      success: true,
+      isFriend
+    });
+
+  } catch (error) {
+    console.error('Error checking friendship:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
 
 
 export default router; 

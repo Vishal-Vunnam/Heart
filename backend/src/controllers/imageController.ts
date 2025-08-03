@@ -65,9 +65,7 @@ router.post('/image-user', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Missing image or postId in request body' });
     }
     const blobName = `${username}_${Date.now()}`;
-    console.log(blobName);
     const imageUrl = await uploadToAzureBlob(image, blobName, 'profile-pics');
-    console.log("Image URL:", imageUrl);
     return res.status(201).json({ message: 'Image uploaded successfully', url: imageUrl });
   } catch (error) {
     console.error('Error uploading image:', error);

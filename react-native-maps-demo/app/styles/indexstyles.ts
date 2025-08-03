@@ -37,6 +37,33 @@ goToLocationButton: {
   borderColor: 'black',
   borderWidth: 3
 },
+goToLocationButtonOnFind: {
+  backgroundColor: 'white',
+  borderRadius: 18,       // round
+  width: 32,              // small white circle
+  height: 32,
+  alignItems: 'stretch',
+  justifyContent: 'space-evenly',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 5,
+  borderColor: 'black',
+  borderWidth: 3
+},
+chooseLocationButtonRow: {
+  paddingHorizontal: 50, 
+  position: 'absolute',
+  bottom: 80,
+  left: 20,
+  right: 20,
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  zIndex: 10,
+},
+
   safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -297,7 +324,7 @@ polisDisplay: {
     marginTop: -8,
     borderRadius: 8,
     backgroundColor: 'transparent',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: 'black',
     zIndex: 10,
   },
@@ -381,6 +408,19 @@ iconWrapper1: {
 iconWrapper2: {
   top:85, 
   alignItems: 'center',
+},
+confirmLocationButton: {
+  padding: 10,
+  backgroundColor: getRandomColor(),
+  borderRadius: 12,
+  alignItems: 'center',
+  zIndex: 10,
+},
+confirmLocationText: {
+  color: 'white',
+  fontSize: 25, 
+  fontWeight: 'bold',
+  fontFamily: 'Koulen_400Regular',
 },
 
 iconText: {
@@ -495,4 +535,26 @@ iconButton2: {
     fontSize: 14,
     fontWeight: 'bold',
   },
+
+closeChooseLocationButton: {
+  position: 'absolute',
+  top: 40,
+  left: 20,
+  zIndex: 20,
+  // backgroundColor: 'white',
+  borderRadius: 16,
+  padding: 6,
+  elevation: 3, // for Android shadow
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+},
+
+closeChooseLocationText: {
+  fontSize: 18,
+  color: 'black',
+  fontWeight: 'bold',
+},
+
 });

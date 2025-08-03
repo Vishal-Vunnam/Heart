@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getPostsByAuthorId } from '@/services/api/posts';
+import { getPostsByAuthorId, getPost } from '@/services/api/posts';
 import { searchPolis } from '@/services/api/search';
 import { getCurrentUser } from '@/services/auth/fireAuth';
 import { ThemedView } from '@/components/ThemedView';
@@ -20,6 +20,7 @@ import { PolisType, PostInfo, UserInfo, DisplayPostInfo, PolisSearchReturn } fro
 import { DiscoverPolis } from './DiscoverPolis';
 import { DiscoverPost } from './DiscoverPosts';
 import styles from './DiscoverStyles';
+import { isFriend } from '@/services/api/user';
 
 const SEARCH_HISTORY_KEY = 'search_history';
 
@@ -54,14 +55,15 @@ interface DiscoverModalProps {
   onPostSelect: (post: PostInfo) => void;
   onPolisSelect?: (polis: PolisType) => void;
   setPolis: PolisType | null;
-  selectedPostIdFromParent: DisplayPostInfo | null;
-  setPostId: (post: DisplayPostInfo | null) => void;
+  selectedPostIdFromParent: string;
+  setPostId: (postId: string | null) => void;
 }
 
 const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSelect, setPolis, selectedPostIdFromParent, setPostId }) => {
   const [posts, setPosts] = useState<DisplayPostInfo[]>([]);
   const [isLoggedInUser, setIsLoggedInUser] = useState(false);
   const [selectedPolis, setSelectedPolis] = useState<PolisType | null>(null);
+  const [isUserFriend, setIsUserFriend] = useState<boolean>(false);
   const textInputRef = useRef<TextInput>(null);
   const [searchText, setSearchText] = useState('');
   const [selectedPost, setSelectedPost] = useState<DisplayPostInfo | null>(null);
@@ -69,33 +71,68 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
   const [polisSuggestions, setPolisSuggestions] = useState<PolisSearchReturn[]>([]);
   const [isSearchingPolis, setIsSearchingPolis] = useState(false);
   const [filteredUsers, setFilteredUsers] = useState<PolisSearchReturn[]>([]);
+  // const [userFriend, setUserFriends] = useState<string[]> 
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    setSelectedPolis(setPolis);
-    setSelectedPost(selectedPostFromParent);
-    (async () => {
+  const fetchData = async () => {
+    try {
+      setSelectedPolis(setPolis);
+
+      if (selectedPostIdFromParent !== "") {
+      const postTmp = await getPost(selectedPostIdFromParent);
+      setSelectedPost(postTmp);
+      }
+
+      // const currentUser = await getCurrentUser();
+      // if (setPolis?.isUser && setPolis.userInfo?.uid) {
+      //   setIsLoggedInUser(currentUser?.uid === setPolis.userInfo.uid);
+      // } else {
+      //   setIsLoggedInUser(false);
+      // }
+    } catch (error) {
+      console.error('Error in useEffect:', error);
+      setIsLoggedInUser(false);
+    }
+  };
+
+  fetchData();
+}, [setPolis, selectedPostIdFromParent]);
+
+
+useEffect(() => {
+  const fetchData = async () => {
+    if (selectedPolis?.isUser) {
       try {
         const currentUser = await getCurrentUser();
-        if (setPolis?.isUser && setPolis.userInfo?.uid) {
-          setIsLoggedInUser(currentUser?.uid === setPolis.userInfo.uid);
+        if (selectedPolis.userInfo?.uid) {
+
+          const uid1 = currentUser?.uid ? String(currentUser.uid).trim() : '';
+          const uid2 = selectedPolis.userInfo.uid ? String(selectedPolis.userInfo.uid).trim() : '';
+          const loggedInUserTemp = uid1 === uid2;
+          setIsLoggedInUser(loggedInUserTemp);
+          setIsUserFriend(await isFriend(uid2));
+          console.log(isUserFriend);
+          // setUserFriends(friendsTemp.friends);
         } else {
           setIsLoggedInUser(false);
         }
-      } catch {
-        setIsLoggedInUser(false);
-      }
-    })();
-  }, [setPolis, selectedPostFromParent]);
 
-  useEffect(() => {
-    if (selectedPolis?.isUser) {
-      setFilteredUsers([]);
-      getPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
+
+        setFilteredUsers([]);
+
+        const userPosts = await getPostsByAuthorId(selectedPolis.userInfo.uid);
         setPosts(userPosts.posts);
-      });
+      } catch (error) {
+        console.error("Error in fetchData useEffect:", error);
+        setIsLoggedInUser(false);
+        setPosts([]);
+      }
     }
-  }, [selectedPolis]);
+  };
+
+  fetchData();
+}, [selectedPolis]);
 
   useEffect(() => {
     if (!isTyping) return;
@@ -224,6 +261,7 @@ const DiscoverModal: React.FC<DiscoverModalProps> = ({ onPostSelect, onPolisSele
             <DiscoverPolis
               selectedPolis={selectedPolis}
               isLoggedInUser={isLoggedInUser}
+              isUserFriend = {isUserFriend}
               posts={posts}
               onPolisSelect={onPolisSelect}
               setSelectedPost={setSelectedPost}

@@ -403,7 +403,6 @@ router.get('/markerposts/by-author', async (req: Request, res: Response) =>  {
 
   // Query to get posts by author, including images as a JSON array and the private field
 
-  console.log("THIS IS THE ID" , currentUserId);
   const query = `
     SELECT 
       p.id as postId,
@@ -695,7 +694,6 @@ router.put('/edit-post', async (req: Request, res: Response) => {
 router.put('/like_post', async (req: Request, res: Response) => { 
   const postId = req.query.postId as string;
   const userId = req.query.userId as string;
-  console.log(`[like_post] Received request: postId=${postId}, userId=${userId}`);
   if (!postId || !userId) {
     console.warn('[like_post] Missing required query parameters:', { postId, userId });
     return res.status(400).json({ success: false, error: "Missing required query parameters: id or userId" });

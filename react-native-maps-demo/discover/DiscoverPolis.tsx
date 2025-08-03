@@ -1,17 +1,19 @@
 // Extracted from original DiscoverModal.tsx
 
 // DiscoverPolis.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { PolisType, DisplayPostInfo } from '@/types/types';
 import { router } from 'expo-router';
 import styles from './DiscoverStyles'; // Importing the styles
 import ProtectedImage from '@/components/ProtectedImage';
-
+import { MaterialIcons } from '@expo/vector-icons';
+import { addFriend } from '@/services/api/user';
 interface DiscoverPolisProps {
   selectedPolis: PolisType;
   isLoggedInUser: boolean;
+  isUserFriend: boolean; 
   posts: DisplayPostInfo[];
   onPolisSelect?: (polis: PolisType) => void;
   setSelectedPost: (post: DisplayPostInfo) => void;
@@ -20,10 +22,24 @@ interface DiscoverPolisProps {
 export const DiscoverPolis: React.FC<DiscoverPolisProps> = ({
   selectedPolis,
   isLoggedInUser,
+  isUserFriend,
   posts,
   onPolisSelect,
-  setSelectedPost,
+  setSelectedPost
 }) => {
+  const [isFriend, setIsFriend] = useState<boolean>(isUserFriend);
+const handleAddFriend = async () => {
+  if(isLoggedInUser || !selectedPolis.isUser) return; 
+  console.log("here")
+  try{
+    const followeeId = selectedPolis.userInfo.uid; 
+    const addingFriend = await addFriend(followeeId);
+    setIsFriend(true);
+    console.log(addingFriend);
+  }catch (error){ 
+
+  }
+}
   return (
     <>
       <ThemedView style={styles.infoDisplay}>
@@ -34,19 +50,33 @@ export const DiscoverPolis: React.FC<DiscoverPolisProps> = ({
               style={styles.profilePicMedium}
             />
           ) : null}
-        <TouchableOpacity
+     <View style={styles.infoLeft}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+
+                  <TouchableOpacity
           style={styles.infoRight}
           onPress={() => {
             if (onPolisSelect) onPolisSelect(selectedPolis);
           }}
-        >          <View style={styles.infoLeft}>
-            <Text style={styles.displayName}>
-              {selectedPolis.isUser
-                ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
-                : selectedPolis.tag}
-            </Text>
+        >     
+          <Text style={styles.displayName}>
+            {selectedPolis.isUser
+              ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
+              : selectedPolis.tag}
+          </Text>
+
+               </TouchableOpacity>
+          {selectedPolis.isUser && !isLoggedInUser && !isFriend && (
+            <TouchableOpacity onPress={handleAddFriend}>
+            <MaterialIcons
+              name="person-add"
+              size={20}
+              style={styles.addFriendIcon}
+            />
+            </TouchableOpacity>
+          )}
+        </View>
           </View>
-        </TouchableOpacity>
         </View>
 
       </ThemedView>

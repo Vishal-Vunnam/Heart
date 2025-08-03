@@ -106,7 +106,15 @@ export default StyleSheet.create({
    fontFamily: 'Anton_400Regular'
 
   },
-  
+  addFriendIcon :{ 
+  borderColor: 'black',
+  borderWidth: 3,
+  borderRadius: 100, 
+  padding: 3, 
+  marginLeft: 8, 
+
+
+  },
   // Enhanced suggestion box
   suggestionBox: {
     position: 'absolute',

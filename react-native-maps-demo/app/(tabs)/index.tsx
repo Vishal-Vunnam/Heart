@@ -95,6 +95,7 @@ export default function HomeScreen() {
   const [userInfoChange, setUserInfoChange] = useState<boolean> (false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [postToEdit, setPostToEdit] = useState<PostInfo | null>(null);
+  const [isChoosingLocation, setIsChoosingLocation] = useState(false);
   
 
   // Handler to trigger posts refresh after deletion
@@ -463,7 +464,14 @@ export default function HomeScreen() {
         {/* Map */}
         <ThemedView style={styles.mapPlaceholder}>
                   {/* Polis Header */}
-        {renderPolisHeader()}
+        {!isChoosingLocation ?  renderPolisHeader() :     
+        <TouchableOpacity
+          style={styles.closeChooseLocationButton}
+          onPress={() => setIsChoosingLocation(false)}
+        >
+          <MaterialIcons name="close" size={24} color="#000" />
+        </TouchableOpacity>
+}
           <MapView
             provider="google"
             mapRef={ref => mapRef.current = ref}
@@ -516,7 +524,7 @@ export default function HomeScreen() {
 
 
           >
-            {posts.map((post, index) => {
+            {!isChoosingLocation && posts.map((post, index) => {
               if (!post.latitude) return null;
               const { postId, latitude, longitude } = post;
               return (
@@ -544,21 +552,42 @@ export default function HomeScreen() {
           </MapView>
 
           {/* Center dot overlay */}
-          <View pointerEvents="none" style={styles.centerDot} />
+          {isChoosingLocation && <View pointerEvents="none" style={styles.centerDot} />}
+        {isChoosingLocation && (
+          <View style={styles.chooseLocationButtonRow}>
+
+            <TouchableOpacity
+              style={styles.confirmLocationButton}
+              onPress={() => {
+                setIsPostModalVisible(true);
+                setIsChoosingLocation(false);
+              }}
+            >
+              <Text style={styles.confirmLocationText}>Confirm Location</Text>
+            </TouchableOpacity>
+                  <TouchableOpacity
+              style={styles.goToLocationButtonOnFind}
+              onPress={goToCurrentLocation}
+            >
+              <MaterialIcons name="near-me" size={24} color="#000" />
+            </TouchableOpacity>
+
+          </View>
+        )}
+
+
 
           {/* Action Buttons and Custom Callout Overlay as siblings */}
           <View style={{ flex: 1 }} pointerEvents="box-none">
             {/* Action Buttons */}
-          <View style={styles.actionButtonContainer}>
-            <TouchableOpacity style={styles.iconWrapper1}  onPress={() => {
-              goToCurrentLocation();
-            setTimeout(() => {
-              handlePost();
-            }, 500);
+         { !isChoosingLocation && <View style={styles.actionButtonContainer}>
+           <TouchableOpacity style={styles.iconWrapper1}  onPress={() => {
+              // goToCurrentLocation();
+            setIsChoosingLocation(true);
             }}>
                     <View style={styles.iconButton1}/>
                     <Text style={styles.iconText}>POST</Text>
-            </TouchableOpacity>
+         </TouchableOpacity>
 
               <TouchableOpacity style={styles.iconWrapper2} onPress={openDiscoverModal} >
                 <View style={styles.iconButton2}/>
@@ -569,7 +598,7 @@ export default function HomeScreen() {
               <TouchableOpacity style={styles.goToLocationButton} onPress={goToCurrentLocation}>
                 <MaterialIcons name="near-me" size={24} color="#000" />
               </TouchableOpacity>
-          </View>
+          </View>}
 
             {/* Custom Callout Overlay */}
             {selectedPost && (
@@ -684,7 +713,7 @@ export default function HomeScreen() {
                       }
                     : selectedPolis
                 }
-                selectedPostIdFromParent={selectedPost.postId}  // 👈 this is the current value
+                selectedPostIdFromParent={selectedPost?.postId || ''} // 👈 this is the current value
                 setPostId={setSelectedPost.postId}              // 👈 this is the setter function
               />
               </Animated.View>

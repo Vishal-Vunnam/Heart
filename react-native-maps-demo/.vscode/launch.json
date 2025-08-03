@@ -1,0 +1,12 @@
+{
+  // This configuration attaches the debugger to an already running Expo packager
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to Expo",
+      "type": "reactnative",
+      "request": "attach",
+      "cwd": "${workspaceFolder}" // Current working directory
+    }
+  ]
+}
