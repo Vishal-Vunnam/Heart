@@ -112,6 +112,7 @@ export async function isFriend(followeeId: string): Promise<boolean> {
     }
 
     const data = await res.json();
+    console.log(data.isFriend);
     return data.isFriend ?? false;
   } catch (error) {
     console.error("Error in isFriend:", error);

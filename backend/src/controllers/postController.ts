@@ -629,6 +629,95 @@ router.get('/post/by-id', async (req: Request, res: Response) =>  {
 
 })
 
+router.get('/explore', async (req: Request, res: Response) => {
+  const currentUserId = req.query.currentUserId as string;
+  const offset = parseInt(req.query.offset as string);
+  const limit = parseInt(req.query.limit as string); // Optional limit
+
+  if (!currentUserId) {
+    return res.status(400).json({ success: false, error: "Missing required parameter: currentUserId" });
+  }
+
+  const query = `
+    WITH userFriends AS (
+      SELECT followee_id 
+      FROM friendships 
+      WHERE follower_id = @param0
+    )
+    SELECT 
+      p.id AS postId,
+      p.userId,
+      u.displayName AS userDisplayName,
+      u.photoURL AS userPhotoURL,
+      p.title,
+      p.description,
+      p.createdAt,
+      p.latitude,
+      p.latitudeDelta,
+      p.longitude,
+      p.longitudeDelta,
+      p.private,
+      (
+        SELECT 
+          i.imageUrl
+        FROM images i
+        WHERE i.postId = p.id
+        FOR JSON PATH
+      ) AS images
+    FROM posts p
+    LEFT JOIN post_viewer pv ON p.id = pv.post_id AND pv.user_id = @param0
+    LEFT JOIN users u ON p.userId = u.id
+    WHERE p.userId IN (SELECT followee_id FROM userFriends)
+      AND (p.private = 0 OR p.userId = @param0 OR pv.post_id IS NOT NULL)
+    ORDER BY p.createdAt DESC
+    OFFSET @param1 ROWS FETCH NEXT @param2 ROWS ONLY;
+  `;
+
+  const params = [currentUserId, offset, limit];
+
+  try {
+    const result = await executeQuery(query, params);
+
+    const posts = result.recordset.map((row: any) => {
+      let images: any[] = [];
+      try {
+        images = row.images ? JSON.parse(row.images) : [];
+      } catch {
+        images = [];
+      }
+
+      const postInfo =  {
+        postId: row.postId,
+        userId: row.userId,
+        userDisplayName: row.userDisplayName,
+        userPhotoURL: row.userPhotoURL,
+        type: 'post',
+        title: row.title,
+        description: row.description,
+        date: row.createdAt,
+        latitude: row.latitude,
+        latitudeDelta: row.latitudeDelta,
+        longitude: row.longitude,
+        longitudeDelta: row.longitudeDelta,
+        private: !!row.private,
+        images,
+      };
+
+      return {
+        postInfo,
+        images
+      };
+    });
+
+    return res.status(200).json({ success: true, posts });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Unknown error occurred while fetching explore posts.",
+    });
+  }
+});
+
 router.put('/edit-post', async (req: Request, res: Response) => {
   // Accept postInfo in the request body (not query)
   const postInfo = req.body.postInfo;

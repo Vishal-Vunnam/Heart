@@ -159,9 +159,9 @@ router.get('/is-friend', async (req: Request, res: Response) => {
     const params = [currentUserId, followeeId];
 
     const result = await executeQuery(query, params);
-    console.log(result);
 
-    const isFriend = result.recordset.length > 0;
+    console.log(result.rowsAffected[0]>0);
+    const isFriend = result.rowsAffected[0] > 0;
 
     return res.status(200).json({
       success: true,

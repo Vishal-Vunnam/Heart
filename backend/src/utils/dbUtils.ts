@@ -7,12 +7,27 @@ export async function executeQuery(query: string, params?: any[]): Promise<any> 
     if (!pool) throw new Error('Database connection failed.');
     const request = pool.request();
 
-    // Add parameters if provided
     if (params && Array.isArray(params)) {
       params.forEach((param, index) => {
-        request.input(`param${index}`, sql.NVarChar, param);
+        let type;
+        if (typeof param === 'number') {
+          type = sql.Int;
+          request.input(`param${index}`, type, param);
+        } else if (typeof param === 'boolean') {
+          type = sql.Bit;
+          request.input(`param${index}`, type, param);
+        } else if (typeof param === 'string') {
+          // Specify length for NVarChar
+          type = sql.NVarChar(255);
+          request.input(`param${index}`, type, param);
+        } else {
+          // fallback to NVarChar max length
+          type = sql.NVarChar(sql.MAX);
+          request.input(`param${index}`, type, param);
+        }
       });
     }
+
 
     const result = await request.query(query);
     console.log('Query executed successfully');

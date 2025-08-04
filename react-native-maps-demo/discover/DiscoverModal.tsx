@@ -21,6 +21,7 @@ import { DiscoverPolis } from './DiscoverPolis';
 import { DiscoverPost } from './DiscoverPosts';
 import styles from './DiscoverStyles';
 import { isFriend } from '@/services/api/user';
+import { DiscoverExplore } from './DiscoverExplore';
 
 const SEARCH_HISTORY_KEY = 'search_history';
 
@@ -111,8 +112,9 @@ useEffect(() => {
           const uid2 = selectedPolis.userInfo.uid ? String(selectedPolis.userInfo.uid).trim() : '';
           const loggedInUserTemp = uid1 === uid2;
           setIsLoggedInUser(loggedInUserTemp);
-          setIsUserFriend(await isFriend(uid2));
-          console.log(isUserFriend);
+          const isItAFriend = await isFriend(uid2)
+          console.log(isItAFriend);
+          setIsUserFriend(isItAFriend);
           // setUserFriends(friendsTemp.friends);
         } else {
           setIsLoggedInUser(false);
@@ -269,6 +271,13 @@ useEffect(() => {
           ) : selectedPost ? (
             <DiscoverPost post={selectedPost} onBack={() => setSelectedPost(null)} />
           ) : null}
+          {!selectedPolis && !selectedPostIdFromParent && !isTyping && (
+          <DiscoverExplore
+            onPolisSelect={onPolisSelect}
+            setSelectedPost={setSelectedPost}
+            postsPerPage={10}
+          />
+        )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

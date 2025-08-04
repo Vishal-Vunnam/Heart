@@ -98,13 +98,22 @@ export async function deletePostById(postId: string) {
     });
 }
 
-export async function likePost(postId: string, userId: string) {
-  console.log("Liking post:", postId, "by user:", userId);
-  const url = `${BASE_URL}/like_post?postId=${encodeURIComponent(postId)}&userId=${encodeURIComponent(userId)}`;
+
+export async function getExplore(limit: number, offset: number) {
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.uid;
+  const url = `${BASE_URL}/explore?limit=${limit.toString()}&offset=${offset.toString()}&currentUserId=${currentUserId}`;
+
   const res = await fetch(url, {
-    method: "PUT",
+    method: "GET",
     headers: { "Content-Type": "application/json" },
   });
-  if (!res.ok) throw new Error("Failed to like post");
-  return res.json();
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Failed to fetch explore posts: ${errText}`);
+  }
+
+  const data = await res.json();
+  return data.posts;
 }

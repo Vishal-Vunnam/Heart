@@ -700,21 +700,9 @@ export default function HomeScreen() {
                   setSelectedPolis(polis);
                   setIsDiscoverModalVisible(false);
                 }}
-                setPolis={
-                  discoverUserId
-                    ? {
-                        isUser: true,
-                        userInfo: {
-                          uid: discoverUserId,
-                          displayName: '',
-                          email: '',
-                          photoURL: null,
-                        },
-                      }
-                    : selectedPolis
-                }
+                setPolis={null}
                 selectedPostIdFromParent={selectedPost?.postId || ''} // 👈 this is the current value
-                setPostId={setSelectedPost.postId}              // 👈 this is the setter function
+                setPostId={setSelectedPost?.postId}              // 👈 this is the setter function
               />
               </Animated.View>
             </PanGestureHandler>

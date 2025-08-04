@@ -1,7 +1,6 @@
 // Extracted from original DiscoverModal.tsx
-
 // DiscoverPolis.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { PolisType, DisplayPostInfo } from '@/types/types';
@@ -10,6 +9,8 @@ import styles from './DiscoverStyles'; // Importing the styles
 import ProtectedImage from '@/components/ProtectedImage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { addFriend } from '@/services/api/user';
+import { getRandomColor } from '@/functions/getRandomColor';
+
 interface DiscoverPolisProps {
   selectedPolis: PolisType;
   isLoggedInUser: boolean;
@@ -17,6 +18,7 @@ interface DiscoverPolisProps {
   posts: DisplayPostInfo[];
   onPolisSelect?: (polis: PolisType) => void;
   setSelectedPost: (post: DisplayPostInfo) => void;
+  postsPerPage?: number; // Optional prop to control how many posts to show per page
 }
 
 export const DiscoverPolis: React.FC<DiscoverPolisProps> = ({
@@ -25,21 +27,51 @@ export const DiscoverPolis: React.FC<DiscoverPolisProps> = ({
   isUserFriend,
   posts,
   onPolisSelect,
-  setSelectedPost
+  setSelectedPost,
+  postsPerPage = 10 // Default to 10 posts per page
 }) => {
-  const [isFriend, setIsFriend] = useState<boolean>(isUserFriend);
-const handleAddFriend = async () => {
-  if(isLoggedInUser || !selectedPolis.isUser) return; 
-  console.log("here")
-  try{
-    const followeeId = selectedPolis.userInfo.uid; 
-    const addingFriend = await addFriend(followeeId);
-    setIsFriend(true);
-    console.log(addingFriend);
-  }catch (error){ 
+  const [isFriend, setIsFriend] = useState<boolean | null>(null);
+  const [visiblePostsCount, setVisiblePostsCount] = useState<number>(postsPerPage);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  useEffect(() => {
+    setIsFriend(isUserFriend);
+  }, [isUserFriend]);
+
+  // Reset visible posts when posts change (e.g., different polis selected)
+  useEffect(() => {
+    setVisiblePostsCount(postsPerPage);
+  }, [posts, postsPerPage]);
+
+  const handleAddFriend = async () => {
+    if(isLoggedInUser || !selectedPolis.isUser) return;
+   
+    console.log("here")
+    try{
+      const followeeId = selectedPolis.userInfo.uid;
+     
+      const addingFriend = await addFriend(followeeId);
+      setIsFriend(true);
+      console.log(addingFriend);
+    }catch (error){
+      // Handle error
+    }
   }
-}
+
+  const handleLoadMore = () => {
+    setIsLoading(true);
+    
+    // Simulate loading delay (remove this in production if not needed)
+    setTimeout(() => {
+      setVisiblePostsCount(prev => Math.min(prev + postsPerPage, posts.length));
+      setIsLoading(false);
+    }, 300);
+  };
+
+  // Get only the posts that should be visible
+  const visiblePosts = posts.slice(0, visiblePostsCount);
+  const hasMorePosts = visiblePostsCount < posts.length;
+
   return (
     <>
       <ThemedView style={styles.infoDisplay}>
@@ -50,69 +82,104 @@ const handleAddFriend = async () => {
               style={styles.profilePicMedium}
             />
           ) : null}
-     <View style={styles.infoLeft}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-
-                  <TouchableOpacity
-          style={styles.infoRight}
-          onPress={() => {
-            if (onPolisSelect) onPolisSelect(selectedPolis);
-          }}
-        >     
-          <Text style={styles.displayName}>
-            {selectedPolis.isUser
-              ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
-              : selectedPolis.tag}
-          </Text>
-
-               </TouchableOpacity>
-          {selectedPolis.isUser && !isLoggedInUser && !isFriend && (
-            <TouchableOpacity onPress={handleAddFriend}>
-            <MaterialIcons
-              name="person-add"
-              size={20}
-              style={styles.addFriendIcon}
-            />
-            </TouchableOpacity>
-          )}
-        </View>
+     
+          <View style={styles.infoLeft}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                     
+              <TouchableOpacity
+                style={styles.infoRight}
+                onPress={() => {
+                  if (onPolisSelect) onPolisSelect(selectedPolis);
+                }}
+              >
+                <Text style={styles.displayName}>
+                  {selectedPolis.isUser
+                    ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
+                    : selectedPolis.tag}
+                </Text>
+              </TouchableOpacity>
+              
+              {selectedPolis.isUser && !isLoggedInUser && isFriend!= null && !isFriend && (
+                <TouchableOpacity onPress={handleAddFriend}>
+                  <MaterialIcons
+                    name="person-add"
+                    size={20}
+                    style={styles.addFriendIcon}
+                  />
+                </TouchableOpacity>
+              )}
+              {selectedPolis.isUser && !isLoggedInUser && isFriend!= null && isFriend && (
+                <TouchableOpacity onPress={handleAddFriend}>
+                  <MaterialIcons
+                    name="person-remove"
+                    size={20}
+                    style={styles.addFriendIcon}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
-
       </ThemedView>
 
-<ThemedView style={styles.postDisplay}>
-  {posts.map((post, index) => (
-    <TouchableOpacity
-      key={index}
-      style={styles.postItem}
-      onPress={() => setSelectedPost(post)}
-    >
-      <View style={styles.infoContainer}>
-        <Text style={styles.postTitle}>{post.postInfo.title}</Text>
-        <Text style={styles.postDate}>
-          {new Date(post.postInfo.date).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          })}
-        </Text>
-      </View>
+      <ThemedView style={styles.postDisplay}>
+        {visiblePosts.map((post, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.postItem}
+            onPress={() => setSelectedPost(post)}
+          >
+            <View style={styles.infoContainer}>
+              <Text style={styles.postTitle}>{post.postInfo.title}</Text>
+              <Text style={styles.postDate}>
+                {new Date(post.postInfo.date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </Text>
+            </View>
+           
+            <View style={styles.imageContainer}>
+              {post.images?.slice(0, 2).map((img, index) => (
+                <ProtectedImage
+                  key={index}
+                  url={img.imageUrl}
+                  style={styles.thumbnail}
+                  resizeMode="contain"
+                />
+              ))}
+            </View>
+          </TouchableOpacity>
+        ))}
 
-    <View style={styles.imageContainer}>
-      {post.images?.slice(0, 2).map((img, index) => (
-        <ProtectedImage
-          key={index}
-          url={img.imageUrl}
-          style={styles.thumbnail}
-          resizeMode="contain"
-        />
-      ))}
-    </View>
-    </TouchableOpacity>
-  ))}
-</ThemedView>
+        {/* Load More Button */}
+        {hasMorePosts && (
+          <TouchableOpacity
+            style={styles.loadMoreButton}
+            onPress={handleLoadMore}
+            disabled={isLoading}
+          >
+            <Text style={styles.loadMoreText}>
+              {isLoading ? 'Loading...' : `Load More (${posts.length - visiblePostsCount} remaining)`}
+            </Text>
+            {!isLoading && (
+              <MaterialIcons
+                name="expand-more"
+                size={20}
+                style={styles.loadMoreIcon}
+              />
+            )}
+          </TouchableOpacity>
+        )}
 
+        {/* Optional: Show total count */}
+        {posts.length > postsPerPage && (
+          <Text style={styles.postCountText}>
+            Showing {visiblePostsCount} of {posts.length} posts
+          </Text>
+        )}
+      </ThemedView>
     </>
   );
 };

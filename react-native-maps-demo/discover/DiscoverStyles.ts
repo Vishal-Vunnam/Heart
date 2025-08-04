@@ -115,6 +115,49 @@ export default StyleSheet.create({
 
 
   },
+  loadMoreButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 16,
+  marginTop: 16,
+  marginHorizontal: 16,
+  backgroundColor: '#ffffffff', // White background to match your theme
+  borderRadius: 8,
+  borderWidth: 2,
+  borderColor: 'black', // Black border to match your design
+  elevation: 4,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+},
+
+loadMoreText: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  color: '#000000ff', // Black text to match your theme
+  marginRight: 8,
+  fontFamily: 'Anton_400Regular', // Using your preferred font
+  textDecorationLine: 'underline', // Underline to match postTitle style
+},
+
+loadMoreIcon: {
+  color: '#000000ff', // Black icon to match
+  borderColor: 'black',
+  borderWidth: 2,
+  borderRadius: 100,
+  padding: 2,
+},
+
+postCountText: {
+  textAlign: 'center',
+  fontSize: 12,
+  color: '#888', // Keep the gray for secondary text
+  marginTop: 8,
+  marginBottom: 16,
+  fontFamily: 'Koulen_400Regular', // Using your secondary font
+},
   // Enhanced suggestion box
   suggestionBox: {
     position: 'absolute',
@@ -249,6 +292,7 @@ postItem: {
   borderBottomColor: '#333',
   borderBottomWidth: 1,
   elevation: 4,
+  height: 100
 },
 
 infoContainer: {
@@ -259,14 +303,34 @@ infoContainer: {
 imageContainer: {
   flexDirection: 'row',
   marginLeft: 12,
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8
 },
+bulletPoint: {
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginRight: 12,
+  minWidth: 20, // Ensures consistent spacing
+},
+
+bulletText: {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: '#000000ff', // Black to match your theme
+  lineHeight: 24,
+},
+
+// And update your thumbnail style to add spacing:
 thumbnail: {
   width: 84,
   height: 84,
-  resizeMode: 'contain',  // Important: maintain aspect ratio
-  overflow: 'hidden',     // Optional: clip anything that bleeds out
-  backgroundColor: 'transparent', // Optional: if image doesn't fill the area, gives a fallback
+  resizeMode: 'contain',
+  overflow: 'hidden',
+  backgroundColor: 'transparent',
+  marginLeft: 8, // Add spacing between images
 },
+
 
 
 postTitle: {
