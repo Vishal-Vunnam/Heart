@@ -1,68 +1,77 @@
 import { StyleSheet } from 'react-native';
+import { getRandomColor } from '@/functions/getRandomColor';
 
-// Styles for DiscoverExplore component based on existing theme consensus
+// Consistent color palette
+const COLORS = {
+  white: '#ffffff',
+  black: '#000000',
+  gray: '#888888',
+  lightGray: '#cccccc',
+  darkGray: '#333333',
+  error: '#ff4444',
+  transparent: 'transparent',
+};
+
+// Consistent font families
+const FONTS = {
+  primary: 'Koulen_400Regular',
+  secondary: 'Anton_400Regular',
+};
+
+// Consistent spacing
+const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+  xxxxl: 40,
+};
+
+// Consistent border radius
+const BORDER_RADIUS = {
+  sm: 8,
+  md: 20,
+  lg: 100,
+};
+
+// Consistent elevation/shadow
+const ELEVATION = {
+  card: {
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+};
+
 export default StyleSheet.create({
   // Main container
   exploreContainer: {
     flex: 1,
-    backgroundColor: 'transparent',
-  },
-    infoContainer: {
-    padding: 10,
-    flexDirection: 'column',
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  userPhoto: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  userDetails: {
-    flexDirection: 'column',
-  },
-  userName: {
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  postDate: {
-    fontSize: 12,
-    color: 'gray',
-  },
-  postTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  postInfo: {
-    alignItems: 'flex-end',
+    backgroundColor: COLORS.transparent,
   },
 
   // Header section
   exploreHeader: {
-    backgroundColor: '#ffffffff',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    elevation: 4,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.lg,
+    marginHorizontal: SPACING.lg,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
+    // ...ELEVATION.card,
   },
 
   exploreTitle: {
     fontSize: 32,
     textDecorationLine: 'underline',
     fontWeight: 'bold',
-    color: '#000000ff',
-    fontFamily: 'Koulen_400Regular',
+    color: COLORS.black,
+    fontFamily: FONTS.primary,
     letterSpacing: 1.5,
     textAlign: 'center',
   },
@@ -70,65 +79,116 @@ export default StyleSheet.create({
   // Posts display container
   postDisplay: {
     marginTop: 0,
-    backgroundColor: 'transparent',
+    backgroundColor: COLORS.transparent,
     flex: 1,
   },
 
-  // Individual post item - changed to column layout
+  // Individual post item
   postItem: {
     flexDirection: 'column',
-    padding: 16,
+    padding: SPACING.lg,
     marginHorizontal: 0,
-    marginBottom: 24,
-    backgroundColor: '#ffffffff',
-    borderBottomColor: '#333',
+    marginBottom: SPACING.xxl,
+    backgroundColor: COLORS.white,
+    borderBottomColor: COLORS.darkGray,
     borderBottomWidth: 1,
-    elevation: 4,
+    ...ELEVATION.card,
+  },
+
+  // Post info container - consistent styling
+  infoContainer: {
+    padding: 10,
+    flexDirection: 'column',
+  },
+
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+
+  // User info styling - made consistent
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  userPhoto: {
+    width: SPACING.xxxxl,
+    height: SPACING.xxxxl,
+    borderRadius: SPACING.md,
+    marginRight: SPACING.sm,
+  },
+
+  userDetails: {
+    flexDirection: 'column',
+    flex: 1,
+  },
+
+  userName: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: COLORS.black,
+    fontFamily: FONTS.secondary,
+  },
+
+  postDate: {
+    fontSize: 12,
+    color: getRandomColor(),
+    fontFamily: FONTS.secondary,
+  },
+
+  // Post content styling - made consistent
+  postInfo: {
+    alignItems: 'flex-start', // Changed from flex-end for better alignment
+    marginTop: SPACING.sm,
+  },
+
+  postTitle: {
+    fontSize: 18, // Increased for better hierarchy
+    fontWeight: 'bold',
+    color: COLORS.black,
+    marginBottom: SPACING.xs,
+    lineHeight: 22,
+    fontFamily: FONTS.secondary,
+    textDecorationLine: 'underline',
+  },
+
+  postDescription: {
+    fontSize: 14,
+    color: COLORS.darkGray,
+    lineHeight: 18,
+    fontFamily: FONTS.secondary,
   },
 
   // Post header with bullet and info
   postHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 16,
+    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.lg,
   },
 
   // Bullet point for list style
   bulletPoint: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    minWidth: 20,
+    marginRight: SPACING.md,
+    minWidth: SPACING.xl,
   },
 
   bulletText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000000ff',
+    color: COLORS.black,
     lineHeight: 24,
+    fontFamily: FONTS.primary,
   },
 
-  // Info container for post details
-//   infoContainer: {
-//     flex: 1,
-//     paddingRight: 12,
-//   },
-
-//   // Post title styling
-//   postTitle: {
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//     color: '#000',
-//     marginBottom: 4,
-//     lineHeight: 22,
-//     fontFamily: 'Anton_400Regular',
-//     textDecorationLine: 'underline',
-//   },
   // Image container - full width Instagram style
   imageContainer: {
     width: '100%',
-    marginTop: 8,
+    marginTop: SPACING.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -136,30 +196,31 @@ export default StyleSheet.create({
   // Instagram-style image display
   instagramImageContainer: {
     width: '100%',
-    aspectRatio: 1, // Square aspect ratio like Instagram
-    marginBottom: 8,
+    aspectRatio: 1,
+    marginBottom: SPACING.sm,
   },
 
   // Thumbnail styling - full width
   thumbnail: {
-    resizeMode: 'contain', // Changed to cover for Instagram-like display
-    borderRadius: 8,
-    marginBottom: 8, 
+    // width: '100%',
+    // height: '100%',
+    resizeMode: 'contain', // Better for Instagram-like display
+    borderRadius: BORDER_RADIUS.sm,
   },
 
   // Multiple images container
   multipleImagesContainer: {
     width: '100%',
     flexDirection: 'row',
-    columnGap: 4,
-    marginBottom: 10, 
-
+    columnGap: SPACING.xs,
+    marginBottom: 10,
   },
 
   // For when there are 2 images
   halfWidthImage: {
     flex: 1,
     aspectRatio: 1,
+    borderRadius: BORDER_RADIUS.sm,
   },
 
   // Load more button
@@ -167,36 +228,32 @@ export default StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    marginTop: 16,
-    marginHorizontal: 16,
-    backgroundColor: '#ffffffff',
-    borderRadius: 8,
+    padding: SPACING.lg,
+    marginTop: SPACING.lg,
+    marginHorizontal: SPACING.lg,
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.sm,
     borderWidth: 2,
-    borderColor: 'black',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    borderColor: COLORS.black,
+    ...ELEVATION.card,
   },
 
   // Load more text
   loadMoreText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000000ff',
-    marginRight: 8,
-    fontFamily: 'Anton_400Regular',
+    color: COLORS.black,
+    marginRight: SPACING.sm,
+    fontFamily: FONTS.secondary,
     textDecorationLine: 'underline',
   },
 
   // Load more icon
   loadMoreIcon: {
-    color: '#000000ff',
-    borderColor: 'black',
+    color: COLORS.black,
+    borderColor: COLORS.black,
     borderWidth: 2,
-    borderRadius: 100,
+    borderRadius: BORDER_RADIUS.lg,
     padding: 2,
   },
 
@@ -204,10 +261,10 @@ export default StyleSheet.create({
   postCountText: {
     textAlign: 'center',
     fontSize: 12,
-    color: '#888',
-    marginTop: 8,
-    marginBottom: 16,
-    fontFamily: 'Koulen_400Regular',
+    color: COLORS.gray,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.lg,
+    fontFamily: FONTS.primary,
   },
 
   // Loading states
@@ -215,13 +272,13 @@ export default StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: SPACING.xl,
   },
 
   loadingText: {
     fontSize: 16,
-    color: '#888',
-    fontFamily: 'Anton_400Regular',
+    color: COLORS.gray,
+    fontFamily: FONTS.secondary,
     textAlign: 'center',
   },
 
@@ -230,14 +287,14 @@ export default StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: SPACING.xxxxl,
   },
 
   emptyText: {
     fontSize: 16,
-    color: '#888',
+    color: COLORS.gray,
     textAlign: 'center',
-    fontFamily: 'Anton_400Regular',
+    fontFamily: FONTS.secondary,
     fontStyle: 'italic',
   },
 
@@ -246,32 +303,39 @@ export default StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: SPACING.xxxxl,
   },
 
   errorText: {
     fontSize: 16,
-    color: '#ff4444',
+    color: COLORS.error,
     textAlign: 'center',
-    fontFamily: 'Anton_400Regular',
-    marginBottom: 16,
+    fontFamily: FONTS.secondary,
+    marginBottom: SPACING.lg,
   },
 
   retryButton: {
-    backgroundColor: '#ffffffff',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    backgroundColor: COLORS.white,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xxl,
+    borderRadius: BORDER_RADIUS.sm,
     borderWidth: 2,
-    borderColor: 'black',
-    elevation: 4,
+    borderColor: COLORS.black,
+    ...ELEVATION.card,
   },
 
   retryButtonText: {
-    color: '#000000ff',
+    color: COLORS.black,
     fontWeight: 'bold',
     fontSize: 16,
-    fontFamily: 'Anton_400Regular',
+    fontFamily: FONTS.secondary,
     textAlign: 'center',
   },
+  addFriends: { 
+    color: getRandomColor(),
+    fontWeight: 'bold',
+    fontSize: 16,
+    fontFamily: FONTS.secondary,
+    textAlign: 'center',
+  }
 });

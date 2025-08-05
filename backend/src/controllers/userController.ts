@@ -174,6 +174,28 @@ router.get('/is-friend', async (req: Request, res: Response) => {
   }
 });
 
+router.delete('/delete-friend', async (req: Request, res: Response) => {
+  try { 
+    const currentUserId = req.query.currentUserId as string;
+    const followeeId = req.query.followeeId as string;
+    const query = `
+    DELETE FROM friendships 
+    WHERE follower_id = @param0 AND followee_id = @param1;
+    `
+    const params = [ 
+      currentUserId, 
+      followeeId
+    ]
+    const result = await executeQuery(query, params);
+    return res.status(200).json({
+      success: true
+    });
+  } catch (error) { 
+    console.error('Error deleting friendship:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+})
+
 
 
 export default router; 

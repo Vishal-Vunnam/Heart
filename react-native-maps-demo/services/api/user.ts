@@ -1,5 +1,5 @@
-// const BASE_URL =  "http://10.0.0.53:4000/api";
-const BASE_URL =  "http://192.168.1.94:4000/api";
+const BASE_URL =  "http://10.0.0.53:4000/api";
+// const BASE_URL =  "http://192.168.1.94:4000/api";
 import { UserInfo } from "@/types/types";
 import { getCurrentUser } from "../auth/fireAuth";
 /**
@@ -116,6 +116,36 @@ export async function isFriend(followeeId: string): Promise<boolean> {
     return data.isFriend ?? false;
   } catch (error) {
     console.error("Error in isFriend:", error);
+    return false;
+  }
+}
+export async function deleteFriend(followeeId: string): Promise<boolean> {
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.uid;
+  console.log(currentUserId, followeeId);
+
+  if (!currentUserId) {
+    console.error("User not logged in");
+    return false;
+  }
+
+  try {
+    const res = await fetch(
+      `${BASE_URL}/delete-friend?currentUserId=${currentUserId}&followeeId=${followeeId}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to delete friend");
+    }
+
+    const data = await res.json();
+    console.log("Delete success:", data.success);
+    return data.success ?? false;
+  } catch (error) {
+    console.error("Error in deleteFriend:", error);
     return false;
   }
 }

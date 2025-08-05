@@ -17,12 +17,13 @@ interface DiscoverExploreProps {
 export const DiscoverExplore: React.FC<DiscoverExploreProps> = ({
   onPolisSelect,
   setSelectedPost,
-  postsPerPage = 10,
+  postsPerPage = 5,
 }) => {
   const [explorePosts, setExplorePosts] = useState<DisplayPostInfo[]>([]);
   const [currOffset, setCurrOffset] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [visiblePostsCount, setVisiblePostsCount] = useState<number>(0);
+  const [noMorePosts, setnoMorePosts] = useState<boolean>(false);
 
   // Fetch initial posts
   useEffect(() => {
@@ -31,6 +32,7 @@ export const DiscoverExplore: React.FC<DiscoverExploreProps> = ({
         setIsLoading(true);
         const posts = await getExplore(postsPerPage, 0);
         setExplorePosts(posts);
+        if (posts.length < postsPerPage) setnoMorePosts(true);
         setVisiblePostsCount(posts.length);
         setCurrOffset(posts.length);
       } catch (error) {
@@ -48,6 +50,7 @@ export const DiscoverExplore: React.FC<DiscoverExploreProps> = ({
     setIsLoading(true);
     try {
       const morePosts = await getExplore(postsPerPage, currOffset);
+      if (morePosts.length < postsPerPage) setnoMorePosts(true);
       setExplorePosts(prev => [...prev, ...morePosts]);
       setVisiblePostsCount(prev => prev + morePosts.length);
       setCurrOffset(prev => prev + morePosts.length);
@@ -104,7 +107,7 @@ export const DiscoverExplore: React.FC<DiscoverExploreProps> = ({
       ))}
 
       {/* Load More Button */}
-      {visiblePostsCount < explorePosts.length || true /* always allow paging in case more exists */ ? (
+      {!noMorePosts && (visiblePostsCount < explorePosts.length || true) /* always allow paging in case more exists */ ? (
         <TouchableOpacity
           style={styles.loadMoreButton}
           onPress={handleLoadMore}
@@ -122,7 +125,10 @@ export const DiscoverExplore: React.FC<DiscoverExploreProps> = ({
           )}
         </TouchableOpacity>
       ) : null}
-
+    {noMorePosts && 
+    <Text style={styles.addFriends}>
+    Add more friends to see more posts!
+    </Text>}
       {/* Optional: Post count info */}
       {explorePosts.length > 0 && (
         <Text style={styles.postCountText}>

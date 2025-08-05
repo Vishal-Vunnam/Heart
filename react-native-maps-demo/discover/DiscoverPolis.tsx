@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 import styles from './DiscoverStyles'; // Importing the styles
 import ProtectedImage from '@/components/ProtectedImage';
 import { MaterialIcons } from '@expo/vector-icons';
-import { addFriend } from '@/services/api/user';
+import { addFriend, deleteFriend} from '@/services/api/user';
 import { getRandomColor } from '@/functions/getRandomColor';
 
 interface DiscoverPolisProps {
@@ -56,6 +56,20 @@ export const DiscoverPolis: React.FC<DiscoverPolisProps> = ({
     }catch (error){
       // Handle error
     }
+  }
+
+  const handleRemoveFriend = async () => { 
+      if(isLoggedInUser || !selectedPolis.isUser) return;
+
+      try {
+          const followeeId = selectedPolis.userInfo.uid;
+          const deletingFriend = deleteFriend(followeeId);
+          setIsFriend(false);
+
+      } catch (error) { 
+
+      }
+   
   }
 
   const handleLoadMore = () => {
@@ -109,7 +123,7 @@ export const DiscoverPolis: React.FC<DiscoverPolisProps> = ({
                 </TouchableOpacity>
               )}
               {selectedPolis.isUser && !isLoggedInUser && isFriend!= null && isFriend && (
-                <TouchableOpacity onPress={handleAddFriend}>
+                <TouchableOpacity onPress={handleRemoveFriend}>
                   <MaterialIcons
                     name="person-remove"
                     size={20}

@@ -94,7 +94,7 @@ export default function HomeScreen() {
   const [showedPostsChanges, setShowedPostsChanges] = useState<boolean> (false);
   const [userInfoChange, setUserInfoChange] = useState<boolean> (false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [postToEdit, setPostToEdit] = useState<PostInfo | null>(null);
+  const [postIdToEdit, setPostIdToEdit] = useState<string>('');
   const [isChoosingLocation, setIsChoosingLocation] = useState(false);
   
 
@@ -105,24 +105,24 @@ export default function HomeScreen() {
   };
 
   // Handler for edit
-  const handleEdit = (post: PostInfo) => {
-    setPostToEdit(post);
+  const handleEdit = (postId: string) => {
+    setPostIdToEdit(postId);
     setEditModalVisible(true);
   };
   // Handler for submit
-  // const handleEditSubmit = (editedPost: postId) => {
-  //   // Update the post in posts state (replace by postId), preserving DisplayPostInfo structure
-  //   // setPosts(prevPosts =>
-  //   //   prevPosts.map(p =>
-  //   //     p.postInfo.postId === editedPost.postInfo.postId
-  //   //       ? { ...p, postInfo: { ...p.postInfo, ...editedPost } }
-  //   //       : p
-  //   //   )
-  //   // );
-  //   setEditModalVisible(false);
-  //   setPostToEdit(null);
-  //   setSelectedPost(editedPost.postId); // Optionally show the updated post
-  // };
+  const handleEditSubmit = (editedPostId: string) => {
+    // Update the post in posts state (replace by postId), preserving DisplayPostInfo structure
+    // setPosts(prevPosts =>
+    //   prevPosts.map(p =>
+    //     p.postInfo.postId === editedPost.postInfo.postId
+    //       ? { ...p, postInfo: { ...p.postInfo, ...editedPost } }
+    //       : p
+    //   )
+    // );
+    setEditModalVisible(false);
+    setPostToEdit(null);
+    // setSelectedPost(editedPostId); // Optionally show the updated post
+  };
 
   // export type UserInfo = {
   //   displayName: string; 
@@ -637,7 +637,7 @@ export default function HomeScreen() {
                       setShowedPostsChanges(true); // Refresh posts
                     }}
                     
-                    // onEdit={() => handleEdit(selectedPost.postInfo)}
+                    onEdit={() => handleEdit(selectedPost.postId)}
                   />
                   <TouchableOpacity 
                     style={styles.closeCalloutButton}
@@ -708,14 +708,17 @@ export default function HomeScreen() {
             </PanGestureHandler>
           </View>
         )}
-
-        {/* Edit Post Modal */}
-        {/* {editModalVisible && postToEdit && (
+        {editModalVisible && postIdToEdit && (
           <EditPostModal
-            onClose={() => { setEditModalVisible(false); setPostToEdit(null); }}
-            oldPostInfo={postToEdit}
+            onClose={() => {
+              setEditModalVisible(false);
+              setPostIdToEdit('');
+            }}
+            // onEdit={}
+            oldPostId={postIdToEdit}
           />
-        )}  */}
+        )}
+
       </ThemedView>
     </SafeAreaView>
   );

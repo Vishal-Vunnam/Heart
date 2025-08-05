@@ -275,7 +275,7 @@ useEffect(() => {
           <DiscoverExplore
             onPolisSelect={onPolisSelect}
             setSelectedPost={setSelectedPost}
-            postsPerPage={10}
+            postsPerPage={5}
           />
         )}
         </View>

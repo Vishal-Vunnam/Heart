@@ -634,6 +634,8 @@ router.get('/explore', async (req: Request, res: Response) => {
   const offset = parseInt(req.query.offset as string);
   const limit = parseInt(req.query.limit as string); // Optional limit
 
+  console.log(offset);
+  console.log(limit)
   if (!currentUserId) {
     return res.status(400).json({ success: false, error: "Missing required parameter: currentUserId" });
   }
