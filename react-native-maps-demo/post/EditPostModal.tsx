@@ -21,6 +21,7 @@ import { getPost } from '@/services/api/posts';
 import { FlipInXDown } from 'react-native-reanimated';
 import { getRandomColor } from '@/functions/getRandomColor';
 import ProtectedImage from '@/components/ProtectedImage';
+import { editPost } from '@/services/api/posts';
 
 // Placeholder for getImageUrlWithSAS and deleteFromAzureBlob
 const getImageUrlWithSAS = (uri: string) => uri;
@@ -176,21 +177,11 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
 
     try {
       // Compose edited post
-      const editedPost: DisplayPostInfo = {
-        postInfo: {
-          ...oldPostInfo.postInfo,
-          title: locationTitle.trim(),
-          description: description.trim(),
-          type: activeTab,
-          // Add event fields if needed in your PostInfo type
-          // ...(activeTab === 'event' ? {
-          //   eventStartTime,
-          //   eventEndTime,
-          // } : {}),
-        },
-        images: selectedImages,
-        tag: tags.length > 0 ? tags.join(', ') : undefined,
-      };
+      const editedPost = {
+          postId: oldPostId,
+          title: locationTitle.trim() ?  locationTitle.trim() : oldPostInfo.postInfo.title,
+          description: description.trim() ? description.trim() : oldPostInfo.postInfo.description,
+      }
 
       // Find removed images
       const removedImages = originalImages.filter(
@@ -209,10 +200,10 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
       }
 
       // Here you would typically call your API to update the post
-      // await updatePost(oldPostId, editedPost);
+      await editPost(editedPost);
 
       Alert.alert('Success', 'Post updated successfully!');
-      onEdit();
+      onEdit(); 
     } catch (error) {
       console.error('Error updating post:', error);
       Alert.alert('Error', 'Failed to update post. Please try again.');
@@ -324,7 +315,10 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
                     modalStyles.tabButton,
                     activeTab === 'event' && modalStyles.tabButtonActive,
                   ]}
-                  onPress={() => setActiveTab('event')}
+                  onPress={() => {
+                    Alert.alert("Coming Soon", "This feature isn’t available yet.");
+                    // setActiveTab('event'); // leave this commented until implemented
+                  }}
                 >
                   <Text
                     style={[
@@ -437,6 +431,7 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
                           <ProtectedImage
                           url= {image.imageUrl}
                           showBorder={false}
+                          style={modalStyles.image}
                           >
                           </ProtectedImage>
                           <TouchableOpacity
@@ -713,6 +708,11 @@ const modalStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     ...ELEVATION.small,
+  },
+    image: {
+    width: 90,
+    height: 90,
+    borderRadius: 14,
   },
 
   // Tab section

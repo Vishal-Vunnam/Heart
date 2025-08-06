@@ -723,6 +723,9 @@ router.get('/explore', async (req: Request, res: Response) => {
 router.put('/edit-post', async (req: Request, res: Response) => {
   // Accept postInfo in the request body (not query)
   const postInfo = req.body.postInfo;
+  const tags: string[] | null = req.body.tags; 
+  const allowedMembers: string[] | null = req.body.allowedMembers; 
+  console.log(postInfo);
   if (!postInfo) {
     return res.status(400).json({ success: false, error: "Missing post information" });
   }
@@ -735,17 +738,13 @@ router.put('/edit-post', async (req: Request, res: Response) => {
       postId,
       title,
       description,
-      latitude,
-      longitude,
-      latitudeDelta,
-      longitudeDelta,
-      date,
-      // Optionally handle tags, images, etc.
     } = parsedPostInfo;
 
     if (!postId) {
       return res.status(400).json({ success: false, error: "Missing postId in postInfo" });
     }
+
+    //INSERT INTO posts (id, userId, title, description, latitude, longitude, latitudeDelta, longitudeDelta, createdAt, updatedAt, private)
 
     // Update the post in the database
     const updateQuery = `
@@ -753,22 +752,16 @@ router.put('/edit-post', async (req: Request, res: Response) => {
       SET
         title = @param0,
         description = @param1,
-        latitude = @param2,
-        longitude = @param3,
-        latitudeDelta = @param4,
-        longitudeDelta = @param5,
-        date = @param6
-      WHERE id = @param7
+        updatedAt = @param2
+      WHERE id = @param3
     `;
+
+    const now = new Date()
 
     await executeQuery(updateQuery, [
       title,
       description,
-      latitude,
-      longitude,
-      latitudeDelta,
-      longitudeDelta,
-      date,
+      toSqlDateString(now),
       postId
     ]);
 
@@ -782,6 +775,7 @@ router.put('/edit-post', async (req: Request, res: Response) => {
     });
   }
 });
+
 router.put('/like_post', async (req: Request, res: Response) => { 
   const postId = req.query.postId as string;
   const userId = req.query.userId as string;

@@ -12,7 +12,7 @@ export default function ProtectedImage({
   showBorder = true,
   borderColor = "#000",
   borderWidth = 2.5,
-  resizeMode = "cover",
+  resizeMode = "contain",
   ...props
 }: {
   url: string;

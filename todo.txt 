@@ -2,6 +2,7 @@ BUGS:
     -edit profile 
     -cant post without description
     -tags not owrking all aroung 
+    -
 
 
 TODO:
@@ -10,6 +11,7 @@ TODO:
     -test for memory leaks 
     -see friends and followers
     -see trending (just return highest liked posts lol)
+    -unlike post
     -Geo-Mapping useing Google Maps API
 
 Backend User Cache:

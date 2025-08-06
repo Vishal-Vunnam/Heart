@@ -1,6 +1,7 @@
 const BASE_URL =  "http://10.0.0.53:4000/api";
 // const BASE_URL =  "http://192.168.1.94:4000/api";
 // Get all posts
+import { PostInfo } from '@/types/types';
 export async function getAllPosts() {
   const res = await fetch(`${BASE_URL}/posts`);
   if (!res.ok) throw new Error("Failed to fetch posts");
@@ -22,6 +23,35 @@ export async function createPost(postData: any, tags?: string[], allowedMembers?
   if (!res.ok) throw new Error("Failed to create post");
   return res.json();
 }
+
+// Edit an existing post
+export async function editPost(
+  postInfo: any,
+  tags?: string[],
+  allowedMembers?: string[],
+) {
+  console.log(postInfo);
+  console.log("here?")
+    const body = {
+      postInfo,
+      ...(tags && { tags }),
+      ...(allowedMembers && { allowedMembers }),
+    };
+
+  const res = await fetch(`${BASE_URL}/edit-post`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    console.log(res);
+    throw new Error("Failed to edit post");
+  }
+
+  return res.json();
+}
+
 
 // Add images to a post
 export async function addImagesToPost(postId: string, userId: string, imageUris: string[]) {
@@ -116,4 +146,16 @@ export async function getExplore(limit: number, offset: number) {
 
   const data = await res.json();
   return data.posts;
+}
+
+
+export async function likePost(postId: string, userId: string) {
+  console.log("Liking post:", postId, "by user:", userId);
+  const url = `${BASE_URL}/like_post?postId=${encodeURIComponent(postId)}&userId=${encodeURIComponent(userId)}`;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error("Failed to like post");
+  return res.json();
 }

@@ -1,296 +1,348 @@
-import React from 'react';
-import { StyleSheet, ScrollView, View, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, ScrollView, View, Dimensions, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { DisplayPostInfo } from '@/types/types';
 import ProtectedImage from './ProtectedImage';
 import { getRandomColor } from '@/functions/getRandomColor';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export const PostView = ({ post }: { post: DisplayPostInfo}) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+ const [userLiked, setUserLiked] = useState<boolean>(false);
+  const totalImages = post.images?.length || 0;
+
+    const handleLike = () => {
+      if(!post) return; 
+      if (!isUserLoggedIn || !post.postInfo.postId) return;
+      setUserLiked(!userLiked);
+      if (onLike) onLike();
+      likePost(post.postInfo.postId, post.postInfo.userId)
+        .then(() => {
+          console.log('Post liked successfully');
+        })
+        .catch((error) => {
+          console.error('Failed to like post:', error);
+        });
+    }
+
   return (
     <View style={styles.container}>
-      {/* Header Section */}
+      {/* Header - Instagram style */}
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <ThemedText style={styles.title}>{post.postInfo.title}</ThemedText>
-          <View style={styles.titleAccent} />
-        </View>
-        
-        {/* Meta Info Row */}
-        <View style={styles.metaRow}>
-          <View style={styles.authorBadge}>
-            <View style={styles.authorAvatar}>
-              <ThemedText style={styles.authorInitial}>
-                {post.postInfo.userDisplayName.charAt(0).toUpperCase()}
-              </ThemedText>
-            </View>
-            <ThemedText style={styles.authorName}>{post.postInfo.userDisplayName}</ThemedText>
+        <View style={styles.authorSection}>
+          <View style={[styles.authorAvatar, { backgroundColor: getRandomColor() }]}>
+            <ThemedText style={styles.authorInitial}>
+              {post.postInfo.userDisplayName.charAt(0).toUpperCase()}
+            </ThemedText>
           </View>
-          
-          <View style={styles.dateBadge}>
+          <View style={styles.authorInfo}>
+            <ThemedText style={styles.authorName}>{post.postInfo.userDisplayName}</ThemedText>
             <ThemedText style={styles.dateText}>{post.postInfo.date}</ThemedText>
           </View>
         </View>
+        <TouchableOpacity style={styles.moreButton}>
+          <ThemedText style={styles.moreText}>•••</ThemedText>
+        </TouchableOpacity>
       </View>
 
-      {/* Description with Modern Typography */}
-      <View style={styles.descriptionContainer}>
-        <ThemedText style={styles.description}>{post.postInfo.description}</ThemedText>
-      </View>
-
-      {/* Images Section with Enhanced Design */}
-      {post.images && post.images.length > 0 && (
-        <View style={styles.imagesSection}>
-          <View style={styles.imagesSectionHeader}>
-            <View style={styles.imagesDot} />
-            <ThemedText style={styles.imagesLabel}>Gallery</ThemedText>
-            <View style={styles.imagesCount}>
-              <ThemedText style={styles.imagesCountText}>{post.images.length}</ThemedText>
-            </View>
+        {post.images && post.images.length > 0 && (
+          <View style={styles.imageContainer}>
+            {post.images.map((image, index) => {
+              const imageUrl = typeof image === 'string'
+                ? image
+                : (image && typeof image === 'object' && 'imageUrl' in image
+                    ? image.imageUrl
+                    : '');
+              return (
+                <View key={index} style={styles.singleImageContainer}>
+                  <ProtectedImage
+                    url={imageUrl}
+                    style={styles.image}
+                    resize={'contain'}
+                  />
+                </View>
+              );
+            })}
           </View>
-          
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.imageScroll}
-            contentContainerStyle={styles.imageScrollContent}
-          >
-            {post.images.map((img, idx) => (
-              <View key={idx} style={styles.imageContainer}>
-                <ProtectedImage 
-                  url={img.url}
-                  style={styles.image}
-                />
-                {/* Image overlay with subtle effect */}
-                <View style={styles.imageOverlay} />
-              </View>
-            ))}
-          </ScrollView>
+        )}
+
+      {/* Action buttons - Instagram style */}
+      <View style={styles.actionBar}>
+        <View style={styles.leftActions}>
+          <TouchableOpacity style={styles.actionButton}>
+            <ThemedText style={styles.actionIcon}>♡</ThemedText>
+          </TouchableOpacity>
+
         </View>
-      )}
-      
-      {/* Bottom accent */}
-      <View style={styles.bottomAccent} />
+        <TouchableOpacity style={styles.actionButton}>
+          <ThemedText style={styles.actionIcon}>🔖</ThemedText>
+        </TouchableOpacity>
+      </View>
+
+      {/* Content Section */}
+      <ScrollView style={styles.contentSection} showsVerticalScrollIndicator={false}>
+        {/* Likes placeholder */}
+        <TouchableOpacity style={styles.likesSection}>
+          <ThemedText style={styles.likesText}>Be the first to like this</ThemedText>
+        </TouchableOpacity>
+
+        {/* Caption */}
+        <View style={styles.captionSection}>
+          <ThemedText style={styles.captionAuthor}>{post.postInfo.userDisplayName}</ThemedText>
+          <ThemedText style={styles.captionTitle}>{post.postInfo.title}</ThemedText>
+          {post.postInfo.description && (
+            <ThemedText style={styles.captionDescription}>{post.postInfo.description}</ThemedText>
+          )}
+        </View>
+
+        {/* Comments placeholder */}
+        <TouchableOpacity style={styles.commentsSection}>
+          <ThemedText style={styles.commentsText}>View all comments</ThemedText>
+        </TouchableOpacity>
+
+        {/* Add some bottom padding for scrolling */}
+        <View style={styles.bottomPadding} />
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffffff',
-    borderRadius: 24,
-    margin: 12,
-    overflow: 'hidden',
-    borderWidth: 3,
-    borderColor: '#000000ff',
-    // Enhanced shadow for depth
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 12,
+    flex: 1,
+    backgroundColor: '#ffffff',
   },
   
   header: {
-    padding: 20,
-    paddingBottom: 16,
-    backgroundColor: '#ffffffff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderBottomWidth: 3,
-    borderBottomColor: '#000000ff',
-  },
-  
-  titleContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#000000ff',
-    lineHeight: 32,
-    letterSpacing: 0.4,
-    fontFamily: 'Anton_400Regular',
-    textDecorationLine: 'underline',
-  },
-  
-  titleAccent: {
-    position: 'absolute',
-    bottom: -6,
-    left: 0,
-    width: 50,
-    height: 4,
-    backgroundColor: '#000000ff',
-    borderRadius: 2,
-  },
-  
-  metaRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#dbdbdb',
   },
   
-  authorBadge: {
+  authorSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: getRandomColor(),
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    elevation: 2,
+    flex: 1,
   },
   
   authorAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#ffffffff',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 12,
+  },
+  imagesContainer: {
+  // backgroundColor: 'black',
+},
+
+  image: {
+    width: '95%',
+    aspectRatio: 1.6,
+    // height: '400',
+    resizeMode: 'contain',
+    paddingVertical: 0,
+    // borderBottomColor: '#55555534',
+    // borderBottomWidth: 2, 
   },
   
   authorInitial: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#000000ff',
+    color: '#ffffff',
     fontFamily: 'Anton_400Regular',
+  },
+  
+  authorInfo: {
+    flex: 1,
   },
   
   authorName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#ffffffff',
+    color: '#000000',
     fontFamily: 'Anton_400Regular',
-    letterSpacing: 0.3,
-  },
-  
-  dateBadge: {
-    backgroundColor: '#ffffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#55555534',
+    marginBottom: 2,
   },
   
   dateText: {
     fontSize: 12,
-    color: '#000000ff',
-    fontWeight: '500',
+    color: '#8e8e8e',
     fontFamily: 'Koulen_400Regular',
   },
   
-  descriptionContainer: {
-    padding: 20,
-    paddingTop: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: '#55555534',
+  moreButton: {
+    padding: 8,
   },
   
-  description: {
+  moreText: {
     fontSize: 16,
-    color: '#000000ff',
-    lineHeight: 24,
-    fontWeight: '400',
-    fontFamily: 'Anton_400Regular',
-    letterSpacing: 0.2,
-  },
-  
-  imagesSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  
-  imagesSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 8,
-    borderBottomWidth: 2,
-    borderBottomColor: '#55555534',
-  },
-  
-  imagesDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#000000ff',
-    marginRight: 12,
-  },
-  
-  imagesLabel: {
-    fontSize: 16,
+    color: '#000000',
     fontWeight: '600',
-    color: '#000000ff',
-    flex: 1,
-    fontFamily: 'Anton_400Regular',
-    letterSpacing: 0.4,
-    textDecorationLine: 'underline',
   },
   
-  imagesCount: {
-    backgroundColor: '#000000ff',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    minWidth: 24,
-    alignItems: 'center',
-    elevation: 2,
-  },
-  
-  imagesCountText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'white',
-    fontFamily: 'Anton_400Regular',
-  },
   
   imageScroll: {
-    flexDirection: 'row',
+    flex: 1,
   },
   
-  imageScrollContent: {
-    paddingRight: 20,
-  },
+
   
-  imageContainer: {
-    position: 'relative',
-    marginRight: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#55555534',
-    elevation: 4,
-  },
-  
-  image: {
-    width: 140,
-    height: 140,
-    borderRadius: 14,
-  },
-  
-  imageOverlay: {
+  imageIndicators: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-    borderRadius: 14,
+    top: 12,
+    right: 12,
+    flexDirection: 'column',
+    alignItems: 'center',
   },
   
-  bottomAccent: {
+  indicator: {
+    width: 6,
     height: 6,
-    backgroundColor: '#000000ff',
-    marginHorizontal: 20,
-    marginBottom: 16,
     borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    marginVertical: 2,
+  },
+  
+  activeIndicator: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  },
+  
+  imageCounter: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+
+  imageContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    
+  },
+  singleImageContainer: {
+    width: '100%',
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  counterText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  noImagePlaceholder: {
+    height: width,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+  },
+  
+  placeholderIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  placeholderText: {
+    fontSize: 30,
+  },
+  
+  actionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#dbdbdb',
+  },
+  
+  leftActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  actionButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    marginRight: 8,
+  },
+  
+  actionIcon: {
+    fontSize: 24,
+    color: '#000000',
+  },
+  
+  contentSection: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  
+  likesSection: {
+    paddingVertical: 8,
+  },
+  
+  likesText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  
+  captionSection: {
+    paddingVertical: 4,
+  },
+  
+  captionAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    fontFamily: 'Anton_400Regular',
+    marginBottom: 4,
+  },
+  
+  captionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    fontFamily: 'Anton_400Regular',
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  
+  captionDescription: {
+    fontSize: 14,
+    color: '#000000',
+    fontFamily: 'Anton_400Regular',
+    lineHeight: 18,
+  },
+  
+  commentsSection: {
+    paddingVertical: 8,
+  },
+  
+  commentsText: {
+    fontSize: 14,
+    color: '#8e8e8e',
+  },
+  
+  bottomPadding: {
+    height: 20,
   },
 });

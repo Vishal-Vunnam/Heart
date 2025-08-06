@@ -714,7 +714,12 @@ export default function HomeScreen() {
               setEditModalVisible(false);
               setPostIdToEdit('');
             }}
-            // onEdit={}
+            onEdit={() => { 
+              setEditModalVisible(false);
+              setPostIdToEdit('')
+              setSelectedPost(null);
+              setShowedPostsChanges(true);
+            }}
             oldPostId={postIdToEdit}
           />
         )}

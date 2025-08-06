@@ -364,9 +364,9 @@ const styles = StyleSheet.create({
     aspectRatio: 1.6,
     maxHeight: 200,
     resizeMode: 'contain',
-    paddingVertical: 8,
-    borderBottomColor: '#55555534',
-    borderBottomWidth: 2, 
+    // paddingVertical: 8,
+    // borderBottomColor: '#55555534',
+    // borderBottomWidth: 2, 
   },
   actionBar: {
     flexDirection: 'row',
