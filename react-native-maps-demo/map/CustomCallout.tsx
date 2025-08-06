@@ -7,7 +7,7 @@ import { deletePostById, getPost} from '@/services/api/posts';
 import { PolisType, DisplayPostInfo } from '@/types/types';
 import PostActionSheet from '../post/PostActionSheet';
 import ProtectedImage from '../components/ProtectedImage';
-import {likePost} from '@/services/api/posts'; // Import likePost function
+import {likePost, unlikePost} from '@/services/api/posts'; // Import likePost function
 import { getRandomColor } from '@/functions/getRandomColor'; // Assuming you have a utility function for random colors
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
@@ -44,7 +44,8 @@ const CustomCallout: React.FC<CustomCalloutProps> = ({
 const [showActionSheet, setShowActionSheet] = useState<boolean>(false);
 const [post, setPost] = useState<DisplayPostInfo | null>(null);
 const [userLiked, setUserLiked] = useState<boolean>(false);
-
+const [likes, setLikes] = useState<number>(0);
+const [likeColor, setLikeColor] = useState<string>(getRandomColor());
 useEffect(() => {
   let isMounted = true; // safety flag
 
@@ -56,6 +57,7 @@ useEffect(() => {
       if (isMounted) {
         setPost(postInfo);
         setUserLiked(postInfo?.postInfo?.likedByCurrentUser ?? false);
+        setLikes(postInfo?.postInfo?.likesCount);
       }
     } catch (err) {
       console.error("❌ Failed to fetch post:", err);
@@ -84,14 +86,36 @@ useEffect(() => {
       console.error('Failed to delete post:', error);
     }
   };
+
   const handleLike = () => {
     if(!post) return; 
-    if (!isUserLoggedIn || !post.postInfo.postId) return;
+    if ( !post.postInfo.postId) return;
+     console.log("here?")
     setUserLiked(!userLiked);
+    setLikes
     if (onLike) onLike();
-    likePost(post.postInfo.postId, post.postInfo.userId)
+    likePost(post.postInfo.postId)
       .then(() => {
+        setUserLiked(!userLiked);
+       setLikes(likes => (likes += 1))
+         setLikeColor(getRandomColor());
         console.log('Post liked successfully');
+      })
+      .catch((error) => {
+        console.error('Failed to like post:', error);
+      });
+  }
+
+  const handleUnlike = () => { 
+    if(!post) return; 
+    if (!post.postInfo.postId) return;
+    if (onLike) onLike();
+    unlikePost(post.postInfo.postId)
+      .then(() => {
+        setUserLiked(!userLiked);
+       setLikes(likes => (likes -= 1))
+         setLikeColor(getRandomColor());
+        console.log('Post unliked successfully');
       })
       .catch((error) => {
         console.error('Failed to like post:', error);
@@ -212,14 +236,16 @@ useEffect(() => {
         >
           <Text style={styles.viewDetailsText}>View Details</Text>
         </TouchableOpacity>
-        <Text> {post.postInfo.likesCount} </Text>
-        <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+        <View style={styles.likeView}>
+        <Text style={[styles.likeCount, { color: likeColor }]}> {likes} </Text>
+        <TouchableOpacity style={styles.actionButton} onPress={!userLiked ? handleLike : handleUnlike}>
           <MaterialIcons
             name={userLiked ? 'favorite' : 'favorite-border'}
             size={28}
             color={userLiked ? 'red' : 'black'}
           />
         </TouchableOpacity>
+        </View>
       </View>
 
       {/* Arrow */}
@@ -375,6 +401,13 @@ const styles = StyleSheet.create({
 
     borderTopWidth: 1,
     borderTopColor: '#374151',
+    
+  },
+  likeView: { 
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: "space-evenly",
+    marginRight: 20, 
   },
   actionButton: {
     flexDirection: 'row',
@@ -523,6 +556,15 @@ const styles = StyleSheet.create({
   dateNextToTitle: {
     color: '#000000ff',
     fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 46,
+    borderRadius: 8,
+    overflow: 'hidden',
+    fontFamily: 'Koulen_400Regular',
+  },
+  likeCount: { 
+        color: getRandomColor(),
+    fontSize: 17,
     fontWeight: '500',
     lineHeight: 46,
     borderRadius: 8,

@@ -4,6 +4,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { DisplayPostInfo } from '@/types/types';
 import ProtectedImage from './ProtectedImage';
 import { getRandomColor } from '@/functions/getRandomColor';
+import { likePost } from '@/services/api/posts';
 
 const { width, height } = Dimensions.get('window');
 
@@ -16,8 +17,8 @@ export const PostView = ({ post }: { post: DisplayPostInfo}) => {
       if(!post) return; 
       if (!isUserLoggedIn || !post.postInfo.postId) return;
       setUserLiked(!userLiked);
-      if (onLike) onLike();
-      likePost(post.postInfo.postId, post.postInfo.userId)
+      // if (onLike) onLike();
+      likePost(post.postInfo.postId)
         .then(() => {
           console.log('Post liked successfully');
         })

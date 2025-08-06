@@ -562,7 +562,8 @@ router.get('/post/by-id', async (req: Request, res: Response) =>  {
     p.private,
     (
       SELECT 
-        i.imageUrl
+        i.imageUrl,
+        i.id as imageId
       FROM images i
       WHERE i.postId = p.id
       FOR JSON PATH
@@ -811,6 +812,28 @@ router.put('/like_post', async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, error: error.message || "Failed to like post" });
   }
 });
+
+router.delete('/unlike_post', async (req: Request, res: Response)=> { 
+  try {
+  const postId = req.query.postId as string;
+  const userId = req.query.userId as string;
+  if (!postId || !userId) {
+    console.warn('[like_post] Missing required query parameters:', { postId, userId });
+    return res.status(400).json({ success: false, error: "Missing required query parameters: id or userId" });
+  }
+  const deleteLikeQuery = `
+  DELETE FROM post_likes 
+  WHERE post_id = @param0 AND user_liked_id = @param1; 
+  `    
+  await executeQuery(deleteLikeQuery, [postId, userId]);
+      console.log(`[like_post] Post liked successfully: postId=${postId}, userId=${userId}`);
+    return res.status(200).json({ success: true, message: "Post liked successfully" });
+}
+catch (error: any) {
+    console.error('[like_post] Error liking post:', error);
+    return res.status(500).json({ success: false, error: error.message || "Failed to like post" });
+  }
+}) 
 
 
 router.delete('/post', async (req: Request, res: Response) => {

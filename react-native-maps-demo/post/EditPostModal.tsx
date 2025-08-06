@@ -22,7 +22,8 @@ import { FlipInXDown } from 'react-native-reanimated';
 import { getRandomColor } from '@/functions/getRandomColor';
 import ProtectedImage from '@/components/ProtectedImage';
 import { editPost } from '@/services/api/posts';
-
+import { ImageType } from '@/types/types';
+import { deleteImagesFromPost } from '@/services/api/image';
 // Placeholder for getImageUrlWithSAS and deleteFromAzureBlob
 const getImageUrlWithSAS = (uri: string) => uri;
 const deleteFromAzureBlob = async (uri: string) => {};
@@ -41,7 +42,8 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
   // Form state
   const [locationTitle, setLocationTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedImages, setSelectedImages] = useState<ImageType[]>([]);
+  const [newImages, setNewImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<'post' | 'event'>('post');
   const [tagInput, setTagInput] = useState('');
@@ -49,7 +51,7 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
   const [originalImages, setOriginalImages] = useState<string[]>([]);
   const [eventStartTime, setEventStartTime] = useState('');
   const [eventEndTime, setEventEndTime] = useState('');
-  
+  const [deletedImages, setDeletedImages] = useState<ImageType[]>([]);
   // Post data state
   const [oldPostInfo, setOldPostInfo] = useState<DisplayPostInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,7 +114,8 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
 
       if (!result.canceled && result.assets) {
         const newImages = result.assets.map((asset) => asset.uri);
-        setSelectedImages((prev) => [...prev, ...newImages]);
+        setNewImages((prev) => [...prev, ...newImages]);
+        console.log(newImages);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -121,8 +124,14 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
   };
 
   const removeImage = (index: number) => {
+    setDeletedImages([...deletedImages, selectedImages[index]]);
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+    
   };
+
+  const removeNewImage = (index: number) => { 
+        setNewImages((prev) => prev.filter((_, i) => i !== index));
+  }
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
@@ -183,24 +192,11 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
           description: description.trim() ? description.trim() : oldPostInfo.postInfo.description,
       }
 
-      // Find removed images
-      const removedImages = originalImages.filter(
-        (img) => !selectedImages.includes(img)
-      );
-
-      // Delete removed images from Azure Blob Storage
-      for (const img of removedImages) {
-        if (!img.startsWith('file://')) {
-          try {
-            await deleteFromAzureBlob(img);
-          } catch (err) {
-            console.error('Failed to delete image from Azure:', img, err);
-          }
-        }
-      }
-
       // Here you would typically call your API to update the post
       await editPost(editedPost);
+
+      await deleteImagesFromPost(deletedImages);
+
 
       Alert.alert('Success', 'Post updated successfully!');
       onEdit(); 
@@ -423,14 +419,15 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
                   <Text style={modalStyles.imagePickerText}>Add Images</Text>
                 </TouchableOpacity>
                 {/* Image Preview */}
-                {selectedImages.length > 0 && (
+                {(selectedImages.length > 0 || newImages.length > 0) && (
                   <View style={modalStyles.imagePreviewContainer}>
                     {selectedImages.map((image, index) => {
+                      console.log("image", image);
                       return (
                         <View key={index} style={modalStyles.imagePreviewWrapper}>
-                          <ProtectedImage
+                         <ProtectedImage
                           url= {image.imageUrl}
-                          showBorder={false}
+                          showBorder={true}
                           style={modalStyles.image}
                           >
                           </ProtectedImage>
@@ -443,6 +440,23 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
                         </View>
                       );
                     })}
+                {newImages.map((image, index) => {
+
+                  return (
+                    <View key={index} style={modalStyles.imagePreviewWrapper}>
+                      <Image
+                        source={{uri: image}}
+                        style={modalStyles.image}
+                      />
+                      <TouchableOpacity
+                        style={modalStyles.removeImageButton}
+                        onPress={() => removeNewImage(index)}
+                      >
+                        <Feather name="x" size={16} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
                   </View>
                 )}
               </View>

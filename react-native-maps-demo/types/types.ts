@@ -46,9 +46,13 @@ export type EventInfo = {
   private?: boolean | 0;
 }
 
+export type ImageType = { 
+  imageId: string, 
+  imageUrl : string
+}
 export type DisplayPostInfo = {
   postInfo: PostInfo;
-  images: string[];
+  images: ImageType[];
   tag?: string; 
 };
 

@@ -149,13 +149,51 @@ export async function getExplore(limit: number, offset: number) {
 }
 
 
-export async function likePost(postId: string, userId: string) {
-  console.log("Liking post:", postId, "by user:", userId);
-  const url = `${BASE_URL}/like_post?postId=${encodeURIComponent(postId)}&userId=${encodeURIComponent(userId)}`;
+export async function likePost(postId: string) {
+    const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.uid;
+  if (!currentUserId) {
+    throw new Error("User not authenticated");
+  }
+
+  console.log("Liking post:", postId, "by user:", currentUserId);
+  const url = `${BASE_URL}/like_post?postId=${encodeURIComponent(postId)}&userId=${encodeURIComponent(currentUserId)}`;
   const res = await fetch(url, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error("Failed to like post");
   return res.json();
+}
+
+export async function unlikePost(postId: string) {
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.uid;
+  if (!currentUserId) {
+    throw new Error("User not authenticated");
+  }
+
+  const url = `${BASE_URL}/unlike_post?postId=${encodeURIComponent(postId)}&userId=${encodeURIComponent(currentUserId)}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+    console.log('Raw response:', data);
+
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to unlike post');
+    }
+
+    return data; // { success: true, message: "Post liked successfully" }
+  } catch (error: any) {
+    console.error('Error in unlikePost:', error);
+    throw error;
+  }
 }

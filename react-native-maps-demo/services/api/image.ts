@@ -1,3 +1,5 @@
+import { ImageType } from "@/types/types";
+
 const BASE_URL =  "http://10.0.0.53:4000/api";
 // const BASE_URL =  "http://192.168.1.94:4000/api";
 
@@ -18,6 +20,19 @@ export async function uploadImageToPost(image: string, postId: string) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image, postId }),
+    });
+    if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to upload image: ${errorText}`);
+    }
+    return res.json();
+}
+
+export async function deleteImagesFromPost(images: ImageType[]) { 
+         const res = await fetch(`${BASE_URL}/delete-images`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images}),
     });
     if (!res.ok) {
         const errorText = await res.text();

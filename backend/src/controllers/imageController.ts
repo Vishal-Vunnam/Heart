@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getImageUrlWithSAS, uploadToAzureBlob } from '../utils/blobStorage';
+import { deleteFromAzureBlob, getImageUrlWithSAS, uploadToAzureBlob } from '../utils/blobStorage';
 import { v4 as uuidv4 } from 'uuid';
 import { executeQuery } from '../utils/dbUtils';
 import { Buffer } from 'buffer'; // Node.js built-in
@@ -72,4 +72,59 @@ router.post('/image-user', async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Failed to upload image' });
   }
 })
+
+type ImageType = { 
+  imageId: string, 
+  imageUrl : string
+}
+
+router.delete('/delete-images', async (req: Request, res: Response) => {
+  try {
+    const images = req.body.images as ImageType[];
+    
+    if (!images || images.length === 0) {
+      return res.status(200).json({ message: 'No images to delete' });
+    }
+
+    // Delete from Azure Blob Storage
+    for (const image of images) {
+      try {
+        if (image.imageUrl) {
+          await deleteFromAzureBlob(image.imageUrl);
+        }
+      } catch (blobError) {
+        console.error(`Failed to delete blob for image ${image.imageId}:`, blobError);
+        // Continue with other deletions even if one fails
+      }
+    }
+
+    // Extract image IDs for database deletion
+    const imageIds = images.map(image => image.imageId);
+    console.log("IMAGE IDS TO DELETE:", imageIds);
+
+    // Create dynamic query with individual parameters for each ID
+    const placeholders = imageIds.map((_, index) => `@param${index}`).join(', ');
+    const deleteQuery = `
+      DELETE FROM images 
+      WHERE id IN (${placeholders})
+    `;
+
+    console.log("DELETE QUERY:", deleteQuery);
+    console.log("PARAMS:", imageIds);
+
+    const result = await executeQuery(deleteQuery, imageIds);
+
+    return res.status(200).json({
+      message: 'Images deleted successfully',
+      deletedCount: result.rowsAffected ? result.rowsAffected[0] : 0
+    });
+
+  } catch (error) {
+    console.error('Error deleting images:', error);
+    return res.status(500).json({
+      error: 'Internal server error while deleting images'
+    });
+  }
+});
+
 export default router;
