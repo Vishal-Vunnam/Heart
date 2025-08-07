@@ -404,15 +404,15 @@ export default function HomeScreen() {
       const { displayName, email } = selectedPolis.userInfo;
       return (
         <View style={styles.polisDisplay}>
-          {selectedPolis.userInfo.photoURL ? (
+          <Text style={styles.polisDisplayText}>
+            Viewing {displayName ? displayName : email}'s City-State
+          </Text>
+                    {selectedPolis.userInfo.photoURL ? (
             <Image
               source={{ uri: selectedPolis.userInfo.photoURL }}
               style={styles.profilePicPolis}
             />
           ) : null}
-          <Text style={styles.polisDisplayText}>
-            Viewing {displayName ? displayName : email}'s City-State
-          </Text>
         </View>
       );
     }

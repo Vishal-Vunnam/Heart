@@ -136,6 +136,13 @@ useEffect(() => {
   fetchData();
 }, [selectedPolis]);
 
+
+// export type PolisSearchReturn = {
+//     name: string;
+//     photoUrl?: string | null;
+//     id: string;
+//     is_tag: boolean;
+// }
   useEffect(() => {
     if (!isTyping) return;
     if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
@@ -204,7 +211,7 @@ useEffect(() => {
                 ? polisSuggestions.map((suggestion, index) => (
                     <TouchableOpacity
                       key={index}
-    
+                      style={styles.suggestionItemContainer}
                       onPress={() => {
                         if (suggestion.is_tag) {
                           setSelectedPolis({ isUser: false, tag: suggestion.name });
@@ -216,7 +223,7 @@ useEffect(() => {
                               displayName: suggestion.name,
                               email: '',
                               uid: suggestion.id,
-                              photoURL: null,
+                              photoURL: suggestion.photoUrl || null,
                             },
                           });
                           setSearchText(suggestion.name);
@@ -227,13 +234,21 @@ useEffect(() => {
                         saveSearch(suggestion);
                       }}
                     >
+                      {suggestion.photoUrl && ( 
+                        <Image
+                          source={{ uri: suggestion.photoUrl }}
+                          style={styles.suggestionImage}
+                        />
+                      )}
                       <Text style={styles.suggestionItem}>{suggestion.is_tag ? `#${suggestion.name}` : suggestion.name}</Text>
+
                     </TouchableOpacity>
                   ))
                 : !isSearchingPolis &&
                   filteredUsers.map((suggestion, index) => (
                     <TouchableOpacity
                       key={index}
+                      style={styles.suggestionItemContainer}
                       onPress={() => {
                         if (suggestion.is_tag) {
                           setSelectedPolis({ isUser: false, tag: suggestion.name });
@@ -245,7 +260,7 @@ useEffect(() => {
                               displayName: suggestion.name,
                               email: '',
                               uid: suggestion.id,
-                              photoURL: null,
+                              photoURL: suggestion.photoUrl || null,
                             },
                           });
                           setSearchText(suggestion.name);

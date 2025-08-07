@@ -14,7 +14,7 @@ export async function createUser(userInfo: {
   photoURL?: string;
 }) {
   console.log("HEYEHEYEHYE", userInfo.photoURL);
-  const res = await fetch(BASE_URL, {
+  const res = await fetch(`${BASE_URL}/user`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(userInfo),
@@ -23,17 +23,21 @@ export async function createUser(userInfo: {
   return res.json();
 }
 
-export async function updateUser(userInfo: UserInfo
-) {
-  const res = await fetch(BASE_URL, {
+export async function updateUser(userInfo: {
+  uid: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+}) {
+  const res = await fetch(`${BASE_URL}/update-user`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(userInfo),
   });
-  if (!res.ok) throw new Error("Failed to update user");
+
+  if (!res.ok) throw new Error(`Failed to update user: ${res.statusText}`);
   return res.json();
 }
-
 export async function addFriend(followeeId: string) {
   try {
     console.log("Adding friend...");

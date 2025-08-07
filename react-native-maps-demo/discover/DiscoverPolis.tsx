@@ -119,15 +119,30 @@ export const DiscoverPolis: React.FC<DiscoverPolisProps> = ({
                     name="person-add"
                     size={20}
                     style={styles.addFriendIcon}
+                    color={getRandomColor()} 
                   />
                 </TouchableOpacity>
               )}
+
               {selectedPolis.isUser && !isLoggedInUser && isFriend!= null && isFriend && (
                 <TouchableOpacity onPress={handleRemoveFriend}>
                   <MaterialIcons
                     name="person-remove"
                     size={20}
                     style={styles.addFriendIcon}
+                    color={getRandomColor()} 
+                  />
+                </TouchableOpacity>
+              )}
+            {(
+            <TouchableOpacity                 onPress={() => {
+                  if (onPolisSelect) onPolisSelect(selectedPolis);
+                }}>
+                  <MaterialIcons
+                    name="place"
+                    size={20}
+                    style={styles.addFriendIcon}
+                    color={getRandomColor()} 
                   />
                 </TouchableOpacity>
               )}

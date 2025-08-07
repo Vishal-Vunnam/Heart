@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { getRandomColor } from '@/functions/getRandomColor';
 
 // Enhanced styles for DiscoverModal component
 export default StyleSheet.create({
@@ -183,12 +184,30 @@ postCountText: {
   suggestionItem: {
     paddingVertical: 14,
     paddingHorizontal: 16,
+    backgroundColor: 'transparent',
+    fontFamily: 'Anton_400Regular',
+    flexDirection: 'row',
+    alignItems: 'center', // Ensure items start on the left
+    gap: 0, // No gap between items
+  },
+  suggestionImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: -10, // Remove gap between image and text
+    marginLeft: 10, 
+    backgroundColor: '#222',
+    borderWidth: 2,
+    borderColor: 'black',
+  },
+  suggestionItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#333',
-    backgroundColor: 'transparent',
-    fontFamily: 'Anton_400Regular'
+    justifyContent: 'flex-start',
+    gap: 0, // No gap between items
   },
-  
   // Enhanced user name styling
   userName: {
     fontSize: 16,
@@ -215,10 +234,9 @@ postCountText: {
     minHeight: 80,
     shadowColor: '#000',
     elevation: 4,
-    borderBottomColor: 'black',
+      borderBottomColor: 'black',
     borderBottomWidth: 2,
   },
-  
   // Enhanced info left section
   infoLeft: {
     flex: 1,
@@ -231,7 +249,17 @@ postCountText: {
     fontWeight: 'bold',
     letterSpacing: 0.5,
     fontFamily: 'Koulen_400Regular',
-    fontSize: 31,
+    fontSize: 25,
+  },
+
+  profilePicPolis: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 14,
+    backgroundColor: '#222',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   
   // Enhanced settings button
@@ -394,9 +422,9 @@ postAuthor: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    marginRight: 14,
+    marginRight: 0,
     backgroundColor: '#222',
-    borderWidth: 2,
-    borderColor: '#fff',
+    borderWidth: 3,
+    borderColor: 'black',
   },
 });

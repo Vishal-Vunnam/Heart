@@ -93,8 +93,10 @@ const handleSave = async () => {
       uid: user.uid,
       displayName: username || user.displayName,
       email: email || user.email,
-      photoURL: newImageUrl.publicUrl,
+      photoURL: newImageUrl ? newImageUrl.url : user.photoURL,
     };
+
+    console.log(newImageUrl); 
 
     // Update Firebase Auth profile (only displayName and photoURL)
     if (hasDisplayNameChanged || hasPhotoChanged) {

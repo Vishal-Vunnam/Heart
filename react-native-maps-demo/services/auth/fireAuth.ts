@@ -94,7 +94,7 @@ export async function updateUserProfile(
     }
 
     // Update email if provided
-    if (userInfo.email) {
+    if (userInfo.email && user.email !== userInfo.email) {
       await updateEmail(user, userInfo.email);
     }
 

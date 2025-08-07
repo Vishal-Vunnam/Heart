@@ -5,9 +5,10 @@ const router = Router();
 
 router.post('/user', async (req: Request, res: Response) => {
   try {
+     console.log("Received user info:", req.body);
     const userInfo: UserInfo = req.body;
     // TODO: Implement user creation logic here
-
+    console.log("Received user info:", userInfo);
     // Validate required fields
     if (!userInfo || !userInfo.uid || !userInfo.email) {
       return res.status(400).json({ success: false, error: 'Missing required user fields (id, email).' });
@@ -43,15 +44,16 @@ router.post('/user', async (req: Request, res: Response) => {
   }
 });
 
-router.put('/user', async (req: Request, res: Response) => {
+router.put('/update-user', async (req: Request, res: Response) => {
   try { 
     const userInfo: UserInfo = req.body;
 
     // Validate required fields
     if (!userInfo || !userInfo.email) {
+      console.log("Missing required user fields:", userInfo);
       return res.status(400).json({ success: false, error: 'Missing required user fields (email).' });
     }
-
+    console.log(userInfo);
     // Prepare SQL query to update user
     const query = `
       UPDATE users
@@ -72,10 +74,12 @@ router.put('/user', async (req: Request, res: Response) => {
       await executeQuery(query, params);
       return res.status(200).json({ success: true, message: 'User updated successfully.' });
     } catch (dbError: any) {
+      console.error('Database error:', dbError);
       return res.status(500).json({ success: false, error: dbError.message || 'Database error.' });
     }
 
   }catch (error: any) {
+    console.error('Error updating user:', error);
       res.status(500).json({ success: false, error: error.message || 'Internal server error.' });
     }
 

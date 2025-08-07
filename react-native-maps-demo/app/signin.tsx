@@ -49,6 +49,15 @@ export default function SignInScreen() {
       setPhotoUri(result.assets[0].uri);
     }
   };
+  const validateUsername = (username: string) => {
+  if (username.length > 14) {
+    return false;
+  }
+  if (username.includes(' ')) {
+    return false;
+  }
+  return true;
+};
 
   const handleAuth = async () => {
     try {
@@ -60,7 +69,10 @@ export default function SignInScreen() {
         console.log("Signing up with email: " + email + " and password: " + password);
 
 
-
+        if (!validateUsername(username)) {
+          Alert.alert('Invalid Username', 'Username must be 14 characters or less and cannot contain spaces.');
+          return;
+        }
         const user = await signUp(email, password);
 
 
@@ -144,7 +156,12 @@ export default function SignInScreen() {
                 placeholder="Username"
                 placeholderTextColor="#888"
                 value={username}
-                onChangeText={setUsername}
+                onChangeText={(text) => {
+                  if (text.length <= 14) {
+                    setUsername(text);
+                  }
+                }}
+                maxLength={14}
               />
               <TouchableOpacity style={styles.photoPickerButton} onPress={pickImage}>
                 <Text style={styles.photoPickerButtonText}>

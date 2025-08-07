@@ -10,6 +10,7 @@ TODO:
     -see friends and followers
     -see trending (just return highest liked posts lol)
     -Geo-Mapping useing Google Maps API
+    -sustained user sign in. 
 
 Backend User Cache:
     -User Posts

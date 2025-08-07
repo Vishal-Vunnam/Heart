@@ -39,7 +39,7 @@ router.get('/user-search', async (req: Request, res: Response) => {
 
       // Search users by displayName
       const userQuery = `
-        SELECT TOP 5 displayName AS name, id, CAST(0 AS BIT) AS is_tag
+        SELECT TOP 5 displayName AS name, photoUrl, id, CAST(0 AS BIT) AS is_tag
         FROM users
         WHERE CONTAINS(displayName, @param0)
       `;

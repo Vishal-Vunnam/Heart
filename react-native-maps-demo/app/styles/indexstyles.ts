@@ -116,7 +116,7 @@ signInText: {
 polisDisplay: {
   backgroundColor: getRandomColor(),
   paddingVertical: 2,
-  paddingHorizontal: 18,
+  paddingHorizontal: 10,
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'flex-start',
@@ -139,10 +139,13 @@ polisDisplay: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    marginRight: 12,
+    marginRight: 8 ,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: 'white',
     backgroundColor: '#222',
+        shadowColor: '#000',
+    shadowOffset: { width: 3, height: 3 },
+    shadowRadius: 0,
   },
   polisDisplayText: {
     color: '#fff',
@@ -151,6 +154,7 @@ polisDisplay: {
     textShadowOffset: { width: 3, height: 3 },
     textShadowRadius: 0,
     fontFamily: 'Koulen_400Regular',
+    paddingHorizontal: 8,
     
   },
   searchBoxContainer: {
