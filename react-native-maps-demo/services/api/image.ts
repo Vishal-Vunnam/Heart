@@ -28,6 +28,19 @@ export async function uploadImageToPost(image: string, postId: string) {
     return res.json();
 }
 
+export async function uploadImagesToPost(images: string[], postId: string) { 
+    const res = await fetch(`${BASE_URL}/images`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images, postId }),
+    });
+    if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to upload images: ${errorText}`);
+    }
+    return res.json();
+}
+
 export async function deleteImagesFromPost(images: ImageType[]) { 
          const res = await fetch(`${BASE_URL}/delete-images`, {
         method: "DELETE",

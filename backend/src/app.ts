@@ -5,7 +5,7 @@ import imageRoutes from './controllers/imageController';
 import searchRoutes from './controllers/searchController';
 const app = express();
 
-app.use(express.json({ limit: '10mb' })); 
+app.use(express.json({ limit: '20mb' })); 
 
 app.use('/api', postRoutes);
 app.use('/api', userRoutes);

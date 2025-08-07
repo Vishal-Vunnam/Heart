@@ -3,9 +3,10 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut, 
-  updateProfile, 
-  User 
+  User ,
+  updateProfile, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider
 } from 'firebase/auth';
+
 import app from '@/services/auth/fireBaseConfig';
 import { createUser } from '@/services/api/user';
 
@@ -62,21 +63,63 @@ export async function signUp(email: string, password: string, displayName?: stri
     return { success: false, error: error.message || "Sign-up failed." };
   }
 }
-
-export async function updateUserProfile(userInfo: { displayName: string | null; photoURL: string | null }): Promise<{ success: boolean; user?: User; error?: string }> {
+export async function updateUserProfile(
+  userInfo: { 
+    displayName?: string | null; 
+    photoURL?: string | null;
+    email?: string;
+    password?: string;
+  },
+  currentPassword?: string
+): Promise<{ success: boolean; user?: User; error?: string }> {
   const user = auth.currentUser;
   if (!user) {
     return { success: false, error: "No user is currently signed in." };
   }
+
   try {
-    await updateProfile(user, {
-      displayName: userInfo.displayName || undefined,
-      photoURL: userInfo.photoURL || undefined,
-    });
+    // If updating email or password, re-authenticate first
+    if ((userInfo.email || userInfo.password) && currentPassword && user.email) {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+    }
+
+    // Update profile (displayName, photoURL)
+    const profileUpdate: { displayName?: string; photoURL?: string } = {};
+    if (userInfo.displayName !== undefined) profileUpdate.displayName = userInfo.displayName || '';
+    if (userInfo.photoURL !== undefined) profileUpdate.photoURL = userInfo.photoURL || '';
+    
+    if (Object.keys(profileUpdate).length > 0) {
+      await updateProfile(user, profileUpdate);
+    }
+
+    // Update email if provided
+    if (userInfo.email) {
+      await updateEmail(user, userInfo.email);
+    }
+
+    // Update password if provided
+    if (userInfo.password) {
+      await updatePassword(user, userInfo.password);
+    }
+
     await user.reload();
     return { success: true, user };
+    
   } catch (error: any) {
-    return { success: false, error: error.message || "Profile update failed." };
+    console.error('User update error:', error);
+    
+    if (error.code === 'auth/requires-recent-login') {
+      return { success: false, error: "Please log in again to make this change." };
+    }
+    if (error.code === 'auth/email-already-in-use') {
+      return { success: false, error: "This email is already in use." };
+    }
+    if (error.code === 'auth/weak-password') {
+      return { success: false, error: "Password is too weak." };
+    }
+    
+    return { success: false, error: error.message || "Update failed." };
   }
 }
 

@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  SafeAreaView
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -23,7 +24,9 @@ import { getRandomColor } from '@/functions/getRandomColor';
 import ProtectedImage from '@/components/ProtectedImage';
 import { editPost } from '@/services/api/posts';
 import { ImageType } from '@/types/types';
-import { deleteImagesFromPost } from '@/services/api/image';
+import { deleteImagesFromPost, uploadImagesToPost } from '@/services/api/image';
+import { getBase64 } from '@/functions/imageToBase64';
+
 // Placeholder for getImageUrlWithSAS and deleteFromAzureBlob
 const getImageUrlWithSAS = (uri: string) => uri;
 const deleteFromAzureBlob = async (uri: string) => {};
@@ -104,6 +107,12 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
         );
         return;
       }
+      if (selectedImages.length + newImages.length >= 5) { 
+        Alert.alert(
+          'Only 5 images per post'
+        );
+        return;
+      }
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -114,6 +123,13 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
 
       if (!result.canceled && result.assets) {
         const newImages = result.assets.map((asset) => asset.uri);
+        if (newImages.length + selectedImages.length > 5) {
+          Alert.alert(
+            'Image Limit Exceeded',
+            'You can only upload up to 5 images per post.'
+          );
+          return;
+        }
         setNewImages((prev) => [...prev, ...newImages]);
         console.log(newImages);
       }
@@ -196,6 +212,14 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
       await editPost(editedPost);
 
       await deleteImagesFromPost(deletedImages);
+      if(newImages.length > 0){
+        let imageUrls: string[] = [];
+        for (const image of newImages) { 
+          const base64Image = await getBase64(image); 
+          imageUrls.push(base64Image);
+        }
+        await uploadImagesToPost(imageUrls, oldPostId);
+      }
 
 
       Alert.alert('Success', 'Post updated successfully!');
@@ -273,10 +297,12 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
               { padding: 0, maxHeight: '90%', width: '90%' },
             ]}
           >
+        <SafeAreaView style={{ flex: 1 }}>
             <ScrollView
-              contentContainerStyle={{ padding: 20 }}
+              contentContainerStyle={{ flexGrow: 1, padding: 20 }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              
             >
               <View style={modalStyles.header}>
                 <Text style={modalStyles.title}>Edit Post</Text>
@@ -477,6 +503,7 @@ const EditPostModal: React.FC<EditPostModalProps> = ({
                 </Text>
               </TouchableOpacity>
             </ScrollView>
+            </SafeAreaView>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -587,7 +614,7 @@ const modalStyles = StyleSheet.create({
     borderWidth: 3, 
     padding: SPACING.xxxxxxl,
     width: '90%',
-    maxHeight: '90%',
+    height: '90%',
     ...ELEVATION.medium,
   },
 

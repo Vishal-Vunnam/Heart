@@ -27,7 +27,7 @@ export default function EditProfileScreen() {
   const [username, setUsername] = useState(user && user.displayName ? user.displayName : '');
   const [email, setEmail] = useState(user && user.email ? user.email : '');
   const [profilePic, setProfilePic] = useState<string | null>(user && user.photoURL ? user.photoURL : null);
-
+  const [isLoading, setIsLoading] = useState(false); 
   const handleImagePicker = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
@@ -48,47 +48,102 @@ export default function EditProfileScreen() {
     }
   };
 
-  const handleSave = async () => {
-    console.log("am i here");
-    let newImageURl = '';
-    if(profilePic !== null && profilePic !== '') {
-      const base64Image : string = await getBase64(profilePic); 
-      newImageURl = await uploadImageForUser(base64Image, username);
+// Alternative version with loading state and better UX
+const handleSave = async () => {
+  console.log("Starting profile update...");
+  
+  // Add loading state (assuming you have setIsLoading)
+  setIsLoading(true);
+  
+  try {
+    // Early validation
+    if (!user?.email || !user?.displayName) {
+      Alert.alert('Error', 'You must be logged in to edit your profile.');
+      return;
     }
-    try {
-      if (!user || !user.email || !user.displayName) {
-        Alert.alert('Error', 'You must be logged in to edit your profile.');
-        return;
+
+    // Check if anything actually changed
+    const hasDisplayNameChanged = username && username !== user.displayName;
+    const hasEmailChanged = email && email !== user.email;
+    const hasPhotoChanged = profilePic && profilePic !== '' && profilePic !== user.photoURL;
+
+    if (!hasDisplayNameChanged && !hasEmailChanged && !hasPhotoChanged) {
+      Alert.alert('Info', 'No changes detected.');
+      router.back();
+      return;
+    }
+
+    // Handle image upload if needed
+    let newImageUrl = user.photoURL; // Default to current photo
+    if (hasPhotoChanged) {
+      console.log("Uploading new profile image...");
+      try {
+        const base64Image = await getBase64(profilePic);
+        newImageUrl = await uploadImageForUser(base64Image, username);
+        console.log("Image uploaded successfully:", newImageUrl);
+      } catch (imageError) {
+        console.error('Image upload failed:', imageError);
+        Alert.alert('Warning', 'Image upload failed, but other changes will be saved.');
+        newImageUrl = user.photoURL; // Keep original photo on upload failure
       }
-      console.log(user.uid);
-      const updatedData : UserInfo= {
-        uid: user.uid, 
-        displayName: username || user.displayName,
-        email: email || user.email,
-        photoURL: newImageURl !== '' && newImageURl ? newImageURl : user.photoURL,
-      };
-      // Update Firestore
-      await updateUserProfile({
+    }
+
+    // Prepare updated data
+    const updatedData = {
+      uid: user.uid,
+      displayName: username || user.displayName,
+      email: email || user.email,
+      photoURL: newImageUrl.publicUrl,
+    };
+
+    // Update Firebase Auth profile (only displayName and photoURL)
+    if (hasDisplayNameChanged || hasPhotoChanged) {
+      console.log("Updating Firebase Auth profile...");
+      const authUpdateResult = await updateUserProfile({
+        email: updatedData.email,
         displayName: updatedData.displayName,
         photoURL: updatedData.photoURL,
       });
 
-      await updateUser(updatedData);
-
-      // Update local state
-      setUsername(updatedData.displayName);
-      setEmail(updatedData.email);
-      setProfilePic(updatedData.photoURL);
-
-      Alert.alert('Success', 'Profile updated successfully!');
-      router.back(); 
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again later.');
+      if (!authUpdateResult.success) {
+        console.error('Firebase Auth update failed:', authUpdateResult.error);
+        throw new Error(authUpdateResult.error || 'Failed to update Firebase profile.');
+      }
+      console.log("Firebase Auth updated successfully");
     }
 
+    // Update your backend
+    console.log("Updating backend user data...");
+    await updateUser(updatedData);
+    console.log("Backend updated successfully");
 
-  };
+    // Update local state only after all successful updates
+    setUsername(updatedData.displayName);
+    setEmail(updatedData.email);
+    setProfilePic(updatedData.photoURL);
+
+    Alert.alert('Success', 'Profile updated successfully!');
+    router.back();
+
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    
+    // Enhanced error handling
+    let errorMessage = 'Failed to update profile. Please try again later.';
+    
+    // if (error?.code === 'auth/requires-recent-login') {
+    //   errorMessage = 'Please log out and log back in before making changes.';
+    // } else if (error?.message) {
+    //   errorMessage = error.message;
+    // } else if (typeof error === 'string') {
+    //   errorMessage = error;
+    // }
+    
+    Alert.alert('Error', errorMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleBack = () => {
     router.back();

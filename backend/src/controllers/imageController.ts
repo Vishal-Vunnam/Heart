@@ -56,6 +56,45 @@ router.post('/image', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/images', async (req: Request, res: Response) => { 
+  try { 
+    const { images, postId } = req.body; 
+    if (!images || !postId) {
+      return res.status(400).json({ error: 'Missing image or postId in request body' });
+    }
+    const imageUrls: string[] = []; 
+    const imageIds: string[] = [];
+
+    for (const image of images) {
+      const imageId = uuidv4();
+      const blobName = `${postId}_${Date.now()}`;
+      const imageUrl = await uploadToAzureBlob(image, blobName, 'post-images');
+      imageUrls.push(imageUrl);
+      imageIds.push(imageId);
+    }
+    // Insert all images into the database
+    const numberOfImageParams = imageIds.length * 2-1; 
+    const insertImageQuery = `
+      INSERT INTO images (id, imageUrl, postId)
+      VALUES ${imageIds.map((id, index) => `(@param${index * 2}, @param${index * 2 + 1}, @param${numberOfImageParams+1})`).join(', ')}
+    `;
+    
+    const params = [];
+    for (let i = 0; i < imageIds.length; i++) {
+      params.push(imageIds[i], imageUrls[i]);
+    }
+    params.push(postId);
+    await executeQuery(insertImageQuery, params);
+    
+    return res.status(201).json({ message: 'Images uploaded successfully', urls: imageUrls });
+  } catch (error) {
+    console.error('Error uploading images:', error);
+    return res.status(500).json({ error: 'Failed to upload images' });
+  }
+
+
+})
+
 router.post('/image-user', async (req: Request, res: Response) => {
   try {
     const image = req.body.image as string; 
@@ -66,6 +105,7 @@ router.post('/image-user', async (req: Request, res: Response) => {
     }
     const blobName = `${username}_${Date.now()}`;
     const imageUrl = await uploadToAzureBlob(image, blobName, 'profile-pics');
+    console.log("Did we get here? ", imageUrl); 
     return res.status(201).json({ message: 'Image uploaded successfully', url: imageUrl });
   } catch (error) {
     console.error('Error uploading image:', error);

@@ -6,8 +6,6 @@ BUGS:
 
 
 TODO:
-    -edit post
-    -delete post
     -test for memory leaks 
     -see friends and followers
     -see trending (just return highest liked posts lol)
