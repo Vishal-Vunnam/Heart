@@ -20,6 +20,7 @@ export type PostInfo = {
     title: string;
     description: string; 
     date?: string | null;
+    tag?: string | null; 
     latitude: number;
     latitudeDelta: number; 
     longitude: number; 

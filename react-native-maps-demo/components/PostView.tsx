@@ -1,349 +1,142 @@
 import React, { useState } from 'react';
-import { StyleSheet, ScrollView, View, Dimensions, TouchableOpacity } from 'react-native';
+import { ScrollView, View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { DisplayPostInfo } from '@/types/types';
 import ProtectedImage from './ProtectedImage';
 import { getRandomColor } from '@/functions/getRandomColor';
 import { likePost } from '@/services/api/posts';
+import { MaterialIcons } from '@expo/vector-icons';
 
-const { width, height } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
-export const PostView = ({ post }: { post: DisplayPostInfo}) => {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
- const [userLiked, setUserLiked] = useState<boolean>(false);
-  const totalImages = post.images?.length || 0;
+export const PostView = ({ post }: { post: DisplayPostInfo }) => {
+  const [userLiked, setUserLiked] = useState(false);
 
-    const handleLike = () => {
-      if(!post) return; 
-      if (!isUserLoggedIn || !post.postInfo.postId) return;
-      setUserLiked(!userLiked);
-      // if (onLike) onLike();
-      likePost(post.postInfo.postId)
-        .then(() => {
-          console.log('Post liked successfully');
-        })
-        .catch((error) => {
-          console.error('Failed to like post:', error);
-        });
-    }
+  const handleLike = () => {
+    if (!post?.postInfo?.postId) return;
+    const prevLiked = userLiked;
+    setUserLiked(!prevLiked);
+    likePost(post.postInfo.postId).catch((error) => {
+      console.error('Failed to like post:', error);
+      setUserLiked(prevLiked);
+    });
+  };
 
   return (
-    <View style={styles.container}>
-      {/* Header - Instagram style */}
-      <View style={styles.header}>
-        <View style={styles.authorSection}>
-          <View style={[styles.authorAvatar, { backgroundColor: getRandomColor() }]}>
-            <ThemedText style={styles.authorInitial}>
-              {post.postInfo.userDisplayName.charAt(0).toUpperCase()}
-            </ThemedText>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+            keyboardShouldPersistTaps="handled"
+          >
+      <ThemedView style={postStyles.container}>
+        {/* Header */}
+        <View style={postStyles.header}>
+          <View style={postStyles.authorInfo}>
+            <View>
+              <ThemedText style={postStyles.authorName}>{post.postInfo.userDisplayName}</ThemedText>
+              <ThemedText style={postStyles.postDate}>
+                {new Date(post.postInfo.date).toLocaleDateString()}
+              </ThemedText>
+            </View>
           </View>
-          <View style={styles.authorInfo}>
-            <ThemedText style={styles.authorName}>{post.postInfo.userDisplayName}</ThemedText>
-            <ThemedText style={styles.dateText}>{post.postInfo.date}</ThemedText>
-          </View>
+          <TouchableOpacity style={postStyles.moreButton}>
+            <MaterialIcons name="more-vert" size={20} color="black" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.moreButton}>
-          <ThemedText style={styles.moreText}>•••</ThemedText>
-        </TouchableOpacity>
-      </View>
 
-        {post.images && post.images.length > 0 && (
-          <View style={styles.imageContainer}>
-            {post.images.map((image, index) => {
-              const imageUrl = typeof image === 'string'
-                ? image
-                : (image && typeof image === 'object' && 'imageUrl' in image
-                    ? image.imageUrl
-                    : '');
+        {/* Title & Description */}
+        <View style={postStyles.content}>
+          <ThemedText style={postStyles.title}>{post.postInfo.title}</ThemedText>
+          {post.postInfo.description && (
+            <ThemedText style={postStyles.description}>{post.postInfo.description}</ThemedText>
+          )}
+        </View>
+
+        {/* Images */}
+        {post.images?.length > 0 && (
+          <View style={postStyles.imageContainer}>
+            {post.images.map((img, index) => {
+              const imageUrl = typeof img === 'string' ? img : img.imageUrl || '';
               return (
-                <View key={index} style={styles.singleImageContainer}>
-                  <ProtectedImage
-                    url={imageUrl}
-                    style={styles.image}
-                    resize={'contain'}
-                  />
+                <View key={index} style={postStyles.singleImageContainer}>
+                  <ProtectedImage url={imageUrl} style={postStyles.image} resize="contain" />
                 </View>
               );
             })}
           </View>
         )}
 
-      {/* Action buttons - Instagram style */}
-      <View style={styles.actionBar}>
-        <View style={styles.leftActions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <ThemedText style={styles.actionIcon}>♡</ThemedText>
-          </TouchableOpacity>
-
-        </View>
-        <TouchableOpacity style={styles.actionButton}>
-          <ThemedText style={styles.actionIcon}>🔖</ThemedText>
-        </TouchableOpacity>
-      </View>
-
-      {/* Content Section */}
-      <ScrollView style={styles.contentSection} showsVerticalScrollIndicator={false}>
-        {/* Likes placeholder */}
-        <TouchableOpacity style={styles.likesSection}>
-          <ThemedText style={styles.likesText}>Be the first to like this</ThemedText>
-        </TouchableOpacity>
-
-        {/* Caption */}
-        <View style={styles.captionSection}>
-          <ThemedText style={styles.captionAuthor}>{post.postInfo.userDisplayName}</ThemedText>
-          <ThemedText style={styles.captionTitle}>{post.postInfo.title}</ThemedText>
-          {post.postInfo.description && (
-            <ThemedText style={styles.captionDescription}>{post.postInfo.description}</ThemedText>
+        {/* Tags */}
+        <View style={postStyles.tagContainer}>
+          {post.postInfo.tag ? (
+            <View style={postStyles.tagButton}>
+              <ThemedText style={postStyles.tagText}>#{post.postInfo.tag}</ThemedText>
+            </View>
+          ) : (
+            <ThemedText style={postStyles.noTagText}>No tags</ThemedText>
           )}
         </View>
 
-        {/* Comments placeholder */}
-        <TouchableOpacity style={styles.commentsSection}>
-          <ThemedText style={styles.commentsText}>View all comments</ThemedText>
-        </TouchableOpacity>
+        {/* Actions */}
+        <View style={postStyles.actionBar}>
+          <View style={postStyles.likeView}>
+            <TouchableOpacity style={postStyles.actionButton} onPress={handleLike}>
+              <MaterialIcons
+                name={userLiked ? 'favorite' : 'favorite-border'}
+                size={20}
+                color={userLiked ? '#ff3040' : getRandomColor()}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={postStyles.actionButton}>
+              <MaterialIcons name="chat-bubble-outline" size={20} color={getRandomColor()} />
+            </TouchableOpacity>
+            <TouchableOpacity style={postStyles.actionButton}>
+              <MaterialIcons name="share" size={20} color={getRandomColor()} />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={postStyles.actionButton}>
+            <MaterialIcons name="bookmark-border" size={20} color={getRandomColor()} />
+          </TouchableOpacity>
+        </View>
 
-        {/* Add some bottom padding for scrolling */}
-        <View style={styles.bottomPadding} />
-      </ScrollView>
-    </View>
+        {/* Likes */}
+        <View style={postStyles.dateAndDescriptionContainer}>
+          <ThemedText style={postStyles.likeCount}>
+            {userLiked ? '1 like' : 'Be the first to like this'}
+          </ThemedText>
+        </View>
+      </ThemedView>
+    </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
+const postStyles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#dbdbdb',
-  },
-  
-  authorSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  
-  authorAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  imagesContainer: {
-  // backgroundColor: 'black',
-},
-
-  image: {
-    width: '95%',
-    aspectRatio: 1.6,
-    // height: '400',
-    resizeMode: 'contain',
-    paddingVertical: 0,
-    // borderBottomColor: '#55555534',
-    // borderBottomWidth: 2, 
-  },
-  
-  authorInitial: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-    fontFamily: 'Anton_400Regular',
-  },
-  
-  authorInfo: {
-    flex: 1,
-  },
-  
-  authorName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000',
-    fontFamily: 'Anton_400Regular',
-    marginBottom: 2,
-  },
-  
-  dateText: {
-    fontSize: 12,
-    color: '#8e8e8e',
-    fontFamily: 'Koulen_400Regular',
-  },
-  
-  moreButton: {
-    padding: 8,
-  },
-  
-  moreText: {
-    fontSize: 16,
-    color: '#000000',
-    fontWeight: '600',
-  },
-  
-  
-  imageScroll: {
-    flex: 1,
-  },
-  
-
-  
-  imageIndicators: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  
-  indicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-    marginVertical: 2,
-  },
-  
-  activeIndicator: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-  },
-  
-  imageCounter: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-
-  imageContainer: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#ffffffff',
+    paddingVertical: 8,
+    width: Math.min(screenWidth * 0.9, 400),
+    elevation: 12,
     marginBottom: 16,
-    
   },
-  singleImageContainer: {
-    width: '100%',
-    marginBottom: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  counterText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  
-  noImagePlaceholder: {
-    height: width,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-  },
-  
-  placeholderIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  placeholderText: {
-    fontSize: 30,
-  },
-  
-  actionBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#dbdbdb',
-  },
-  
-  leftActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  
-  actionButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    marginRight: 8,
-  },
-  
-  actionIcon: {
-    fontSize: 24,
-    color: '#000000',
-  },
-  
-  contentSection: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  
-  likesSection: {
-    paddingVertical: 8,
-  },
-  
-  likesText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  
-  captionSection: {
-    paddingVertical: 4,
-  },
-  
-  captionAuthor: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000',
-    fontFamily: 'Anton_400Regular',
-    marginBottom: 4,
-  },
-  
-  captionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000000',
-    fontFamily: 'Anton_400Regular',
-    marginBottom: 4,
-    lineHeight: 20,
-  },
-  
-  captionDescription: {
-    fontSize: 14,
-    color: '#000000',
-    fontFamily: 'Anton_400Regular',
-    lineHeight: 18,
-  },
-  
-  commentsSection: {
-    paddingVertical: 8,
-  },
-  
-  commentsText: {
-    fontSize: 14,
-    color: '#8e8e8e',
-  },
-  
-  bottomPadding: {
-    height: 20,
-  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8 },
+  authorInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  authorName: { color: 'black', fontSize: 30, fontFamily: 'Koulen_400Regular', lineHeight: 46 },
+  postDate: { color: 'black', fontSize: 12, fontFamily: 'Koulen_400Regular' },
+  moreButton: { borderRadius: 12, minWidth: 36, alignItems: 'center', justifyContent: 'center' },
+  imageContainer: { width: '100%', alignItems: 'center', marginBottom: 12 },
+  singleImageContainer: { width: '100%', alignItems: 'center', marginBottom: 12 },
+  image: { width: '95%', aspectRatio: 1.6, maxHeight: 200, resizeMode: 'contain', borderRadius: 8 },
+  content: { paddingHorizontal: 16, paddingBottom: 8 },
+  title: { color: 'black', fontSize: 20, fontWeight: '800', fontFamily: 'Anton_400Regular', marginBottom: 4 },
+  description: { color: '#000000ff', fontSize: 15, fontFamily: 'Anton_400Regular' },
+  tagContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, paddingHorizontal: 16, marginBottom: 8 },
+  tagButton: { backgroundColor: '#374151', borderColor: '#1E40AF', borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
+  tagText: { fontSize: 13, color: '#3B82F6', fontWeight: '700' },
+  noTagText: { fontSize: 12, color: '#6B7280', fontStyle: 'italic' },
+  actionBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#374151', paddingHorizontal: 16, paddingVertical: 8 },
+  likeView: { flexDirection: 'row', alignItems: 'center' },
+  actionButton: { marginRight: 12 },
+  dateAndDescriptionContainer: { paddingHorizontal: 16, marginTop: -4, marginBottom: 8 },
+  likeCount: { color: getRandomColor(), fontSize: 17, fontWeight: '500', fontFamily: 'Koulen_400Regular' },
 });

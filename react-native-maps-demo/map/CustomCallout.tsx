@@ -1,7 +1,7 @@
 // Remove all image loading state logic and ActivityIndicator
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ScrollView, Image } from 'react-native';
 import { ThemedText } from '../components/ThemedText';
 import { deletePostById, getPost} from '@/services/api/posts';
 import { PolisType, DisplayPostInfo } from '@/types/types';
@@ -10,6 +10,7 @@ import ProtectedImage from '../components/ProtectedImage';
 import {likePost, unlikePost} from '@/services/api/posts'; // Import likePost function
 import { getRandomColor } from '@/functions/getRandomColor'; // Assuming you have a utility function for random colors
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
 
 interface CustomCalloutProps {
@@ -54,6 +55,7 @@ useEffect(() => {
 
     try {
       const postInfo = await getPost(postId);
+      console.log("Fetched post:", postInfo);
       if (isMounted) {
         setPost(postInfo);
         setUserLiked(postInfo?.postInfo?.likedByCurrentUser ?? false);
@@ -130,8 +132,8 @@ useEffect(() => {
           <View style={styles.authorRow}>
             {post.postInfo.userPhotoURL ? (
               <TouchableOpacity style={styles.avatarTouchable}>
-                <ProtectedImage
-                  url={post.postInfo.userPhotoURL}
+                <Image
+                  source={{ uri: post.postInfo.userPhotoURL }}
                   style={styles.avatar}
                 />
               </TouchableOpacity>
@@ -144,9 +146,21 @@ useEffect(() => {
                 </View>
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              onPress={() => {
+                if (onSelectNewPolis) {
+                  onSelectNewPolis({ isUser: true, userInfo: {
+                    displayName: post.postInfo.userDisplayName || '',
+                    uid: post.postInfo.userId,
+                    photoURL: post.postInfo.userPhotoURL || null,
+                  } });
+                }
+              }}
+            >
             <ThemedText style={styles.authorName} numberOfLines={1} ellipsizeMode="tail">
               {post.postInfo.userDisplayName}
             </ThemedText>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -157,16 +171,18 @@ useEffect(() => {
           {post.postInfo.title}
         </ThemedText>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {post.tag ? (
+          {post.postInfo.tag ? (
             <TouchableOpacity
               style={styles.tagButton}
               onPress={() => {
                 if (onSelectNewPolis) {
-                  onSelectNewPolis({ isUser: false, tag: post.tag });
+                  onSelectNewPolis({ isUser: false, tag: post.postInfo.tag || '' });
                 }
               }}
             >
-              <ThemedText style={styles.tagText}>{post.tag}</ThemedText>
+              {post.postInfo.tag && 
+              <ThemedText style={styles.tagText}>#{post.postInfo.tag}</ThemedText>
+      }
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity
@@ -262,7 +278,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0, 
     paddingVertical: 8, 
     width: Math.min(screenWidth * 0.90, 400),
-    height: screenHeight * 0.4,
+    height: screenHeight * 0.435,
     elevation: 12,
     borderWidth: 3,
     borderColor: '#000000ff',
@@ -292,10 +308,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    borderColor: 'black',
+    borderWidth: 3,
     backgroundColor: getRandomColor(),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 5,
     shadowColor: '#3B82F6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -334,12 +352,12 @@ const styles = StyleSheet.create({
   moreButton: {
     borderRadius: 12,
     minWidth: 36,
-    bottom: 5,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
   moreButtonText: {
-    color: '#000000ff',
+    color: 'black',
     fontSize: 16,
     fontWeight: 'bold',
     transform: [{ rotate: '90deg' }],
@@ -352,7 +370,7 @@ const styles = StyleSheet.create({
   title: {
     color: 'black',
     fontSize: 22,
-    textDecorationLine: 'underline',
+    // textDecorationLine: 'underline',
     fontWeight: '800',
     letterSpacing: 0.4,
     lineHeight: 26,
@@ -481,26 +499,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tagButton: {
-    backgroundColor: '#374151',
-    borderColor: '#1E40AF',
-    borderWidth: 1.5,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 32,
-    shadowColor: '#1E40AF',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
     elevation: 2,
   },
   tagText: {
-    fontSize: 13,
-    color: '#3B82F6',
+    fontSize: 16,
+    color: getRandomColor(),
     fontWeight: '700',
     letterSpacing: 0.5,
+    fontFamily: 'Koulen_400Regular',
+    shadowOffset: { width: 1.2, height: 1.2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
   },
   noTagText: {
     fontSize: 12,
@@ -549,9 +558,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 4,
+    // marginBottom: 4,
     gap: 12,
     flexWrap: 'wrap',
+    borderBottomColor: 'black',
+    borderBottomWidth: 3,
+    // paddingBottom: 8,
   },
   dateNextToTitle: {
     color: '#000000ff',

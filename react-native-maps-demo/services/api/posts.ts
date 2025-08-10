@@ -1,5 +1,5 @@
-const BASE_URL =  "http://10.0.0.53:4000/api";
-// const BASE_URL =  "http://192.168.1.94:4000/api";
+// const BASE_URL =  "http://10.0.0.53:4000/api";
+const BASE_URL =  "http://192.168.1.94:4000/api";
 // Get all posts
 import { PostInfo } from '@/types/types';
 export async function getAllPosts() {
@@ -9,10 +9,10 @@ export async function getAllPosts() {
 }
 
 // Create a new post
-export async function createPost(postData: any, tags?: string[], allowedMembers?: string[]) {
+export async function createPost(postData: any, tag?: string, allowedMembers?: string[]) {
   const body = {
     ...postData,
-    tags: tags || [],
+    tag: tag || null,
     invitees: allowedMembers || [],
   };
   const res = await fetch(`${BASE_URL}/posts`, {
@@ -115,10 +115,25 @@ export async function getMarkerPostsByAuthorId(authorId: string){
   const data = await res.json();
   return data;
 }
+
 // Get posts by tag
 export async function getPostsByTag(tag: string) {
   const res = await fetch(`${BASE_URL}/posts/by-tag?tag=${encodeURIComponent(tag)}`);
   if (!res.ok) throw new Error("Failed to fetch posts by tag");
+  return res.json();
+}
+
+export async function getMarkerPostsByTag(tag: string){ 
+  const url = new URL(`${BASE_URL}/markerposts/by-tag`);
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.uid;
+   url.searchParams.append('tag', tag);
+
+  if (currentUserId) {
+    url.searchParams.append('currentUserId', currentUserId);
+  }
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error("Failed to fetch marker posts by tag");
   return res.json();
 }
 

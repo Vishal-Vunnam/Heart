@@ -45,7 +45,7 @@ router.post('/posts', async (req: Request, res: Response) => {
   console.log("Received POST /posts with body:", req.body);
   try {
     const postInfo: PostInfo = req.body.postInfo || req.body;
-    const tags: string[] = req.body.tags || [];
+    const tag: string = req.body.tag.trim() || null;
     const allowedMembers: string[] = req.body.allowedMembers
 
     // Validate required fields
@@ -90,45 +90,47 @@ router.post('/posts', async (req: Request, res: Response) => {
 
     const result = await executeQuery(query, params);
 
+    console.log("HEERRREE", tag);
     if (result.rowsAffected && result.rowsAffected[0] === 1) {
-      if (Array.isArray(tags) && tags.length > 0) {
-        for (const tag of tags) {
-          try {
-            // Insert tag into tags table if it doesn't exist, then insert into post_tags
-            const tagId = require('crypto').createHash('sha256').update(tag).digest('hex');
-            // Insert tag if not exists
-            console.log('adding tag', tag);
-            await executeQuery(
-              `
-              IF NOT EXISTS (SELECT 1 FROM tags WHERE name = @param0)
-              BEGIN
-                INSERT INTO tags (id, name) VALUES (@param1, @param0)
-              END
-              `,
-              [tag, tagId]
-            );
 
-            await executeQuery(
-              `
-                IF NOT EXISTS (
-                  SELECT 1 FROM post_tags WHERE postId = @param0 AND tagId = @param1
-                )
-                BEGIN
-                  INSERT INTO post_tags (postId, tagId)
-                  VALUES (@param0, @param1)
-                END
-              `,
-              [uniquePostId, tagId]
-            );
-          } catch (tagError: any) {
-            // If a tag insert fails, log and return error
-            return res.status(500).json({
-              success: false,
-              error: `Failed to insert tag '${tag}': ${tagError.message || tagError}`
-            });
-          }
+
+      if (typeof tag === 'string' && tag.trim() !== '') {
+        try {
+          const tagId = require('crypto').createHash('sha256').update(tag).digest('hex');
+
+          // Insert tag if not exists
+          await executeQuery(
+            `
+            IF NOT EXISTS (SELECT 1 FROM tags WHERE name = @param0)
+            BEGIN
+              INSERT INTO tags (id, name) VALUES (@param1, @param0)
+            END
+            `,
+            [tag, tagId]
+          );
+
+          // Link post to tag
+          await executeQuery(
+            `
+            IF NOT EXISTS (
+              SELECT 1 FROM post_tags WHERE postId = @param0 AND tagId = @param1
+            )
+            BEGIN
+              INSERT INTO post_tags (postId, tagId)
+              VALUES (@param0, @param1)
+            END
+            `,
+            [uniquePostId, tagId]
+          );
+        } catch (tagError: any) {
+          return res.status(500).json({
+            success: false,
+            error: `Failed to insert tag '${tag}': ${tagError.message || tagError}`
+          });
         }
       }
+  
+
 
       if (postInfo.private && Array.isArray(allowedMembers) && allowedMembers.length > 0) { 
         await addUsersToPrivatePost(allowedMembers, uniquePostId, postInfo.userId);
@@ -320,11 +322,14 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
         FROM images i
         WHERE i.postId = p.id
         FOR JSON PATH
-      ) as images
+      ) as images,
+      t.name as tag
     FROM posts p
     LEFT JOIN post_viewer pv 
       ON p.id = pv.post_id AND pv.user_id = @param1
     LEFT JOIN users u ON p.userId = u.id
+    LEFT JOIN post_tags pt ON p.id = pt.postId
+    LEFT JOIN tags t ON pt.tagId = t.id
     WHERE p.userId = @param0
       AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
   `;
@@ -367,6 +372,7 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
         type: 'post',
         title: row.title,
         description: row.description,
+        tag: row.tag || null,
         date: row.createdAt,
         latitude: row.latitude,
         latitudeDelta: row.latitudeDelta,
@@ -390,21 +396,87 @@ router.get('/posts/by-author', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/markerposts/by-author', async (req: Request, res: Response) =>  { 
-  console.log('GET /posts/by-author called');
-  const authorId = req.query.authorId as string;
-  
-  if (!authorId) {
-    return res.status(400).json({ success: false, error: "Missing required query parameter: authorId" });
+router.get('/posts/by-tag', async (req: Request, res: Response) => {
+  const tag = req.query.tag as string;
+  if (!tag) {
+    return res.status(400).json({ success: false, error: "Missing required query parameter: tag" });
   }
 
-  // Assume req.user.uid is set by auth middleware
+  try {
+    // First, get the tagId for the given tag name
+    const tagIdQuery = `
+        SELECT id FROM tags WHERE name = @param0
+    `;
+    const tagIdResult = await executeQuery(tagIdQuery, [tag]);
+    if (!tagIdResult.recordset || tagIdResult.recordset.length === 0) {
+      return res.status(200).json({ success: true, posts: [] });
+    }
+    const tagId = tagIdResult.recordset[0].id;
+
+    // Get all postIds that have the tagId in the post_tags join table
+    const postTagQuery = `
+        SELECT pt.postId
+        FROM post_tags pt
+        WHERE pt.tagId = @param0
+    `;
+    const postTagResult = await executeQuery(postTagQuery, [tagId]);
+    const postIds = (postTagResult.recordset || []).map((row: any) => row.postId);
+
+    if (postIds.length === 0) {
+      return res.status(200).json({ success: true, posts: [] });
+    }
+
+    // Now, fetch all posts with those postIds
+    const placeholders = postIds.map((_: string, idx: number) => `@param${idx}`).join(', ');
+    const postQuery = `
+        SELECT 
+            id as postId,
+            userId,
+            title,
+            description,
+            date,
+            latitude,
+            latitudeDelta,
+            longitude,
+            longitudeDelta
+        FROM posts
+        WHERE id IN (${placeholders})
+    `;
+    const postResult = await executeQuery(postQuery, postIds);
+
+    const posts = (postResult.recordset || []).map((row: any) => ({
+      postId: row.postId,
+      userId: row.userId,
+      type: 'post',
+      title: row.title,
+      description: row.description,
+      date: row.date,
+      latitude: row.latitude,
+      latitudeDelta: row.latitudeDelta,
+      longitude: row.longitude,
+      longitudeDelta: row.longitudeDelta,
+    }));
+
+    return res.status(200).json({ success: true, posts });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Unknown error occurred while fetching posts by tag."
+    });
+  }
+});
+
+router.get('/markerposts/by-tag', async (req: Request, res: Response) => { 
+  const tag = req.query.tag as string;
   const currentUserId = req.query.currentUserId;
-
-  // Query to get posts by author, including images as a JSON array and the private field
-
-  const query = `
-    SELECT 
+  if (!tag) {
+    return res.status(400).json({ success: false, error: "Missing required query parameter: tag" });
+  }
+  try {
+    // First, get the tagId for the given tag name
+    console.log("Fetching tagId for tag:", tag);
+    const query = `
+    SELECT      
       p.id as postId,
       p.userId,
       p.latitude,
@@ -412,38 +484,21 @@ router.get('/markerposts/by-author', async (req: Request, res: Response) =>  {
       p.longitude,
       p.longitudeDelta,
       p.private
-    FROM posts p
+      FROM posts p 
+    LEFT JOIN post_tags pt ON p.id = pt.postId
+    LEFT JOIN tags t ON pt.tagId = t.id
     LEFT JOIN post_viewer pv 
       ON p.id = pv.post_id AND pv.user_id = @param1
-    WHERE p.userId = @param0
-      AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
-  `;
-  /*SELECT 
-    p.*,
-    (
-      SELECT 
-        i.imageUrl
-      FROM images i
-      WHERE i.postId = p.id
-      FOR JSON PATH
-    ) as images
-  FROM posts p
-  LEFT JOIN post_viewer pv 
-    ON p.id = pv.post_id AND pv.user_id = @param1
-  WHERE p.userId = @param0
+    WHERE t.name = @param0
     AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
-  */
-  const params = [authorId, currentUserId];
+    `;
+    const params = [tag, currentUserId];
 
-
-
-  try {
     const result = await executeQuery(query, params);
 
     // Do not filter based on private; return all posts as-is
     const posts = (result.recordset || []).map((row: any) => {
-
-        return {
+      return {
         postId: row.postId,
         userId: row.userId, 
         latitude: row.latitude,
@@ -462,7 +517,7 @@ router.get('/markerposts/by-author', async (req: Request, res: Response) =>  {
       error: error.message || "Unknown error occurred while fetching posts by authorId."
     });
   }
-})
+});
 
 /**
  * Route: GET /posts/by-tag
@@ -569,7 +624,8 @@ router.get('/post/by-id', async (req: Request, res: Response) =>  {
       FOR JSON PATH
     ) AS images,  -- ✅ Comma added here
     l.likesCount,
-    l.likedByCurrentUser
+    l.likedByCurrentUser,
+    t.name as tag
   FROM posts p
   LEFT JOIN post_viewer pv 
     ON p.id = pv.post_id AND pv.user_id = @param1
@@ -581,6 +637,8 @@ router.get('/post/by-id', async (req: Request, res: Response) =>  {
     FROM post_likes
     GROUP BY post_id
   ) l ON p.id = l.postId
+  LEFT JOIN post_tags pt ON p.id = pt.postId
+  LEFT JOIN tags t ON pt.tagId = t.id
   LEFT JOIN users u ON p.userId = u.id
   WHERE p.id = @param0
     AND (p.private = 0 OR p.userId = @param1 OR pv.post_id IS NOT NULL);
@@ -610,6 +668,7 @@ router.get('/post/by-id', async (req: Request, res: Response) =>  {
       type: 'post',
       title: row.title,
       description: row.description,
+      tag: row.tag || null,
       date: row.createdAt,
       latitude: row.latitude,
       latitudeDelta: row.latitudeDelta,

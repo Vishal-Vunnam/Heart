@@ -12,7 +12,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { router } from 'expo-router';
+import { Stack, router} from 'expo-router';
 import { updateProfile } from 'firebase/auth';
 import { createUser } from '@/services/api/user';
 import { uploadImageForUser } from '@/services/api/image';
@@ -32,6 +32,9 @@ export default function SignInScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
+  const handleBack = () => {
+      router.back();
+    };
   // Helper to pick an image from the library
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -117,23 +120,32 @@ export default function SignInScreen() {
         router.back(); // 🟢 After slight delay, user state will be correct
       }, 500);
       } else {
-        await signIn(email, password);
-        Alert.alert('Success', 'Signed in!');
-        router.back();
+          const res = await signIn(email, password);
+          if (res.success && res.user) {
+            Alert.alert('Success', 'Signed in!');
+            router.back();
+          } else {
+            Alert.alert('Error', res.error || 'Invalid email or password.');
+          }
       }
-    } catch (error: any) {
-      Alert.alert('Error', error.message || String(error));
-    }
+        } catch (error: any) {
+          Alert.alert('Error', error.message || String(error));
+        }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
   <ThemedView style={styles.container}>
     {/* Header */}
-    <View style={styles.header}>
-      <Text style={styles.appTitle}>Polis</Text>
-    </View>
-
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Text style={styles.backButtonText}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.appTitle}>Polis</Text>
+          </View>
+          <View style={styles.placeholder} />
+        </View>
     {/* Form Container with Scroll */}
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -224,7 +236,6 @@ export default function SignInScreen() {
     </View>
   </ThemedView>
 </SafeAreaView>
-
   );
 }
 
@@ -241,12 +252,11 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 60,
-    marginBottom: 40,
+    justifyContent: 'space-between',
+    paddingVertical: 20,
     borderBottomWidth: 3,
-    borderBottomColor: 'black',
-    paddingBottom: 20,
+    borderBottomColor: '#000000ff',
+    marginBottom: 20,
   },
   scrollContent: {
   flexGrow: 1,
@@ -397,6 +407,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Koulen_400Regular',
     lineHeight: 20,
   },
+    backButton: {
+    padding: 8,
+    backgroundColor: '#000000ff',
+    borderRadius: 12,
+    minWidth: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonText: {
+    fontSize: 18,
+    color: 'white',
+    fontWeight: 'bold',
+    fontFamily: 'Anton_400Regular',
+  }, 
   errorText: {
     color: '#000000ff',
     fontSize: 14,
@@ -446,5 +470,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontStyle: 'italic',
     fontFamily: 'Koulen_400Regular',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+    placeholder: {
+    width: 40,
   },
 });

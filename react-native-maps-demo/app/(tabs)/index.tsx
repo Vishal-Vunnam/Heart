@@ -46,7 +46,7 @@ import { getRandomColor } from '@/functions/getRandomColor';
 // Firebase Firestore & Storage
 // import { addPost, getAllPosts, getPostbyAuthorID, getPostbyTag } from '@/backend/firestore';
 // import { getImageFromBlobUrl, getImageUrlWithSAS } from '@/backend/blob-storage';
-import { getAllPosts, createPost, getPostsByAuthorId, getPostsByTag, getMarkerPostsByAuthorId } from '@/services/api/posts';
+import { getAllPosts, createPost, getPostsByAuthorId, getPostsByTag, getMarkerPostsByAuthorId, getMarkerPostsByTag } from '@/services/api/posts';
 import { getImageUrlWithSAS } from '@/services/api/image';
 import { getCurrentUser } from '@/services/auth/fireAuth';
 
@@ -108,20 +108,6 @@ export default function HomeScreen() {
   const handleEdit = (postId: string) => {
     setPostIdToEdit(postId);
     setEditModalVisible(true);
-  };
-  // Handler for submit
-  const handleEditSubmit = (editedPostId: string) => {
-    // Update the post in posts state (replace by postId), preserving DisplayPostInfo structure
-    // setPosts(prevPosts =>
-    //   prevPosts.map(p =>
-    //     p.postInfo.postId === editedPost.postInfo.postId
-    //       ? { ...p, postInfo: { ...p.postInfo, ...editedPost } }
-    //       : p
-    //   )
-    // );
-    setEditModalVisible(false);
-    setPostToEdit(null);
-    // setSelectedPost(editedPostId); // Optionally show the updated post
   };
 
   // export type UserInfo = {
@@ -188,9 +174,13 @@ export default function HomeScreen() {
         
         });
       } else {
-        getPostsByTag(selectedPolis.tag).then((tagPosts) => {
-          setPosts(tagPosts); 
-        })
+        getMarkerPostsByTag(selectedPolis.tag || '').then((tagPosts) => {
+          if (tagPosts && tagPosts.success && Array.isArray(tagPosts.posts)) {
+            setPosts(tagPosts.posts); // set directly
+          } else {
+            setPosts([]);
+          }
+        });
       }
     }
     setShowedPostsChanges(false);

@@ -46,6 +46,7 @@ router.post('/user', async (req: Request, res: Response) => {
 
 router.put('/update-user', async (req: Request, res: Response) => {
   try { 
+    console.log("Updating user info:", req.body);
     const userInfo: UserInfo = req.body;
 
     // Validate required fields

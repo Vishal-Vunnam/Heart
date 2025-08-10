@@ -1,17 +1,18 @@
-BUGS: 
-    -edit profile 
-    -cant post without description
-    -tags not owrking all aroung 
-    -
 
 
-TODO:
-    -test for memory leaks 
+
+TODO (FOR RELEASE):
+    -Fix PostView Styling. 
+    -Click on Image 
+    -Notifications???
+    -tags are working add styling 
+
+TODO (POST RELEASE): 
+    -notifications
     -see friends and followers
     -see trending (just return highest liked posts lol)
     -Geo-Mapping useing Google Maps API
-    -sustained user sign in. 
-
+    
 Backend User Cache:
     -User Posts
     -User Followers

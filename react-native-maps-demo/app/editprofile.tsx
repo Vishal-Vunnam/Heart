@@ -79,12 +79,13 @@ const handleSave = async () => {
       console.log("Uploading new profile image...");
       try {
         const base64Image = await getBase64(profilePic);
-        newImageUrl = await uploadImageForUser(base64Image, username);
+        const ImageTmp = await uploadImageForUser(base64Image, username);
+        ImageTmp && ImageTmp.url ? newImageUrl = ImageTmp.url : undefined; 
         console.log("Image uploaded successfully:", newImageUrl);
       } catch (imageError) {
         console.error('Image upload failed:', imageError);
         Alert.alert('Warning', 'Image upload failed, but other changes will be saved.');
-        newImageUrl = user.photoURL; // Keep original photo on upload failure
+        // newImageUrl = user.photoURL; // Keep original photo on upload failure
       }
     }
 
@@ -93,10 +94,10 @@ const handleSave = async () => {
       uid: user.uid,
       displayName: username || user.displayName,
       email: email || user.email,
-      photoURL: newImageUrl ? newImageUrl.url : user.photoURL,
+      photoURL: newImageUrl ?? undefined,
     };
 
-    console.log(newImageUrl); 
+    console.log("FRONTEND", updatedData); 
 
     // Update Firebase Auth profile (only displayName and photoURL)
     if (hasDisplayNameChanged || hasPhotoChanged) {

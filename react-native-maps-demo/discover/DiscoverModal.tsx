@@ -9,6 +9,7 @@ import {
   Platform,
   TouchableOpacity,
   Image,
+  Touchable,
 } from 'react-native';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,7 +23,9 @@ import { DiscoverPost } from './DiscoverPosts';
 import styles from './DiscoverStyles';
 import { isFriend } from '@/services/api/user';
 import { DiscoverExplore } from './DiscoverExplore';
-
+import { MaterialIcons } from '@expo/vector-icons';
+import { TouchableWithoutFeedback } from 'react-native';
+import { dismiss } from 'expo-router/build/global-state/routing';
 const SEARCH_HISTORY_KEY = 'search_history';
 
 export async function saveSearch(search: PolisSearchReturn) {
@@ -136,6 +139,12 @@ useEffect(() => {
   fetchData();
 }, [selectedPolis]);
 
+const dismissTyping = () => {
+  setIsTyping(false);
+  setSearchText('');
+  setPolisSuggestions([]);
+  textInputRef.current?.blur();
+}
 
 // export type PolisSearchReturn = {
 //     name: string;
@@ -170,6 +179,7 @@ useEffect(() => {
   };
 
   return (
+    <TouchableWithoutFeedback onPress={dismissTyping}>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -241,7 +251,7 @@ useEffect(() => {
                         />
                       )}
                       <Text style={styles.suggestionItem}>{suggestion.is_tag ? `#${suggestion.name}` : suggestion.name}</Text>
-
+                      <MaterialIcons name="close" size={24} color="#888" />
                     </TouchableOpacity>
                   ))
                 : !isSearchingPolis &&
@@ -265,12 +275,11 @@ useEffect(() => {
                           });
                           setSearchText(suggestion.name);
                         }
-                        setIsTyping(false);
-                        setPolisSuggestions([]);
-                        textInputRef.current?.blur();
+                        dismissTyping();
                       }}
                     >
                       <Text style={styles.suggestionItem}>{suggestion.is_tag ? `#${suggestion.name}` : suggestion.name}</Text>
+                      
                     </TouchableOpacity>
                   ))}
             </View>
@@ -286,16 +295,20 @@ useEffect(() => {
           ) : selectedPost ? (
             <DiscoverPost post={selectedPost} onBack={() => setSelectedPost(null)} />
           ) : null}
-          {!selectedPolis && !selectedPostIdFromParent && !isTyping && (
+          {!selectedPolis && !selectedPost && !selectedPostIdFromParent && (
           <DiscoverExplore
             onPolisSelect={onPolisSelect}
-            setSelectedPost={setSelectedPost}
+            setSelectedPost={(post) => {
+              setSelectedPost(post);
+              dismissTyping();
+            }}
             postsPerPage={5}
           />
         )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 };
 

@@ -32,7 +32,7 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
 
   // Tag input state
   const [tagInput, setTagInput] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
+  const [tag, setTag] = useState(''); 
 
   const [allowedMembers, setAllowedMembers] = useState<UserSearchReturn[]>([]);
   const [memberSearch, setMemberSearch] = useState('');
@@ -85,30 +85,9 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Tag input handlers
-  const handleAddTag = () => {
-    const trimmed = tagInput.trim();
-    if (trimmed.length > 0 && !tags.includes(trimmed)) {
-      setTags(prev => [...prev, trimmed]);
-      setTagInput('');
-    }
-  };
 
-  const handleTagInputChange = (text: string) => {
-    if (text.endsWith(',') || text.endsWith(' ')) {
-      const trimmed = text.trim().replace(/,$/, '');
-      if (trimmed.length > 0 && !tags.includes(trimmed)) {
-        setTags(prev => [...prev, trimmed]);
-      }
-      setTagInput('');
-    } else {
-      setTagInput(text);
-    }
-  };
 
-  const handleRemoveTag = (index: number) => {
-    setTags(prev => prev.filter((_, i) => i !== index));
-  };
+
 
   // Member search logic
   const handleAddMember = (user: UserSearchReturn) => {
@@ -156,7 +135,7 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
         allowedMembers: postVisibility === 'Private' ? allowedMembers.map(m => m.id) : undefined,
       };
       const allowedMembersId: string[] = postVisibility === 'Private' ? allowedMembers.map(m => m.id) : [];
-      const createdPost = await createPost(postInfo, tags, allowedMembersId);
+      const createdPost = await createPost(postInfo, tag, allowedMembersId);
       if (selectedImages.length > 0) {
         for (const imageUri of selectedImages) {
           const base64Image = await getBase64(imageUri);
@@ -178,7 +157,7 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
     setLocationTitle('');
     setDescription('');
     setSelectedImages([]);
-    setTags([]);
+    setTag('');
     setTagInput('');
     setAllowedMembers([]);
     setMemberSearch('');
@@ -253,44 +232,30 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
 
                   {/* Tags Section */}
                   <View style={modalStyles.inputGroup}>
-                    <Text style={modalStyles.label}>Tags</Text>
+                    <Text style={modalStyles.label}>Tag</Text>
                     <View style={modalStyles.tagInputContainer}>
                       <View style={modalStyles.tagInputRow}>
                         <Feather name="hash" size={18} color="#6B7280" style={modalStyles.hashIcon} />
                         <TextInput
                           style={modalStyles.tagInput}
-                          placeholder="Add tags (press Enter or comma to add)"
+                          placeholder="Add a tag!"
                           placeholderTextColor="#6B7280"
                           value={tagInput}
-                          onChangeText={handleTagInputChange}
-                          onSubmitEditing={handleAddTag}
+                          onChangeText={(text) => {
+                            setTagInput(text);
+                            setTag(text);
+                          }}
                           blurOnSubmit={false}
                           returnKeyType="done"
                         />
-                        <TouchableOpacity
+                        {/* <TouchableOpacity
                           style={modalStyles.addTagButton}
                           onPress={handleAddTag}
                         >
                           <Feather name="plus" size={16} color="#3B82F6" />
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                       </View>
                     </View>
-                    {/* Tag Chips */}
-                    {tags.length > 0 && (
-                      <View style={modalStyles.tagChipsContainer}>
-                        {tags.map((tag, idx) => (
-                          <View key={idx} style={modalStyles.tagChip}>
-                            <Text style={modalStyles.tagChipText}>#{tag}</Text>
-                            <TouchableOpacity
-                              style={modalStyles.removeTagButton}
-                              onPress={() => handleRemoveTag(idx)}
-                            >
-                              <Feather name="x" size={12} color="#6B7280" />
-                            </TouchableOpacity>
-                          </View>
-                        ))}
-                      </View>
-                    )}
                   </View>
 
                   {/* Visibility */}

@@ -1,7 +1,7 @@
 import { ImageType } from "@/types/types";
 
-const BASE_URL =  "http://10.0.0.53:4000/api";
-// const BASE_URL =  "http://192.168.1.94:4000/api";
+// const BASE_URL =  "http://10.0.0.53:4000/api";
+const BASE_URL =  "http://192.168.1.94:4000/api";
 
 export async function getImageUrlWithSAS(url: string) {
     const res = await fetch(`${BASE_URL}/safeimage?url=${encodeURIComponent(url)}`);

@@ -1,5 +1,6 @@
+
 import { 
-  getAuth, 
+  initializeAuth,
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut, 
@@ -7,10 +8,12 @@ import {
   updateProfile, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider
 } from 'firebase/auth';
 
-import app from '@/services/auth/fireBaseConfig';
+import { app } from '@/services/auth/fireBaseConfig';
 import { createUser } from '@/services/api/user';
 
-const auth = getAuth(app);
+// Try this approach: Just use initializeAuth, let Firebase handle persistence automatically
+// Make sure AsyncStorage is installed but don't import it here
+const auth = initializeAuth(app);
 
 export async function signIn(email: string, password: string) {
   if (!email || !password) {
