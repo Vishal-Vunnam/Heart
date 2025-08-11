@@ -102,14 +102,11 @@ export const DiscoverPolis: React.FC<DiscoverPolisProps> = ({
                      
               <TouchableOpacity
                 style={styles.infoRight}
-                onPress={() => {
-                  if (onPolisSelect) onPolisSelect(selectedPolis);
-                }}
               >
                 <Text style={styles.displayName}>
                   {selectedPolis.isUser
-                    ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
-                    : selectedPolis.tag}
+                  ? selectedPolis.userInfo.displayName || selectedPolis.userInfo.email
+                  : '#' + selectedPolis.tag}
                 </Text>
               </TouchableOpacity>
               
@@ -159,7 +156,18 @@ export const DiscoverPolis: React.FC<DiscoverPolisProps> = ({
             onPress={() => setSelectedPost(post)}
           >
             <View style={styles.infoContainer}>
+              <View style={styles.profileAndTitle}>
+              {(!selectedPolis.isUser && post.postInfo.userPhotoURL) ? (
+                <Image
+                  source={{ uri: post.postInfo.userPhotoURL }}
+                  style={[
+                    styles.profilePicSmall,
+                    { borderColor: '#000000ff', borderWidth: 2 }
+                  ]}
+                />
+              ) : null}
               <Text style={styles.postTitle}>{post.postInfo.title}</Text>
+              </View>
               <Text style={styles.postDate}>
                 {new Date(post.postInfo.date).toLocaleDateString('en-US', {
                   month: 'short',
@@ -170,7 +178,7 @@ export const DiscoverPolis: React.FC<DiscoverPolisProps> = ({
             </View>
            
             <View style={styles.imageContainer}>
-              {post.images?.slice(0, 2).map((img, index) => (
+              {post.images?.slice(0, 1).map((img, index) => (
                 <ProtectedImage
                   key={index}
                   url={img.imageUrl}

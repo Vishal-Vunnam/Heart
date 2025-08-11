@@ -104,6 +104,7 @@ export async function getMarkerPostsByAuthorId(authorId: string){
   const currentUserId = currentUser?.uid;
 
   // Send current user as a query param (if available)
+  console.log("Fetching marker posts by authorId:", authorId, "for user:", currentUserId);
   const url = new URL(`${BASE_URL}/markerposts/by-author`);
   url.searchParams.append('authorId', authorId);
   if (currentUserId) {
@@ -118,7 +119,16 @@ export async function getMarkerPostsByAuthorId(authorId: string){
 
 // Get posts by tag
 export async function getPostsByTag(tag: string) {
-  const res = await fetch(`${BASE_URL}/posts/by-tag?tag=${encodeURIComponent(tag)}`);
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.uid;
+
+  const url = new URL(`${BASE_URL}/posts/by-tag`);
+  url.searchParams.append('tag', tag);
+  if (currentUserId) {
+    url.searchParams.append('currentUserId', currentUserId);
+  }
+  console.log("Fetching posts by tag:", url.toString());
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error("Failed to fetch posts by tag");
   return res.json();
 }

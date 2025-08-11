@@ -236,18 +236,22 @@ const PostModal = ({userId, userName, visible, onClose, currentLocation, onPost 
                     <View style={modalStyles.tagInputContainer}>
                       <View style={modalStyles.tagInputRow}>
                         <Feather name="hash" size={18} color="#6B7280" style={modalStyles.hashIcon} />
-                        <TextInput
-                          style={modalStyles.tagInput}
-                          placeholder="Add a tag!"
-                          placeholderTextColor="#6B7280"
-                          value={tagInput}
-                          onChangeText={(text) => {
-                            setTagInput(text);
-                            setTag(text);
-                          }}
-                          blurOnSubmit={false}
-                          returnKeyType="done"
-                        />
+                      <TextInput
+                        style={modalStyles.tagInput}
+                        placeholder="Add a tag!"
+                        placeholderTextColor="#6B7280"
+                        value={tagInput}
+                        onChangeText={(text) => {
+                          const formatted = text
+                            .toUpperCase()
+                            .replace(/[\s-]+/g, "_"); // replace spaces or hyphens with underscores
+                          setTagInput(formatted);
+                          setTag(formatted);
+                        }}
+                        blurOnSubmit={false}
+                        returnKeyType="done"
+                        autoCapitalize="characters"
+                      />
                         {/* <TouchableOpacity
                           style={modalStyles.addTagButton}
                           onPress={handleAddTag}

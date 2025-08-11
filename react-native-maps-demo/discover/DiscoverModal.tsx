@@ -13,19 +13,20 @@ import {
 } from 'react-native';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getPostsByAuthorId, getPost } from '@/services/api/posts';
+import { getPostsByAuthorId, getPost, getPostsByTag } from '@/services/api/posts';
 import { searchPolis } from '@/services/api/search';
 import { getCurrentUser } from '@/services/auth/fireAuth';
 import { ThemedView } from '@/components/ThemedView';
-import { PolisType, PostInfo, UserInfo, DisplayPostInfo, PolisSearchReturn } from '@/types/types';
+import { PolisType, PostInfo, UserInfo, DisplayPostInfo, PolisSearchReturn, MarkerPostInfo } from '@/types/types';
 import { DiscoverPolis } from './DiscoverPolis';
-import { DiscoverPost } from './DiscoverPosts';
+import { PostView } from '@/discover/PostView';
 import styles from './DiscoverStyles';
 import { isFriend } from '@/services/api/user';
 import { DiscoverExplore } from './DiscoverExplore';
 import { MaterialIcons } from '@expo/vector-icons';
 import { TouchableWithoutFeedback } from 'react-native';
 import { dismiss } from 'expo-router/build/global-state/routing';
+import { DisplayPostInfoToMarkerPostInfo } from '@/functions/polisTypeConverter';
 const SEARCH_HISTORY_KEY = 'search_history';
 
 export async function saveSearch(search: PolisSearchReturn) {
@@ -56,7 +57,7 @@ export async function clearSearchHistory() {
 }
 
 interface DiscoverModalProps {
-  onPostSelect: (post: PostInfo) => void;
+  onPostSelect: (post: MarkerPostInfo, polis: PolisType) => void;
   onPolisSelect?: (polis: PolisType) => void;
   setPolis: PolisType | null;
   selectedPostIdFromParent: string;
@@ -129,10 +130,26 @@ useEffect(() => {
         const userPosts = await getPostsByAuthorId(selectedPolis.userInfo.uid);
         setPosts(userPosts.posts);
       } catch (error) {
-        console.error("Error in fetchData useEffect:", error);
         setIsLoggedInUser(false);
         setPosts([]);
       }
+    }
+    else if (selectedPolis?.tag) {
+      try {
+        setIsLoggedInUser(false);
+        setIsUserFriend(false);
+        setFilteredUsers([]);
+
+        const tagPosts = await getPostsByTag(selectedPolis.tag);
+        setPosts(tagPosts.posts);
+      } catch (error) {
+        console.error("Error in fetchData useEffect:", error);
+        setPosts([]);
+      }
+    } else {
+      setPosts([]);
+      setIsLoggedInUser(false);
+      setIsUserFriend(false);
     }
   };
 
@@ -185,11 +202,12 @@ const dismissTyping = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+      keyboardShouldPersistTaps="handled"
+      scrollEnabled={!selectedPost} // <-- DISABLE outer scroll while a post is open
+    >
         <View style={{ padding: 16 }}>
           <ThemedView style={styles.searchBoxWrapper}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -231,7 +249,6 @@ const dismissTyping = () => {
                             isUser: true,
                             userInfo: {
                               displayName: suggestion.name,
-                              email: '',
                               uid: suggestion.id,
                               photoURL: suggestion.photoUrl || null,
                             },
@@ -283,25 +300,41 @@ const dismissTyping = () => {
                     </TouchableOpacity>
                   ))}
             </View>
-          ) : selectedPolis && !selectedPost ? (
+            ) : selectedPolis && !selectedPost ? (
             <DiscoverPolis
               selectedPolis={selectedPolis}
               isLoggedInUser={isLoggedInUser}
-              isUserFriend = {isUserFriend}
+              isUserFriend={isUserFriend}
               posts={posts}
               onPolisSelect={onPolisSelect}
-              setSelectedPost={setSelectedPost}
+              setSelectedPost={(post) => {
+              if(selectedPolis && post && post.postInfo && post.postInfo.postId) {
+              onPostSelect?.(DisplayPostInfoToMarkerPostInfo(post), selectedPolis); ;
+              }}
+              }
             />
-          ) : selectedPost ? (
-            <DiscoverPost post={selectedPost} onBack={() => setSelectedPost(null)} />
+            ) : selectedPost ? (
+            <PostView
+              post={selectedPost}
+              isLoggedInUser={isLoggedInUser}
+              onPostSelect={onPostSelect}
+              setSelectedPost={setSelectedPost}
+              setPostId={setPostId}
+              onBack={() => {
+              setSelectedPost(null);
+              }}
+            />
           ) : null}
           {!selectedPolis && !selectedPost && !selectedPostIdFromParent && (
           <DiscoverExplore
             onPolisSelect={onPolisSelect}
-            setSelectedPost={(post) => {
-              setSelectedPost(post);
-              dismissTyping();
-            }}
+            setSelectedPost={(post, polis) => {
+              console.log("Post selected in DiscoverExplore:", post, polis);
+              if(polis && post && post.postInfo && post.postInfo.postId) {
+                console.log("KSJFKAJSHFKJH");
+              onPostSelect?.(DisplayPostInfoToMarkerPostInfo(post), polis); ;
+              }}
+            }
             postsPerPage={5}
           />
         )}

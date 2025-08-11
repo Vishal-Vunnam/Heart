@@ -162,7 +162,6 @@ export default function HomeScreen() {
 
 
   useEffect(() => {
-    console.log("please");
     if (selectedPolis) {
       if (selectedPolis.isUser) {
         getMarkerPostsByAuthorId(selectedPolis.userInfo.uid).then((userPosts) => {
@@ -171,6 +170,7 @@ export default function HomeScreen() {
           } else {
             setPosts([]);
           }
+        
         
         });
       } else {
@@ -273,6 +273,7 @@ export default function HomeScreen() {
     }, 600); // a bit longer than animation
   };
   
+
 
   // Data loading functions
   // const loadPosts = async () => {
@@ -682,8 +683,10 @@ export default function HomeScreen() {
               <Animated.View style={[styles.discoverModalContent, { transform: [{ translateY: slideAnim }] }]}>
                 <View style={styles.dragHandle} />
                 <DiscoverModal
-                onPostSelect={(post) => {
-                  handleMarkerPress(post);
+                onPostSelect={(post, polis ) => {
+                  setSelectedPolis(polis); 
+                  handleMarkerPress(post)
+                  setSelectedPost(post); 
                   setIsDiscoverModalVisible(false);
                 }}
                 onPolisSelect={(polis: PolisType) => {

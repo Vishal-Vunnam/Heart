@@ -371,6 +371,12 @@ postTitle: {
   textDecorationLine: 'underline',
 },
 
+profileAndTitle: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 4,
+},
+
 postDate: {
   fontSize: 12,
   color: '#888',
@@ -414,8 +420,7 @@ postAuthor: {
     height: 32,
     borderRadius: 16,
     marginRight: 10,
-    backgroundColor: '#222',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#fff',
   },
   profilePicMedium: {

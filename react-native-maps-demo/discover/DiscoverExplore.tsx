@@ -10,7 +10,7 @@ import styles from '@/discover/ExploreStyles'
 
 interface DiscoverExploreProps {
   onPolisSelect?: (polis: PolisType) => void;
-  setSelectedPost: (post: DisplayPostInfo) => void;
+  setSelectedPost: (post: DisplayPostInfo, polis: PolisType) => void;
   postsPerPage?: number;
 }
 
@@ -72,7 +72,17 @@ export const DiscoverExplore: React.FC<DiscoverExploreProps> = ({
         <TouchableOpacity
           key={index}
           style={styles.postItem}
-          onPress={() => setSelectedPost(post)}
+          onPress={() => {
+            const polis: PolisType = {
+              isUser: true,
+              userInfo: {
+                uid: post.postInfo.userId,
+                displayName: post.postInfo.userDisplayName || '',
+                photoURL: post.postInfo.userPhotoURL || null,
+              },
+            };
+            setSelectedPost(post, polis);
+          }}
         >
             <View style={styles.infoContainer}>
             <View style={styles.topRow}>

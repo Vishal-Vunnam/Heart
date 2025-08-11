@@ -69,7 +69,7 @@ export type PolisSearchReturn = {
     is_tag: boolean;
 }
 
-type MarkerColor = 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink';
+export type MarkerColor = 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink';
 export type MarkerPostInfo = { 
   postId: string; 
   userId: string;
